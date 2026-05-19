@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Sponsors - BIZCOM</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <header class="pill-header">
+        <div class="header-logo">
+            <img src="images/logo.jpeg">
+        </div>
+        <nav class="header-links">
+            <a href="studentIndex.html">Home</a>
+            <a href="studentCheck.html">Check Sponsors</a>
+            <a href="studentIndex.html#sponsor-status">Sponsor Status</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2>Scan Your Sponsors</h2>
+            <p>Upload your .txt list or paste the names below to check their status.</p>
+            
+            <div class="form-group">
+                <label for="category">Select Category *</label>
+                <select id="category" required>
+                    <option value="" disabled selected>Choose an industry category...</option>
+                    <option value="food">Food</option>
+                    <option value="beverage">Beverage</option>
+                    <option value="apparel">Apparels / Accessories</option>
+                    <option value="activities">Activities</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="photography">Photography</option>
+                    <option value="misc">Misc</option>
+                </select>
+            </div>
+
+            <div class="upload-zone">
+                <h3 style="margin-top:0;">Drag & Drop your .txt file here</h3>
+                <p>or click to browse files</p>
+            </div>
+
+            <div class="form-group">
+                <label for="manual-entry">Or Paste Sponsor Names (One per line)</label>
+                <textarea id="manual-entry" rows="5" placeholder="e.g.&#10;Company A&#10;Company B"></textarea>
+            </div>
+
+            <div style="text-align: right;">
+                <button class="btn btn-primary">Scan Sponsors</button>
+            </div>
+        </section>
+
+        <section class="card" id="results-section">
+            <h2>Scan Results</h2>
+            <p>Review your list below. Only "Safe" and "Unrecognized" sponsors should be included in your final email.</p>
+            
+            <div class="results-grid">
+                <div class="result-card result-safe">
+                    <h3 style="color: var(--status-success); margin-top:0;">🟢 Safe to Contact</h3>
+                    <ul style="margin:0; padding-left: 20px;">
+                        <li>Company A</li>
+                        <li>Company B</li>
+                    </ul>
+                </div>
+
+                <div class="result-card result-warning">
+                    <h3 style="color: var(--status-warning); margin-top:0;">🟡 Cooling Off</h3>
+                    <p style="font-size: 0.9rem; margin:0 0 10px 0;">Hit the 8-10 cap recently. Do not contact.</p>
+                    <ul style="margin:0; padding-left: 20px;">
+                        <li>KOI (Available: Oct 12)</li>
+                    </ul>
+                </div>
+
+                <div class="result-card result-danger">
+                    <h3 style="color: var(--status-danger); margin-top:0;">🔴 Banned / Closed</h3>
+                    <p style="font-size: 0.9rem; margin:0 0 10px 0;">Permanently restricted. Do not contact.</p>
+                    <ul style="margin:0; padding-left: 20px;">
+                        <li>Heineken (Alcohol)</li>
+                    </ul>
+                </div>
+
+                <div class="result-card result-unrecognized">
+                    <h3 style="color: var(--status-unrecognized); margin-top:0;">🟣 Unrecognized</h3>
+                    <p style="font-size: 0.9rem; margin:0 0 10px 0;">Requires manual admin review. Keep in your email.</p>
+                    <ul style="margin:0; padding-left: 20px;">
+                        <li>New Startup SG</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                <p><strong>Done?</strong> Download your filtered list and email it to <strong>bizcom@smu.edu.sg</strong> for final approval.</p>
+                <button class="btn btn-primary">Download Clean List</button>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>
