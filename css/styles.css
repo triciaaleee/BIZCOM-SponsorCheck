@@ -1,0 +1,130 @@
+/* Import Google Fonts to match the image typography */
+/* Merriweather for Serif headings, Inter for Sans-Serif UI/Body */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Merriweather:wght@700;900&display=swap');
+
+:root {
+    /* Extracted Color Palette */
+    --bizcom-cream: #F5F2EB;     /* Background off-white/cream */
+    --bizcom-navy: #00306A;      /* Deep navy blue for headings and navbar border */
+    --bizcom-blue: #6392E9;      /* Cornflower blue for buttons */
+    --text-dark: #1A1A1A;        /* Standard black/dark grey text */
+    --white: #FFFFFF;
+}
+
+/* ---------------------------------------------------
+   Global Styles & Typography
+--------------------------------------------------- */
+body {
+    background-color: var(--bizcom-cream);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Merriweather', serif;
+    color: var(--bizcom-navy);
+    font-weight: 900;
+}
+
+/* ---------------------------------------------------
+   Navbar (Pill-shaped as seen in the image)
+--------------------------------------------------- */
+.navbar-custom {
+    background-color: var(--white) !important;
+    border: 2px solid var(--bizcom-navy);
+    border-radius: 50px; /* Creates the pill shape */
+    padding: 10px 30px;
+    margin-top: 20px;
+    margin-bottom: 40px;
+    /* Removed shadow to match the flat design in the image */
+    box-shadow: none !important; 
+}
+
+/* Navbar Links */
+.navbar-custom .navbar-brand, 
+.navbar-custom .nav-link {
+    color: var(--text-dark) !important;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.navbar-custom .nav-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 2px;
+}
+
+/* ---------------------------------------------------
+   Buttons (Matching the "Contact" button style)
+--------------------------------------------------- */
+.btn-primary-custom, 
+.btn-accent {
+    background-color: var(--bizcom-blue);
+    color: var(--text-dark);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    border: 2px solid var(--text-dark); /* Distinct black border from image */
+    border-radius: 30px; /* Pill shape for buttons */
+    padding: 8px 24px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-primary-custom:hover, 
+.btn-accent:hover {
+    background-color: #4a7be0; /* Slightly darker blue on hover */
+    color: var(--text-dark);
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+.btn-outline-secondary {
+    border: 2px solid var(--text-dark);
+    color: var(--text-dark);
+    font-weight: 600;
+    border-radius: 30px;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--text-dark);
+    color: var(--white);
+}
+
+/* ---------------------------------------------------
+   Cards & Containers (For the Dashboard UI)
+--------------------------------------------------- */
+.card {
+    background-color: var(--white);
+    border: 1px solid rgba(0, 48, 106, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.03);
+    border-radius: 16px; /* Smooth rounded corners for forms/tables */
+}
+
+.stat-card {
+    border-left: 5px solid var(--bizcom-blue);
+}
+
+/* ---------------------------------------------------
+   Tables & Forms
+--------------------------------------------------- */
+.table th {
+    background-color: var(--bizcom-navy);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    border-bottom: none;
+}
+
+.form-label {
+    font-family: 'Inter', sans-serif;
+    color: var(--bizcom-navy);
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--bizcom-navy);
+    box-shadow: 0 0 0 0.25rem rgba(0, 48, 106, 0.25);
+}

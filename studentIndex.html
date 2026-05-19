@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sponsorship Submission | Student Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-check me-2"></i>BIZCOM Sponsor Tracker (Student Portal)
+            </a>
+            <div class="d-flex text-white align-items-center">
+                <span class="badge bg-light text-dark"><i class="bi bi-unlock"></i> Public Access</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="text-muted text-uppercase mb-1">Total Sponsors Approached</h6>
+                    <h2 class="mb-0" style="color: var(--smu-navy);">4,201 <span class="fs-6 text-muted">this month</span></h2>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="text-muted text-uppercase mb-1">Banned Database</h6>
+                    <h2 class="mb-0 text-danger">342 <span class="fs-6 text-muted">companies</span></h2>
+                    <a href="#" class="text-decoration-none small text-danger">View Banned List</a>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="text-muted text-uppercase mb-1">Closed Operations</h6>
+                    <h2 class="mb-0 text-warning">89 <span class="fs-6 text-muted">companies</span></h2>
+                    <a href="#" class="text-decoration-none small text-warning">View Closed List</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card p-4">
+                    <h4 class="mb-4" style="color: var(--smu-navy);">Submit New Sponsorship List</h4>
+                    
+                    <form id="studentSubmissionForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Club / Organization Name</label>
+                                <input type="text" class="form-control" placeholder="e.g., SMU Red Cross">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Event Name</label>
+                                <input type="text" class="form-control" placeholder="e.g., Semester 2 Blood Drive">
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Event Scale</label>
+                                <select class="form-select">
+                                    <option value="" selected disabled>Select expected attendance...</option>
+                                    <option value="small">Small (<50) - Cap: 300</option>
+                                    <option value="medium">Medium (50-150) - Cap: 600</option>
+                                    <option value="large">Large (>150) - Cap: 1000</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Sponsor Category</label>
+                                <select class="form-select" required>
+                                    <option value="" selected disabled>Select category to upload...</option>
+                                    <option value="food">Food</option>
+                                    <option value="beverage">Beverage</option>
+                                    <option value="apparels">Apparels / Accessories</option>
+                                    <option value="activities">Activities</option>
+                                    <option value="electronics">Electronics</option>
+                                    <option value="photography">Photography</option>
+                                    <option value="misc">Misc</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill me-2"></i> Please upload one category at a time. Preferred format is <strong>.txt</strong> with one company per line.
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Upload .txt File</label>
+                            <input class="form-control mb-2" type="file" accept=".txt">
+                            <div class="text-center text-muted small">-- OR --</div>
+                            <label class="form-label fw-bold mt-2">Manual Input (One per line)</label>
+                            <textarea class="form-control" rows="4" placeholder="Enter companies here..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between gap-3 border-top pt-4">
+                            <button type="button" class="btn btn-outline-secondary w-50" id="preCheckBtn">
+                                <i class="bi bi-search me-1"></i> Step 1: Run Pre-Check
+                            </button>
+                            <button type="button" class="btn btn-primary-custom w-50" id="submitBtn" disabled>
+                                <i class="bi bi-send me-1"></i> Step 2: Submit to BIZCOM
+                            </button>
+                        </div>
+                        <div class="text-muted small mt-2 text-center">You must clear the automated Pre-Check before submitting to the BIZCOM review queue.</div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

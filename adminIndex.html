@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | BIZCOM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-lock-fill me-2"></i>BIZCOM Backend
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3"><i class="bi bi-person-badge"></i> Logged in as: Secretariat Admin</span>
+                <a class="btn btn-sm btn-outline-light" href="#">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold" style="color: var(--smu-navy);">Pending Review Queue</h2>
+            <button class="btn btn-outline-secondary" disabled title="Requires Super Admin"><i class="bi bi-people-fill me-1"></i> Manage Admins</button>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5 class="mb-3" style="color: var(--smu-navy);">Action Required: Unrecognized & System-Flagged Sponsors</h5>
+            <p class="text-muted small">The system encountered discrepancies with the following entries. Resolve them below to update the Master Database.</p>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Company Submitted</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Club / Event</th>
+                            <th scope="col">System Note</th>
+                            <th scope="col" class="text-center">Database Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">Gamer's Haven</td>
+                            <td>Electronics</td>
+                            <td>SCIS / Hackathon</td>
+                            <td><span class="badge bg-secondary">New Unmatched</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-success me-1" title="Add to Master"><i class="bi bi-plus-circle"></i> Add to Master</button>
+                                <button class="btn btn-sm btn-danger me-1" title="Ban Company"><i class="bi bi-slash-circle"></i> Ban</button>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td class="fw-bold">Macs</td>
+                            <td>Food</td>
+                            <td>PAW / Welfare Drive</td>
+                            <td><span class="badge bg-warning text-dark">Possible Alias</span></td>
+                            <td class="text-center">
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select" style="max-width: 150px;">
+                                        <option selected disabled>Merge with...</option>
+                                        <option value="mcdonalds">McDonalds</option>
+                                        <option value="mac">Mac Cosmetics</option>
+                                    </select>
+                                    <button class="btn btn-primary-custom" title="Merge"><i class="bi bi-sign-merge-left"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="fw-bold">Food Republic</td>
+                            <td>Food</td>
+                            <td>SMU Red Cross / Blood Drive</td>
+                            <td><span class="badge bg-danger">Flagged: Similar to "Food Junction" (Banned)</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-success me-1" title="Override Flag & Approve"><i class="bi bi-check2-all"></i> Override & Approve</button>
+                                <button class="btn btn-sm btn-danger" title="Confirm Ban"><i class="bi bi-shield-x"></i> Confirm Ban</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card p-4">
+            <h5 class="mb-3" style="color: var(--smu-navy);">Recent Clean Submissions (Auto-Processed)</h5>
+            <div class="table-responsive">
+                <table class="table table-sm text-muted">
+                    <thead>
+                        <tr>
+                            <th>Club</th>
+                            <th>Category</th>
+                            <th>Total Processed</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SMU Red Cross</td>
+                            <td>Beverage</td>
+                            <td>12 Sponsors</td>
+                            <td>Today, 10:45 AM</td>
+                            <td><span class="badge bg-success">Auto-Approved</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
