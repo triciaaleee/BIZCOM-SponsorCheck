@@ -1,0 +1,88 @@
+/* ============================================================
+   components/pills.css
+   Status pills used in results table and admin views.
+   Always: colour + icon + label (never colour alone — WCAG).
+   ============================================================ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.pill__icon {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Status variants ---------- */
+
+.pill--clear {
+  color: var(--color-green-dark);
+  background-color: var(--status-clear-bg);
+}
+
+.pill--caution {
+  color: #8C7212;
+  background-color: var(--status-caution-bg);
+}
+
+.pill--alumni {
+  color: var(--color-navy-dark);
+  background-color: var(--status-alumni-bg);
+}
+
+.pill--blocked {
+  color: var(--color-orange);
+  background-color: var(--status-blocked-bg);
+}
+
+.pill--cooldown {
+  color: var(--color-orange-dark);
+  background-color: var(--status-cooldown-bg);
+}
+
+.pill--neutral {
+  color: var(--text-secondary);
+  background-color: var(--surface-muted);
+}
+
+/* ---------- Size variants ---------- */
+
+.pill--lg {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.pill--lg .pill__icon { font-size: 15px; }
+
+/* ---------- Pill in a button-row context (smaller gap) ---------- */
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* ---------- Industry tag (neutral, smaller) ---------- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border: 1px solid var(--border-subtle);
+}

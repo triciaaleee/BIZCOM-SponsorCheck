@@ -1,0 +1,91 @@
+/* ============================================================
+   components/toasts.css
+   Slide-in notifications, bottom-right.
+   ============================================================ */
+
+.toast-container {
+  position: fixed;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: var(--z-toast);
+  max-width: 360px;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  transform: translateX(120%);
+  opacity: 0;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out);
+  pointer-events: auto;
+  border-left: 3px solid var(--color-navy);
+}
+
+.toast.is-visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast--success { border-left-color: var(--color-green); }
+.toast--error   { border-left-color: var(--color-orange); }
+.toast--info    { border-left-color: var(--color-navy); }
+.toast--warning { border-left-color: var(--color-gold); }
+
+.toast__icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.toast--success .toast__icon { color: var(--color-green); }
+.toast--error .toast__icon   { color: var(--color-orange); }
+.toast--info .toast__icon    { color: var(--color-navy); }
+.toast--warning .toast__icon { color: var(--color-gold); }
+
+.toast__body {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: var(--line-height-snug);
+}
+
+.toast__title {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 2px;
+}
+
+.toast__message {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.toast__close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.toast__close:hover {
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+}

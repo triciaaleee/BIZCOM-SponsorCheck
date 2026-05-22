@@ -1,0 +1,166 @@
+/* ============================================================
+   components/drop-zone.css
+   File upload drop zone with drag-over feedback.
+   ============================================================ */
+
+.drop-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-5);
+  background-color: var(--surface-card);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.drop-zone:hover {
+  border-color: var(--color-navy-light);
+  background-color: rgba(46, 82, 157, 0.02);
+}
+
+.drop-zone.is-drag-over {
+  border-color: var(--color-navy);
+  border-style: solid;
+  background-color: rgba(46, 82, 157, 0.04);
+  transform: scale(1.02);
+}
+
+.drop-zone.is-drag-over .drop-zone__icon {
+  animation: drop-bob 800ms ease-in-out infinite;
+}
+
+@keyframes drop-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.drop-zone__icon {
+  font-size: 48px;
+  color: var(--color-navy-light);
+  line-height: 1;
+}
+
+.drop-zone__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.drop-zone__hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 360px;
+}
+
+.drop-zone__divider {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  align-items: center;
+}
+
+.drop-zone__divider a {
+  color: var(--color-navy);
+  font-weight: var(--font-weight-medium);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.drop-zone.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ---------- Compact status bar after file selected ---------- */
+
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.upload-status__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background-color: rgba(46, 82, 157, 0.10);
+  color: var(--color-navy);
+  font-size: var(--font-size-xl);
+}
+
+.upload-status__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.upload-status__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upload-status__meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ---------- Progress bar ---------- */
+
+.progress {
+  height: 6px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress__bar {
+  height: 100%;
+  background-color: var(--color-navy);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.progress__bar--indeterminate {
+  width: 30% !important;
+  animation: progress-slide 1400ms ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0%   { margin-left: -30%; }
+  100% { margin-left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress__bar--indeterminate { animation: none; width: 100% !important; }
+}

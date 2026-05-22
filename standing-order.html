@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Standing Order — BIZCOM SponsorCheck</title>
+  <meta name="description" content="The SMUSA Sponsorship Standing Order — searchable, with anchor links per section.">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
+
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/layout.css">
+
+  <link rel="stylesheet" href="./css/components/buttons.css">
+  <link rel="stylesheet" href="./css/components/cards.css">
+  <link rel="stylesheet" href="./css/components/pills.css">
+  <link rel="stylesheet" href="./css/components/states.css">
+
+  <link rel="stylesheet" href="./css/pages/standing-order.css">
+  <link rel="stylesheet" href="./css/utilities.css">
+</head>
+<body>
+
+<div class="page">
+
+  <nav class="navbar">
+    <div class="navbar__container">
+      <a href="./index.html" class="navbar__brand">
+        <span class="navbar__brand-mark"><span>bi</span><span>z</span><span>com</span></span>
+        <span class="navbar__brand-sub">SponsorCheck</span>
+      </a>
+      <div class="navbar__nav">
+        <a href="./sponsor-check.html" class="navbar__link">Checker</a>
+        <a href="./dashboard.html" class="navbar__link">Dashboard</a>
+        <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+        <a href="./admin/login.html" class="navbar__link">Admin</a>
+      </div>
+      <button class="navbar__toggle" aria-label="Open menu" aria-expanded="false">
+        <i class="bi bi-list"></i>
+      </button>
+    </div>
+    <div class="navbar__drawer">
+      <a href="./sponsor-check.html" class="navbar__link">Checker</a>
+      <a href="./dashboard.html" class="navbar__link">Dashboard</a>
+      <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+      <a href="./admin/login.html" class="navbar__link">Admin</a>
+    </div>
+  </nav>
+
+  <main class="page__main">
+    <div class="container">
+
+      <header class="page-header">
+        <div class="page-header__eyebrow">Standing order</div>
+        <h1 class="page-header__title">SMUSA Sponsorship Standing Order</h1>
+        <p class="page-header__description">
+          The authoritative policy for student-organised sponsorship at SMU. Plain-English summary of each section, with the official PDF as the source of truth.
+        </p>
+        <div class="banner banner--info mt-4">
+          <i class="bi bi-info-circle-fill banner__icon"></i>
+          <div class="banner__body">
+            <div class="banner__title">Summary for quick reference</div>
+            <div class="banner__message">
+              This page paraphrases the official Standing Order (effective 1 March 2024) for ease of reading. For the binding text, refer to the official PDF held by the BIZCOM Corporate Relations Secretary.
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="standing-order">
+
+        <!-- Sticky TOC -->
+        <aside class="toc" aria-label="Table of contents">
+          <div class="toc__heading">On this page</div>
+          <ul class="toc__list">
+            <li><a href="#section-1" class="toc__link is-active">1. Purpose &amp; scope</a></li>
+            <li><a href="#section-2" class="toc__link">2. Definitions</a></li>
+            <li><a href="#section-3" class="toc__link">3. Roles &amp; responsibilities</a></li>
+            <li><a href="#section-4" class="toc__link">4. Outreach process</a></li>
+            <li><a href="#section-5" class="toc__link">5. 30-day outreach cap</a></li>
+            <li><a href="#section-6" class="toc__link">6. Event-size caps</a></li>
+            <li><a href="#section-7" class="toc__link">7. Master List</a></li>
+            <li><a href="#section-8" class="toc__link">8. Alumni List</a></li>
+            <li><a href="#section-9" class="toc__link">9. Non-circumvention</a></li>
+            <li><a href="#section-10" class="toc__link">10. Penalties</a></li>
+            <li><a href="#annex-a" class="toc__link">Annex A — Prohibited categories</a></li>
+            <li><a href="#annex-b" class="toc__link">Annex B — Restricted partners</a></li>
+          </ul>
+
+          <div class="so-search mt-5">
+            <i class="bi bi-search so-search__icon"></i>
+            <input type="search" id="so-search" placeholder="Search this page…" aria-label="Search standing order">
+          </div>
+        </aside>
+
+        <!-- Content -->
+        <article class="so-content">
+
+          <h2 id="section-1">1. Purpose &amp; scope</h2>
+          <p>
+            The Standing Order establishes how Student Activity Groups (SAGs) approach external organisations for sponsorship of SMU-organised events. It exists so that SMU clubs present a coordinated face to corporate partners and avoid contradicting each other in outreach.
+          </p>
+          <p>
+            It applies to all SAGs under SMUSA, including School Constituent Bodies, CCA Constituent Bodies, CCA Clubs, and any group operating under the SMUSA umbrella.
+          </p>
+
+          <h2 id="section-2">2. Definitions</h2>
+          <ul>
+            <li><strong>Sponsor</strong> — an external organisation contacted to provide cash, in-kind goods, services, prizes, or vouchers.</li>
+            <li><strong>Outreach</strong> — any deliberate contact with a sponsor for the purpose of soliciting support (cold email, follow-up, in-person pitch).</li>
+            <li><strong>Master List</strong> — the pre-vetted, BIZCOM-maintained database of sponsors that are eligible for approach.</li>
+            <li><strong>Alumni List</strong> — a subset of sponsors owned, founded, or operated by SMU alumni, requiring OAR coordination before approach.</li>
+            <li><strong>Submission</strong> — a complete sponsor list submitted to BIZCOM for vetting prior to outreach.</li>
+          </ul>
+
+          <h2 id="section-3">3. Roles &amp; responsibilities</h2>
+          <h3>SAGs</h3>
+          <p>
+            SAGs are responsible for assembling their intended sponsor list, pre-checking it through this platform, and submitting the cleaned list to the BIZCOM Corporate Relations Secretary for final vetting before any outreach begins.
+          </p>
+          <h3>BIZCOM Corporate Relations Secretary</h3>
+          <p>
+            Maintains the Master List, Banned List, and Alumni List. Reviews each submission and confirms approved sponsors back to the SAG within the published turnaround time.
+          </p>
+          <h3>BIZCOM as a whole</h3>
+          <p>
+            Owns enterprise-level partnerships and coordinates with SAGs where there is overlap between BIZCOM's own contacts and a SAG's intended list.
+          </p>
+
+          <h2 id="section-4">4. Outreach process</h2>
+          <ol>
+            <li>Assemble a draft sponsor list with company names and (preferably) industry tags.</li>
+            <li>Pre-check the list through this platform — review any flagged rows.</li>
+            <li>Submit the cleaned list to BIZCOM by email for final approval.</li>
+            <li>Wait for BIZCOM confirmation before initiating any outreach.</li>
+            <li>Log each outreach attempt back to BIZCOM so the rolling outreach counter stays accurate for everyone.</li>
+          </ol>
+
+          <h2 id="section-5">5. 30-day outreach cap</h2>
+          <div class="annex">
+            <p>
+              Each sponsor may receive a maximum of <strong>10 outreach attempts</strong> in any rolling 30-day window across all SMU SAGs combined. Once the cap is reached, the sponsor enters a 30-day cooldown during which no SAG may approach them.
+            </p>
+            <p class="text-secondary text-sm" style="margin-bottom: 0">
+              Rationale: repeated cold outreach to the same company within a short window damages SMU's reputation as a coordinated partner. The cap is enforced advisorily through this platform and definitively at BIZCOM review.
+            </p>
+          </div>
+
+          <h2 id="section-6">6. Event-size caps</h2>
+          <p>The maximum number of distinct sponsors that may be approached per event is determined by the event size:</p>
+          <ul>
+            <li><strong>Small event</strong> (under 50 attendees) — cap of <strong>300</strong> sponsors.</li>
+            <li><strong>Medium event</strong> (50–150 attendees) — cap of <strong>600</strong> sponsors.</li>
+            <li><strong>Large event</strong> (over 150 attendees) — cap of <strong>1,000</strong> sponsors.</li>
+          </ul>
+          <p class="text-secondary text-sm">
+            These caps are cumulative across all submission waves for the same event. Re-classifying an event after submission requires written approval from the Corporate Relations Secretary.
+          </p>
+
+          <h2 id="section-7">7. Master List</h2>
+          <p>
+            The Master List contains sponsors that have been previously approved through BIZCOM vetting. Companies on the Master List are not automatically pre-approved for new events — they still require submission — but they will not be flagged as blocked or alumni-restricted.
+          </p>
+          <p>
+            The Master List grows over time. Sponsors approved through one SAG's submission are subsequently added to the Master List, reducing review time for future submissions.
+          </p>
+
+          <h2 id="section-8">8. Alumni List</h2>
+          <p>
+            Companies owned, founded, or operated by SMU alumni are tracked separately on the Alumni List. Outreach to alumni-affiliated sponsors must be coordinated with the Office of Alumni Relations (OAR) before initiation, regardless of the company's appearance on any other list.
+          </p>
+          <p>
+            The Alumni List is maintained collaboratively with OAR and is updated as alumni-owned businesses are identified.
+          </p>
+
+          <h2 id="section-9">9. Non-circumvention</h2>
+          <p>
+            SAGs may not circumvent these rules through indirect outreach — including outreach via parent companies, subsidiaries, individual staff contacts, or third parties — to a sponsor that would otherwise be blocked, on cooldown, or unapproved.
+          </p>
+          <p>
+            Suspected circumvention should be reported to the Corporate Relations Secretary for investigation.
+          </p>
+
+          <h2 id="section-10">10. Penalties</h2>
+          <p>
+            Breaches of this standing order may result in: a written warning to the SAG executive committee, suspension of sponsorship privileges for the current academic term, or escalation to the SMUSA Disciplinary Committee for repeat offences.
+          </p>
+          <p>
+            Penalties are determined case-by-case by the BIZCOM Director in consultation with the SMUSA Executive Committee.
+          </p>
+
+          <h2 id="annex-a">Annex A — Prohibited categories</h2>
+          <p>The following categories of organisation may not be approached for sponsorship under any circumstances:</p>
+          <ul>
+            <li>Alcohol and alcoholic beverage producers or distributors</li>
+            <li>Tobacco and vaping product manufacturers or retailers</li>
+            <li>Gaming, betting, and gambling operators</li>
+            <li>Adult or sexual products and services</li>
+            <li>Pharmaceutical companies (over-the-counter wellness brands are reviewed case-by-case)</li>
+            <li>Foundations and grant-making bodies (these route through OAR)</li>
+            <li>Insurance companies (cross-referenced with Annex B)</li>
+            <li>Companies that have ceased operations or are confirmed defunct</li>
+          </ul>
+
+          <h2 id="annex-b">Annex B — Restricted partners</h2>
+          <p>The following categories are reserved for BIZCOM-direct partnerships and may not be approached by individual SAGs:</p>
+          <ul>
+            <li>Major Singapore banks (DBS, OCBC, UOB and equivalents)</li>
+            <li>Insurance companies (cross-referenced with Annex A)</li>
+            <li>Telecommunications providers (Singtel, StarHub, M1)</li>
+            <li>Government-linked statutory boards (route through OSL)</li>
+          </ul>
+
+          <p class="mt-6 text-secondary text-sm">
+            <em>Effective date: 1 March 2024. For amendments or clarifications, contact the BIZCOM Corporate Relations Secretary at <a href="mailto:biz.secretary@sa.smu.edu.sg">biz.secretary@sa.smu.edu.sg</a>.</em>
+          </p>
+
+        </article>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__bottom">
+        <span>© 2026 SMU BIZCOM</span>
+        <span>Plain-English summary. Official PDF is the binding source.</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script src="./js/components/navbar.js" defer></script>
+
+<!-- Inline: TOC active-section tracking + search highlight -->
+<script>
+(function () {
+  // Active section tracking via IntersectionObserver
+  const links = document.querySelectorAll('.toc__link');
+  const sections = Array.from(links).map(l => document.getElementById(l.getAttribute('href').slice(1))).filter(Boolean);
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          links.forEach(l => l.classList.toggle('is-active', l.getAttribute('href') === '#' + id));
+        }
+      });
+    }, { rootMargin: '-100px 0px -60% 0px' });
+    sections.forEach(s => observer.observe(s));
+  }
+
+  // Search: simple text-match highlight
+  const search = document.getElementById('so-search');
+  const content = document.querySelector('.so-content');
+  let originalHTML = content.innerHTML;
+
+  search.addEventListener('input', function (e) {
+    const q = e.target.value.trim();
+    // Restore first
+    content.innerHTML = originalHTML;
+    if (q.length < 2) return;
+
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    walk(content, function (textNode) {
+      if (re.test(textNode.nodeValue)) {
+        const span = document.createElement('span');
+        span.innerHTML = textNode.nodeValue.replace(re, '<mark class="so-highlight">$1</mark>');
+        textNode.parentNode.replaceChild(span, textNode);
+      }
+    });
+
+    // Scroll to first match
+    const first = content.querySelector('.so-highlight');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function walk(node, fn) {
+    if (node.nodeType === 3) { fn(node); return; }
+    if (node.nodeType !== 1 || node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
+    Array.from(node.childNodes).forEach(c => walk(c, fn));
+  }
+})();
+</script>
+</body>
+</html>

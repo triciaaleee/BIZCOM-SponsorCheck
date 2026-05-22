@@ -1,0 +1,98 @@
+/* ============================================================
+   components/modals.css
+   Modal dialog. Open by adding .is-open to .modal.
+   ============================================================ */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: var(--surface-overlay);
+  z-index: var(--z-modal);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal__dialog {
+  background-color: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - var(--space-8));
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.96);
+  opacity: 0;
+  transition:
+    transform var(--duration-slow) var(--ease-spring),
+    opacity var(--duration-base) var(--ease-out);
+}
+
+.modal--wide .modal__dialog {
+  max-width: 720px;
+}
+
+.modal.is-open .modal__dialog {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.modal__header {
+  padding: var(--space-5) var(--space-5) var(--space-3) var(--space-5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.modal__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: var(--line-height-snug);
+}
+
+.modal__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-xl);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.modal__close:hover {
+  background-color: var(--surface-muted);
+}
+
+.modal__body {
+  padding: 0 var(--space-5);
+  overflow-y: auto;
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+.modal__footer {
+  padding: var(--space-4) var(--space-5) var(--space-5) var(--space-5);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}

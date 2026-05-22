@@ -1,0 +1,183 @@
+/* ============================================================
+   components/buttons.css
+   Button system from PRD §6.9. Use .btn + a single variant.
+   States: hover, active, focus, disabled, loading.
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color           var(--duration-fast) var(--ease-out),
+    border-color    var(--duration-fast) var(--ease-out),
+    box-shadow      var(--duration-fast) var(--ease-out),
+    transform       var(--duration-fast) var(--ease-out);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.btn:disabled,
+.btn.is-disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---------- Sizes ---------- */
+
+.btn--sm { height: 32px; padding: 0 var(--space-3); font-size: var(--font-size-sm); }
+.btn--lg { height: 48px; padding: 0 var(--space-5); font-size: var(--font-size-lg); }
+
+/* ---------- Primary (navy filled) ---------- */
+
+.btn--primary {
+  background-color: var(--color-navy);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+  background-color: var(--color-navy-mid);
+  box-shadow: var(--shadow-md);
+  color: var(--text-inverse);
+  text-decoration: none;
+}
+
+.btn--primary:active {
+  background-color: var(--color-navy-dark);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn--primary:disabled,
+.btn--primary.is-disabled {
+  background-color: #D1D5DB;
+  color: #8A94A6;
+  box-shadow: none;
+}
+
+/* ---------- Secondary (outline navy) ---------- */
+
+.btn--secondary {
+  background-color: transparent;
+  color: var(--color-navy);
+  border-color: var(--color-navy);
+}
+
+.btn--secondary:hover {
+  background-color: rgba(46, 82, 157, 0.06);
+  border-color: var(--color-navy-mid);
+  color: var(--color-navy);
+  text-decoration: none;
+}
+
+.btn--secondary:active {
+  background-color: rgba(46, 82, 157, 0.12);
+  color: var(--color-navy-dark);
+  border-color: var(--color-navy-dark);
+}
+
+.btn--secondary:disabled,
+.btn--secondary.is-disabled {
+  color: var(--text-muted);
+  border-color: var(--border-default);
+  background-color: transparent;
+}
+
+/* ---------- Tertiary (text-only) ---------- */
+
+.btn--tertiary {
+  color: var(--color-navy);
+}
+
+.btn--tertiary:hover {
+  background-color: rgba(46, 82, 157, 0.06);
+  color: var(--color-navy-mid);
+  text-decoration: none;
+}
+
+/* ---------- Destructive ---------- */
+
+.btn--destructive {
+  background-color: var(--color-orange);
+  color: var(--text-inverse);
+}
+
+.btn--destructive:hover {
+  background-color: var(--color-orange-dark);
+  color: var(--text-inverse);
+  text-decoration: none;
+}
+
+/* ---------- Gold accent (delight CTA) ---------- */
+
+.btn--gold {
+  background-color: var(--color-gold);
+  color: var(--color-navy-dark);
+}
+
+.btn--gold:hover {
+  background-color: var(--color-gold-mid);
+  color: var(--color-navy-dark);
+  text-decoration: none;
+}
+
+/* ---------- Loading state ---------- */
+
+.btn.is-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  color: var(--text-inverse);
+  animation: btn-spin 0.7s linear infinite;
+}
+
+.btn--secondary.is-loading::after,
+.btn--tertiary.is-loading::after {
+  color: var(--color-navy);
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.is-loading::after { animation-duration: 1.4s; }
+}
+
+/* ---------- Icon-only button ---------- */
+
+.btn--icon {
+  width: 40px;
+  padding: 0;
+}
+
+.btn--icon.btn--sm { width: 32px; }
+.btn--icon.btn--lg { width: 48px; }
