@@ -118,32 +118,9 @@
   animation: hero-fade-up var(--duration-slow) var(--ease-out) 1.6s forwards;
 }
 
-.hero__meta {
-  margin-top: var(--space-5);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  opacity: 0;
-  animation: hero-fade-up var(--duration-slow) var(--ease-out) 1.9s forwards;
-}
-
-.hero__meta-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.hero__meta-item i {
-  color: var(--color-green);
-  font-size: var(--font-size-base);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hero__description,
-  .hero__actions,
-  .hero__meta {
+  .hero__actions {
     opacity: 1;
     transform: none;
     animation: none;
@@ -263,11 +240,6 @@
   font-weight: var(--font-weight-extrabold);
   letter-spacing: var(--letter-spacing-tight);
   margin-bottom: var(--space-3);
-}
-
-.value-props__description {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
 }
 
 .value-prop {

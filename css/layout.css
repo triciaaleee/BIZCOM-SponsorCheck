@@ -218,24 +218,6 @@
   }
 }
 
-.footer__brand {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
-  color: var(--text-inverse);
-  margin-bottom: var(--space-3);
-  letter-spacing: var(--letter-spacing-tight);
-}
-
-.footer__brand span:nth-child(2) {  /* 'z' */
-  color: var(--color-gold);
-}
-
-.footer__tagline {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: var(--font-size-sm);
-  max-width: 360px;
-}
-
 .footer__heading {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
