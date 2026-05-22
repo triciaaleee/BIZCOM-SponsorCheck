@@ -87,7 +87,7 @@
 .navbar__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   font-weight: var(--font-weight-extrabold);
   font-size: var(--font-size-xl);
   color: var(--text-primary);
@@ -102,7 +102,21 @@
 
 .navbar__brand-mark {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+}
+
+/* Brand mark text fallback: 'z' in gold */
+.navbar__brand-mark span:nth-child(2) {
+  color: var(--color-gold);
+}
+
+/* Brand mark image: properly sized for the 72px navbar */
+.navbar__brand-mark img {
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
 }
 
 .navbar__brand-sub {
@@ -112,6 +126,8 @@
   color: var(--text-muted);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--border-subtle);
 }
 
 @media (min-width: 1024px) {
@@ -218,6 +234,14 @@
   }
 }
 
+.footer__brand-img {
+  display: block;
+  height: 48px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+}
+
 .footer__heading {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -311,5 +335,35 @@
   color: var(--text-secondary);
   font-size: var(--font-size-lg);
   max-width: 640px;
+  margin: 0;
+}
+
+/* ---------- Shared section header (used by landing) ---------- */
+
+.section-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto var(--space-6) auto;
+}
+
+.section-header__eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-navy);
+  margin-bottom: var(--space-2);
+}
+
+.section-header__title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: var(--space-3);
+}
+
+.section-header__description {
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
   margin: 0;
 }

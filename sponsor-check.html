@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sponsor Checker — BIZCOM SponsorCheck</title>
+  <title>Sponsor checker, BIZCOM SponsorCheck</title>
   <link rel="icon" href="admin/assets/favicon.png">
   <meta name="description" content="Upload a CSV of intended sponsors and see which are banned, closed, alumni-affiliated, or near the outreach cap.">
 
@@ -37,13 +37,15 @@
   <nav class="navbar">
     <div class="navbar__container">
       <a href="./index.html" class="navbar__brand">
-        <span class="navbar__brand-mark"><span>bi</span><span>z</span><span>com</span></span>
+        <span class="navbar__brand-mark">
+          <img src="admin/assets/bizcom-logo.png" alt="SMU BIZCOM">
+        </span>
         <span class="navbar__brand-sub">SponsorCheck</span>
       </a>
       <div class="navbar__nav">
         <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-        <a href="./dashboard.html" class="navbar__link">Dashboard</a>
-        <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+        <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
+        <a href="./standing-order.html" class="navbar__link">Standing order</a>
         <a href="./admin/login.html" class="navbar__link">Admin</a>
       </div>
       <button class="navbar__toggle" aria-label="Open menu" aria-expanded="false">
@@ -52,8 +54,8 @@
     </div>
     <div class="navbar__drawer">
       <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-      <a href="./dashboard.html" class="navbar__link">Dashboard</a>
-      <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+      <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
+      <a href="./standing-order.html" class="navbar__link">Standing order</a>
       <a href="./admin/login.html" class="navbar__link">Admin</a>
     </div>
   </nav>
@@ -63,9 +65,9 @@
 
       <header class="page-header">
         <div class="page-header__eyebrow">Sponsor checker</div>
-        <h1 class="page-header__title">Pre-check your list against the master database.</h1>
+        <h1 class="page-header__title">Pre-check your sponsor list.</h1>
         <p class="page-header__description">
-          Upload a CSV or TXT of intended sponsors. We'll flag banned, closed, alumni-affiliated, and over-cap companies so you submit a cleaner list to BIZCOM.
+          Upload a CSV. The checker flags banned, closed, alumni-affiliated, and over-cap companies so you submit a clean list to BIZCOM.
         </p>
       </header>
 
@@ -74,7 +76,7 @@
         <!-- MAIN COLUMN -->
         <div class="checker__main">
 
-          <!-- Step 1: Event metadata (always visible) -->
+          <!-- Step 1: Event metadata -->
           <div class="event-meta">
             <div class="event-meta__header">
               <div class="event-meta__num">1</div>
@@ -94,27 +96,88 @@
               </div>
               <div class="form-group" style="grid-column: 1 / -1">
                 <label class="form-label">Event size <span class="form-label__required">*</span></label>
-                <div class="segmented" role="tablist">
-                  <button type="button" class="segmented__option" data-event-size="small">
-                    Small <span class="segmented__option-meta">cap 300</span>
+                <div class="size-picker" role="radiogroup" aria-label="Event size">
+                  <button type="button" class="size-tile" data-event-size="small" role="radio" aria-checked="false">
+                    <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
+                    <div class="size-tile__name">Small</div>
+                    <div class="size-tile__attendees">Under 50 attendees</div>
+                    <div class="size-tile__cap">Cap: 300 sponsors</div>
                   </button>
-                  <button type="button" class="segmented__option is-active" data-event-size="medium">
-                    Medium <span class="segmented__option-meta">cap 600</span>
+                  <button type="button" class="size-tile is-active" data-event-size="medium" role="radio" aria-checked="true">
+                    <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
+                    <div class="size-tile__name">Medium</div>
+                    <div class="size-tile__attendees">50 to 150 attendees</div>
+                    <div class="size-tile__cap">Cap: 600 sponsors</div>
                   </button>
-                  <button type="button" class="segmented__option" data-event-size="large">
-                    Large <span class="segmented__option-meta">cap 1000</span>
+                  <button type="button" class="size-tile" data-event-size="large" role="radio" aria-checked="false">
+                    <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
+                    <div class="size-tile__name">Large</div>
+                    <div class="size-tile__attendees">Over 150 attendees</div>
+                    <div class="size-tile__cap">Cap: 1,000 sponsors</div>
                   </button>
                 </div>
-                <div class="form-helper">Small &lt; 50 attendees · Medium 50–150 · Large &gt; 150</div>
               </div>
             </div>
           </div>
 
           <!-- STATE: UPLOAD -->
           <div id="state-upload">
+
+            <!-- Step 2: Prepare-your-file guide -->
+            <div class="template-guide">
+              <div class="template-guide__header">
+                <div class="event-meta__num event-meta__num--gold">2</div>
+                <div>
+                  <h2 class="event-meta__title">Prepare your file</h2>
+                  <div class="event-meta__subtitle">Start from the template. Excel files are not accepted, save as CSV before uploading.</div>
+                </div>
+              </div>
+
+              <div class="template-guide__actions">
+                <button type="button" class="btn btn--primary" id="download-xlsx-template">
+                  <i class="bi bi-file-earmark-excel-fill"></i> Download Excel template
+                </button>
+                <button type="button" class="btn btn--secondary" onclick="downloadTemplate(); return false;">
+                  <i class="bi bi-filetype-csv"></i> Download CSV template
+                </button>
+              </div>
+
+              <div class="template-guide__example">
+                <div class="template-guide__example-label">Example of a correctly-formatted file</div>
+                <div class="template-guide__example-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>company_name</th>
+                        <th>industry_code</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>KOI Thé</td><td>food_beverage</td></tr>
+                      <tr><td>Uniqlo</td><td>apparel_accessories</td></tr>
+                      <tr><td>Logitech</td><td>tech_electronics</td></tr>
+                      <tr><td>Climb Central</td><td>activities_experiences</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="template-guide__rules">
+                <div class="template-guide__rules-title">Quick rules</div>
+                <ul>
+                  <li>One company per row.</li>
+                  <li>Two columns only: <code>company_name</code> and <code>industry_code</code>.</li>
+                  <li>Industry code is optional but speeds up classification. See the <a href="./dashboard.html">sponsor directory</a> for the full list of codes.</li>
+                  <li>No merged cells, no header notes, no totals row.</li>
+                  <li>Save as CSV (UTF-8) before uploading. In Excel: File &rsaquo; Save As &rsaquo; CSV UTF-8.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Step 3: Upload -->
             <div class="event-meta">
               <div class="event-meta__header">
-                <div class="event-meta__num">2</div>
+                <div class="event-meta__num">3</div>
                 <div>
                   <h2 class="event-meta__title">Upload your list</h2>
                   <div class="event-meta__subtitle">CSV or TXT, up to 5 MB.</div>
@@ -127,9 +190,9 @@
                 <div class="drop-zone__title">Drop your sponsor list here</div>
                 <div class="drop-zone__hint">or click to browse</div>
                 <div class="drop-zone__divider">
-                  <span>Accepts .csv or .txt · up to 5 MB</span>
-                  <span>·</span>
-                  <a href="#" onclick="downloadTemplate(); return false;">Download CSV template</a>
+                  <span>CSV or TXT, up to 5 MB</span>
+                  <span>&middot;</span>
+                  <a href="#" onclick="loadSample(); return false;">Load sample list</a>
                 </div>
               </div>
 
@@ -144,7 +207,7 @@
                 <div>
                   <h2 class="preview-card__title">Ready to check</h2>
                   <div class="preview-card__sub">
-                    <strong id="preview-total">0</strong> distinct companies · <span id="preview-cap">Medium · cap 600 ✓</span>
+                    <strong id="preview-total">0</strong> distinct companies &middot; <span id="preview-cap">Medium, cap 600 OK</span>
                   </div>
                 </div>
                 <div class="preview-card__actions">
@@ -169,7 +232,7 @@
                   <tbody id="preview-body"></tbody>
                 </table>
               </div>
-              <div class="form-helper mt-3">Showing the first 10 rows for preview only — the full list is checked when you submit.</div>
+              <div class="form-helper mt-3">Showing the first 10 rows for preview only. The full list is checked when you submit.</div>
             </div>
           </div>
 
@@ -178,8 +241,8 @@
             <div class="preview-card">
               <div class="checking-overlay">
                 <div class="loading-dot"></div>
-                <div class="checking-overlay__message">Cross-checking against 12,403 known sponsors…</div>
-                <div class="checking-overlay__sub">This usually takes 1–4 seconds.</div>
+                <div class="checking-overlay__message">Cross-checking against the sponsor database...</div>
+                <div class="checking-overlay__sub">This usually takes 1 to 4 seconds.</div>
               </div>
             </div>
           </div>
@@ -226,6 +289,10 @@
                   <div class="summary-stat__value" id="count-cooldown">0</div>
                   <div class="summary-stat__label">Cooldown</div>
                 </div>
+                <div class="summary-stat summary-stat--unverified">
+                  <div class="summary-stat__value" id="count-unverified">0</div>
+                  <div class="summary-stat__label">Unverified</div>
+                </div>
               </div>
             </div>
 
@@ -237,6 +304,7 @@
                 <button class="filter-chip" data-filter="alumni">Alumni</button>
                 <button class="filter-chip" data-filter="blocked">Blocked</button>
                 <button class="filter-chip" data-filter="cooldown">Cooldown</button>
+                <button class="filter-chip" data-filter="unverified">Unverified</button>
               </div>
             </div>
 
@@ -262,26 +330,26 @@
         <aside class="checker__aside">
           <div class="aside-card">
             <div class="aside-card__title">
-              <i class="bi bi-info-circle-fill"></i> Tips
+              <i class="bi bi-question-circle-fill"></i> What each status means
             </div>
             <ul class="aside-card__list">
-              <li>One company per row. Suffixes like "Pte Ltd" are auto-stripped.</li>
-              <li>Include an <code>industry</code> column to skip auto-classification.</li>
-              <li>UEN column (optional) gives the most reliable match.</li>
-              <li>Caps are enforced before submit — trim if you exceed.</li>
+              <li><strong>Clear</strong>: previously approved by BIZCOM, safe to approach.</li>
+              <li><strong>Caution</strong>: approaching the 30-day outreach cap.</li>
+              <li><strong>Alumni</strong>: alumni-affiliated, needs OAR clearance.</li>
+              <li><strong>Blocked</strong>: banned per Annex A or B, or company has closed.</li>
+              <li><strong>Cooldown</strong>: 30-day outreach cap reached, wait for next cycle.</li>
+              <li><strong>Unverified</strong>: new company, BIZCOM has not vetted yet.</li>
             </ul>
           </div>
 
           <div class="aside-card">
             <div class="aside-card__title">
-              <i class="bi bi-question-circle-fill"></i> Status meanings
+              <i class="bi bi-info-circle-fill"></i> Tips
             </div>
             <ul class="aside-card__list">
-              <li><strong>Clear</strong> — not in any list, can be approached pending BIZCOM approval.</li>
-              <li><strong>Caution</strong> — on Master List or nearing outreach cap.</li>
-              <li><strong>Alumni</strong> — alumni-affiliated, needs OAR clearance.</li>
-              <li><strong>Blocked</strong> — banned per Annex A/B or company is closed.</li>
-              <li><strong>Cooldown</strong> — over 30-day outreach cap.</li>
+              <li>One company per row. Suffixes like "Pte Ltd" are auto-stripped.</li>
+              <li>Include an <code>industry_code</code> column to skip auto-classification.</li>
+              <li>Caps are enforced before submit. Trim if you exceed.</li>
             </ul>
           </div>
 
@@ -289,7 +357,7 @@
             <div class="aside-card__title">
               <i class="bi bi-file-earmark-text-fill"></i> Try a sample
             </div>
-            <p class="text-xs text-secondary mb-3">No file ready? Load a 12-row sample list to see it in action.</p>
+            <p class="text-xs text-secondary mb-3">No file ready? Load a 12-row sample list to see the checker in action.</p>
             <button type="button" class="btn btn--secondary btn--sm" onclick="loadSample()" style="width: 100%">
               <i class="bi bi-magic"></i> Load sample list
             </button>
@@ -304,7 +372,7 @@
     <div class="container">
       <div class="footer__bottom">
         <span>© 2026 SMU BIZCOM</span>
-        <span><a href="./standing-order.html">Standing order</a> · <a href="mailto:biz.secretary@sa.smu.edu.sg">Contact</a></span>
+        <span><a href="./standing-order.html">Standing order</a> &middot; <a href="mailto:biz.secretary@sa.smu.edu.sg">Contact</a></span>
       </div>
     </div>
   </footer>
@@ -326,7 +394,7 @@
         <strong><span id="cap-modal-count">0</span></strong>.
       </p>
       <p class="text-secondary text-sm">
-        You can trim the list and re-upload, or reclassify your event as Large (cap 1000) above.
+        You can trim the list and re-upload, or reclassify your event as Large (cap 1,000) above.
       </p>
     </div>
     <div class="modal__footer">
@@ -336,7 +404,10 @@
   </div>
 </div>
 
-<!-- canvas-confetti for 100% clear celebration -->
+<!-- SheetJS for Excel template generation -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- canvas-confetti for zero-issue celebration -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 <!-- App scripts -->
@@ -346,12 +417,12 @@
 <script src="./js/components/count-up.js" defer></script>
 <script src="./js/lib/mock-data.js" defer></script>
 <script src="./js/lib/matcher.js" defer></script>
+<script src="./js/pages/sponsor-check-template.js" defer></script>
 <script src="./js/pages/sponsor-check.js" defer></script>
 
-<!-- Helpers used by inline onclick (small enough to inline) -->
 <script>
   function downloadTemplate() {
-    const csv = 'company_name,industry,contact_email,uen\nKOI Thé,food_beverage,contact@koi.com,\nUniqlo,apparel_accessories,,\nLogitech,tech_electronics,,\n';
+    const csv = 'company_name,industry_code\nKOI Thé,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -363,7 +434,7 @@
     URL.revokeObjectURL(url);
   }
   function loadSample() {
-    const sampleCsv = 'company_name,industry\nKOI Thé,food_beverage\nLiHO TEA,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\nGrab,transport_mobility\nSingapore Pools,\nAIA Insurance,\nDBS Bank,\nTea Tribe,food_beverage\nCrave Bakery,food_beverage\nClimb Central,activities_experiences\nCathay Cineplexes,entertainment_leisure\n';
+    const sampleCsv = 'company_name,industry_code\nKOI Thé,food_beverage\nLiHO TEA,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\nGrab,transport_mobility\nSingapore Pools,\nAIA Insurance,\nDBS Bank,\nTea Tribe,food_beverage\nCrave Bakery,food_beverage\nClimb Central,activities_experiences\nCathay Cineplexes,entertainment_leisure\n';
     const blob = new Blob([sampleCsv], { type: 'text/csv' });
     const file = new File([blob], 'sample-sponsors.csv', { type: 'text/csv' });
     const dt = new DataTransfer();
@@ -371,6 +442,8 @@
     const input = document.getElementById('file-input');
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
+    // Tell sponsor-check.js this was from the sample button
+    if (typeof window.__markSampleLoad === 'function') window.__markSampleLoad();
   }
 </script>
 </body>

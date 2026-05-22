@@ -3,40 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SponsorCheck — SMU BIZCOM</title>
+  <title>SponsorCheck, SMU BIZCOM</title>
   <link rel="icon" href="admin/assets/favicon.png">
-  <meta name="description" content="Pre-check your sponsor list against BIZCOM's banned, closed, alumni, and outreach-cap rules in seconds — before you email.">
+  <meta name="description" content="Pre-check your sponsor list against BIZCOM's banned, closed, alumni, and outreach-cap rules before you email.">
 
-  <!-- 1. Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
-  <!-- 2. Poppins -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
 
-  <!-- 3. Design tokens FIRST -->
   <link rel="stylesheet" href="./css/tokens.css">
   <link rel="stylesheet" href="./css/base.css">
   <link rel="stylesheet" href="./css/layout.css">
 
-  <!-- Components -->
   <link rel="stylesheet" href="./css/components/buttons.css">
   <link rel="stylesheet" href="./css/components/cards.css">
   <link rel="stylesheet" href="./css/components/pills.css">
   <link rel="stylesheet" href="./css/components/states.css">
 
-  <!-- Page -->
   <link rel="stylesheet" href="./css/pages/landing.css">
 
-  <!-- Utilities last -->
   <link rel="stylesheet" href="./css/utilities.css">
 </head>
 <body>
 
   <div class="page">
 
-    <!-- Navbar -->
     <nav class="navbar" aria-label="Main">
       <div class="navbar__container">
         <a href="./index.html" class="navbar__brand" aria-label="BIZCOM SponsorCheck home">
@@ -47,8 +39,8 @@
         </a>
         <div class="navbar__nav">
           <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-          <a href="./dashboard.html" class="navbar__link">Dashboard</a>
-          <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+          <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
+          <a href="./standing-order.html" class="navbar__link">Standing order</a>
           <a href="./admin/login.html" class="navbar__link">Admin</a>
         </div>
         <button class="navbar__toggle" aria-label="Open menu" aria-expanded="false">
@@ -57,15 +49,14 @@
       </div>
       <div class="navbar__drawer">
         <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-        <a href="./dashboard.html" class="navbar__link">Dashboard</a>
-        <a href="./standing-order.html" class="navbar__link">Standing Order</a>
+        <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
+        <a href="./standing-order.html" class="navbar__link">Standing order</a>
         <a href="./admin/login.html" class="navbar__link">Admin</a>
       </div>
     </nav>
 
     <main class="page__main">
 
-      <!-- Hero -->
       <section class="hero">
         <div class="hero__shape hero__shape--gold"></div>
         <div class="hero__shape hero__shape--navy"></div>
@@ -73,19 +64,19 @@
         <div class="hero__container">
           <div class="hero__copy">
             <h1 class="hero__title">
-              <span class="word">Pre-check</span>
+              <span class="word">Check</span>
               <span class="word">your</span>
               <span class="word">sponsor</span>
               <span class="word">list</span>
-              <span class="word">in</span>
-              <span class="word"><span class="hero__accent">seconds.</span></span>
+              <span class="word">before</span>
+              <span class="word"><span class="hero__accent">you submit.</span></span>
             </h1>
             <p class="hero__description">
-              Upload a CSV. We cross-check every company against BIZCOM's banned list, closed companies, alumni database, and 30-day outreach cap — so you email a cleaner list and look more coordinated to partners.
+              A tool for SMU clubs. Upload your sponsor list as a CSV and see which companies are banned, closed, alumni-affiliated, or at the 30-day outreach cap. Fix the list before you email BIZCOM.
             </p>
             <div class="hero__actions">
               <a href="./sponsor-check.html" class="btn btn--primary btn--lg">
-                <i class="bi bi-cloud-upload"></i> Check your list
+                <i class="bi bi-cloud-upload"></i> Open the checker
               </a>
               <a href="./standing-order.html" class="btn btn--secondary btn--lg">
                 Read the standing order
@@ -93,12 +84,11 @@
             </div>
           </div>
 
-          <!-- Mock results card -->
           <div class="hero__visual">
             <div class="hero__card">
               <div class="hero__card-header">
-                <div class="hero__card-title">Sample check &middot; 5 sponsors</div>
-                <span class="pill pill--neutral">DEMO</span>
+                <div class="hero__card-title">Sample check, 5 sponsors</div>
+                <span class="pill pill--neutral">Demo</span>
               </div>
               <div class="hero__card-row">
                 <span class="hero__card-name">KOI Thé</span>
@@ -125,109 +115,136 @@
         </div>
       </section>
 
-      <!-- Stat strip -->
-      <div class="container">
-        <div class="stat-strip reveal">
-          <div class="stat-strip__item">
-            <div class="stat-strip__value" data-countup="12403">0</div>
-            <div class="stat-strip__label">Sponsors tracked</div>
-          </div>
-          <div class="stat-strip__item">
-            <div class="stat-strip__value" data-countup="218">0</div>
-            <div class="stat-strip__label">On banned list</div>
-          </div>
-          <div class="stat-strip__item">
-            <div class="stat-strip__value" data-countup="142">0</div>
-            <div class="stat-strip__label">Checks this month</div>
-          </div>
-          <div class="stat-strip__item">
-            <div class="stat-strip__value" data-countup="15">0</div>
-            <div class="stat-strip__label">Industries tagged</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Value props -->
-      <section class="value-props">
-        <div class="container">
-          <div class="value-props__header reveal">
-            <div class="value-props__eyebrow">Why use it</div>
-            <h2 class="value-props__title">Less back-and-forth. Cleaner submissions.</h2>
-          </div>
-
-          <div class="grid grid--cols-3">
-            <div class="value-prop reveal delay-1">
-              <div class="value-prop__icon-wrap"><i class="bi bi-lightning-charge-fill"></i></div>
-              <h3 class="value-prop__title">Catch issues before the email</h3>
-              <p class="value-prop__description">
-                Spot banned, closed, and alumni-affiliated companies the moment you draft your list — not after Secretarial replies three days later.
-              </p>
-            </div>
-            <div class="value-prop reveal delay-2">
-              <div class="value-prop__icon-wrap"><i class="bi bi-shield-check"></i></div>
-              <h3 class="value-prop__title">Respect the 30-day outreach cap</h3>
-              <p class="value-prop__description">
-                See which companies are already saturated (close to or over their 10-contact rolling cap) so your event isn't the 11th cold ask in a month.
-              </p>
-            </div>
-            <div class="value-prop reveal delay-3">
-              <div class="value-prop__icon-wrap"><i class="bi bi-bar-chart-fill"></i></div>
-              <h3 class="value-prop__title">Industry-aware classification</h3>
-              <p class="value-prop__description">
-                Sponsors are tagged across 15 canonical industries — so you can see at a glance whether your list is well-spread or 200 F&amp;B chains.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- How it works -->
       <section class="how-it-works">
         <div class="container">
-          <div class="value-props__header reveal">
-            <div class="value-props__eyebrow">How it works</div>
-            <h2 class="value-props__title">Three steps. Roughly thirty seconds.</h2>
+          <div class="section-header reveal">
+            <div class="section-header__eyebrow">How to use it</div>
+            <h2 class="section-header__title">Your workflow, end to end</h2>
+            <p class="section-header__description">
+              Five steps, from your raw sponsor list to a BIZCOM-ready submission.
+            </p>
           </div>
-          <div class="steps">
-            <div class="step reveal delay-1">
-              <div class="step__num">1</div>
-              <h3 class="step__title">Upload your CSV</h3>
-              <p class="step__description">
-                Drop in your sponsor list (CSV or TXT). One column for company name, optionally one for industry. We provide a starter template.
+
+          <ol class="journey">
+            <li class="journey__step reveal">
+              <div class="journey__num">1</div>
+              <div class="journey__body">
+                <h3 class="journey__title">Prepare your sponsor list</h3>
+                <p class="journey__description">
+                  Download the CSV template, or use the formatting guide on the checker page. One row per company, one column for the name, optionally one for industry.
+                </p>
+              </div>
+            </li>
+            <li class="journey__step reveal">
+              <div class="journey__num">2</div>
+              <div class="journey__body">
+                <h3 class="journey__title">Save your file as CSV</h3>
+                <p class="journey__description">
+                  If you started in Excel, use File &rsaquo; Save As &rsaquo; CSV (UTF-8). This site does not accept Excel files directly.
+                </p>
+              </div>
+            </li>
+            <li class="journey__step reveal">
+              <div class="journey__num">3</div>
+              <div class="journey__body">
+                <h3 class="journey__title">Upload and run the check</h3>
+                <p class="journey__description">
+                  Drop the CSV into the checker, set your event size, and run the check. Results appear within seconds.
+                </p>
+              </div>
+            </li>
+            <li class="journey__step reveal">
+              <div class="journey__num">4</div>
+              <div class="journey__body">
+                <h3 class="journey__title">Review the flags</h3>
+                <p class="journey__description">
+                  Each company shows a status: clear, caution, alumni, blocked, cooldown, or unverified. Remove the ones you should not approach and keep the rest.
+                </p>
+              </div>
+            </li>
+            <li class="journey__step reveal">
+              <div class="journey__num">5</div>
+              <div class="journey__body">
+                <h3 class="journey__title">Email the cleaned list to BIZCOM</h3>
+                <p class="journey__description">
+                  Download the annotated CSV and email it to the Corporate Relations Secretary for final vetting. The page can pre-fill the email for you.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="features">
+        <div class="container">
+          <div class="section-header reveal">
+            <div class="section-header__eyebrow">What the checker does</div>
+            <h2 class="section-header__title">Built around the standing order</h2>
+            <p class="section-header__description">
+              The checker enforces the rules students usually miss.
+            </p>
+          </div>
+
+          <div class="features__grid">
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-x-octagon-fill"></i></div>
+              <h3 class="feature__title">Banned and closed companies</h3>
+              <p class="feature__description">
+                Cross-checks every name against Annex A and B of the standing order, plus companies that have closed.
               </p>
             </div>
-            <div class="step reveal delay-2">
-              <div class="step__num">2</div>
-              <h3 class="step__title">We cross-check instantly</h3>
-              <p class="step__description">
-                Every company is matched (exact and fuzzy) against the master list, banned list, alumni database, and current outreach counts.
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-mortarboard-fill"></i></div>
+              <h3 class="feature__title">Alumni-affiliated businesses</h3>
+              <p class="feature__description">
+                Flags companies owned or operated by SMU alumni, which need OAR clearance before any outreach.
               </p>
             </div>
-            <div class="step reveal delay-3">
-              <div class="step__num">3</div>
-              <h3 class="step__title">Download or email</h3>
-              <p class="step__description">
-                Download the annotated CSV with status, reason, and recommendation for each row — or email it straight to BIZCOM.
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-clock-history"></i></div>
+              <h3 class="feature__title">30-day outreach cap</h3>
+              <p class="feature__description">
+                Warns when a sponsor is close to or already over the 10-contact rolling cap, so your event is not the eleventh ask in a month.
+              </p>
+            </div>
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-tags-fill"></i></div>
+              <h3 class="feature__title">Industry classification</h3>
+              <p class="feature__description">
+                Tags every company with one of 15 industry categories so you can see whether your list is well-spread.
+              </p>
+            </div>
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-download"></i></div>
+              <h3 class="feature__title">Download annotated CSV</h3>
+              <p class="feature__description">
+                Export the result with status, reason, and recommendation per row. Use it as your BIZCOM submission.
+              </p>
+            </div>
+            <div class="feature reveal">
+              <div class="feature__icon"><i class="bi bi-envelope-paper-fill"></i></div>
+              <h3 class="feature__title">Email to BIZCOM directly</h3>
+              <p class="feature__description">
+                Open a pre-filled email to the Corporate Relations Secretary with your event details and the cleaned list attached.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- CTA strip -->
       <section class="container">
         <div class="cta-strip reveal">
           <div class="cta-strip__inner">
-            <h2 class="cta-strip__title">Try a check right now.</h2>
+            <h2 class="cta-strip__title">Ready to check a list?</h2>
             <p class="cta-strip__description">
-              No login. No setup. Just upload a CSV and see what comes back.
+              No login required.
             </p>
             <div class="cta-strip__actions">
               <a href="./sponsor-check.html" class="btn btn--gold btn--lg">
                 <i class="bi bi-cloud-upload"></i> Open the checker
               </a>
               <a href="./dashboard.html" class="btn btn--secondary btn--lg" style="color: white; border-color: rgba(255,255,255,0.4)">
-                See the dashboard
+                Browse the sponsor directory
               </a>
             </div>
           </div>
@@ -236,18 +253,17 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer__grid">
           <div>
-            <img src="admin/assets/bizcom-footer.png" alt="SMU BIZCOM">
+            <img src="admin/assets/bizcom-footer.png" alt="SMU BIZCOM" class="footer__brand-img">
           </div>
           <div>
             <div class="footer__heading">Product</div>
             <ul class="footer__list">
               <li><a href="./sponsor-check.html">Sponsor checker</a></li>
-              <li><a href="./dashboard.html">Public dashboard</a></li>
+              <li><a href="./dashboard.html">Sponsor directory</a></li>
               <li><a href="./standing-order.html">Standing order</a></li>
             </ul>
           </div>
@@ -256,21 +272,19 @@
             <ul class="footer__list">
               <li><a href="./admin/login.html">Admin login</a></li>
               <li><a href="mailto:biz.secretary@sa.smu.edu.sg">Contact Secretarial</a></li>
-              <li><a href="https://smubizcom.com" rel="noopener">smubizcom.com</a></li>
+              <li><a href="https://www.smusa.sg/smusa-gazette" rel="noopener" target="_blank">SMUSA Gazette</a></li>
             </ul>
           </div>
         </div>
         <div class="footer__bottom">
-          <span>© 2026 SMU BIZCOM. Built as a Phase 1 vetting tool.</span>
-          <span>Not affiliated with the official SMUSA website.</span>
+          <span>© 2026 SMU BIZCOM. A Phase 1 vetting tool.</span>
+          <span>Not the official SMUSA website.</span>
         </div>
       </div>
     </footer>
   </div>
 
-  <!-- Scripts -->
   <script src="./js/components/navbar.js" defer></script>
   <script src="./js/components/reveal.js" defer></script>
-  <script src="./js/components/count-up.js" defer></script>
 </body>
 </html>

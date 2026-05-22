@@ -1,8 +1,20 @@
 /* ============================================================
    js/lib/matcher.js
    Frontend placeholder for the sponsor-matching algorithm.
-   Mirrors §10 of the PRD. When Supabase Edge Functions are
+   Mirrors PRD section 10. When Supabase Edge Functions are
    wired up, this whole module is swapped for a fetch() call.
+
+   STATUS DEFINITIONS (finalised v2):
+     clear      : on the Master List, previously approved by BIZCOM,
+                  outreach count is comfortably below the cap.
+     caution    : on the Master List but approaching the 30-day
+                  outreach cap (8 or 9 of 10 contacts).
+     alumni     : alumni-affiliated, needs OAR clearance.
+     blocked    : on the banned list (Annex A or B) or closed.
+     cooldown   : 30-day outreach cap already hit, must wait.
+     unverified : not in any list. New company, BIZCOM has not
+                  vetted this one yet.
+     duplicate  : duplicate row within the same submission.
    ============================================================ */
 
 (function () {
@@ -17,9 +29,9 @@
   function normalise(name) {
     if (!name) return '';
     let n = String(name).toLowerCase();
-    n = n.replace(/\([^)]*\)/g, ' ');           // strip parentheticals
-    n = n.replace(/&/g, ' and ');                // & → and
-    n = n.replace(/[^\w\s]/g, ' ');              // strip punctuation
+    n = n.replace(/\([^)]*\)/g, ' ');
+    n = n.replace(/&/g, ' and ');
+    n = n.replace(/[^\w\s]/g, ' ');
     SUFFIXES.forEach(function (s) {
       const re = new RegExp('\\b' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
       n = n.replace(re, ' ');
@@ -28,7 +40,7 @@
     return n;
   }
 
-  // Simple keyword classifier for tier-2 industry auto-classification
+  // Keyword classifier for tier-2 industry auto-classification
   const KEYWORDS = {
     food_beverage: ['tea', 'coffee', 'cafe', 'café', 'bistro', 'kitchen', 'bakery', 'restaurant', 'food', 'noodle', 'ramen', 'sushi', 'eats', 'mart'],
     apparel_accessories: ['apparel', 'fashion', 'wear', 'clothing', 'shoe', 'bag'],
@@ -52,7 +64,7 @@
     return null;
   }
 
-  // Trigram similarity (Jaccard on trigram sets) — approximates pg_trgm
+  // Trigram similarity (Jaccard on trigram sets), approximates pg_trgm
   function trigrams(s) {
     s = '  ' + s + ' ';
     const set = new Set();
@@ -74,13 +86,13 @@
 
   /**
    * Check a single input name against the sponsor database.
-   * Returns: { status, matched, industry, classificationSource, reason, outreachCount }
+   * Returns: { input, status, matched, industry, classificationSource, reason, outreachCount }
    */
   function checkOne(inputName, providedIndustry) {
     const normalisedInput = normalise(inputName);
     const sponsors = window.MOCK_DATA.sponsors;
     const settings = window.MOCK_DATA.settings;
-    const outreach  = window.MOCK_DATA.outreachCounts;
+    const outreach = window.MOCK_DATA.outreachCounts;
 
     // 1. Exact match
     let matched = sponsors.find(function (s) { return s.normalised === normalisedInput; });
@@ -121,6 +133,7 @@
     // 4. Determine status
     const effectiveMatch = matched || fuzzy;
     const outreachCount = effectiveMatch ? (outreach[effectiveMatch.id] || 0) : 0;
+    const cap = settings.outreach_cap_per_30d;
 
     let status, reason;
     if (effectiveMatch) {
@@ -135,27 +148,27 @@
           break;
         case 'alumni':
           status = 'alumni';
-          reason = 'Alumni-affiliated — requires OAR clearance';
+          reason = 'Alumni-affiliated, requires OAR clearance';
           break;
         case 'master':
-          if (outreachCount >= settings.outreach_cap_per_30d) {
+          if (outreachCount >= cap) {
             status = 'cooldown';
-            reason = 'Over outreach cap (' + outreachCount + ' contacts in last 30 days). Cooling off.';
-          } else if (outreachCount >= settings.outreach_cap_per_30d - 2) {
+            reason = '30-day outreach cap reached (' + outreachCount + ' of ' + cap + '). Wait for next cycle.';
+          } else if (outreachCount >= cap - 2) {
             status = 'caution';
-            reason = 'Approaching outreach cap (' + outreachCount + ' of ' + settings.outreach_cap_per_30d + ' contacts in 30 days)';
+            reason = 'Approaching 30-day cap (' + outreachCount + ' of ' + cap + ' contacts).';
           } else {
-            status = 'caution';
-            reason = 'On Master List, previously approved (' + outreachCount + ' recent contacts)';
+            status = 'clear';
+            reason = 'Previously approved by BIZCOM (' + outreachCount + ' recent contacts).';
           }
           break;
         default:
           status = 'clear';
-          reason = 'Match found, no restrictions';
+          reason = 'Match found, no restrictions.';
       }
     } else {
-      status = 'clear';
-      reason = 'Not in database — eligible pending BIZCOM approval';
+      status = 'unverified';
+      reason = 'Not in any list. BIZCOM will need to vet this company.';
     }
 
     return {
@@ -170,14 +183,13 @@
   }
 
   /**
-   * Run the check on a list. Simulates a 1–2s network delay so the
+   * Run the check on a list. Simulates a 1-2s network delay so the
    * loading state actually shows up in dev.
    */
   function checkBatch(rows, opts) {
     const delay = (opts && typeof opts.delay === 'number') ? opts.delay : (800 + Math.random() * 1200);
     return new Promise(function (resolve) {
       setTimeout(function () {
-        // Dedupe by normalised name
         const seen = new Set();
         const results = [];
         rows.forEach(function (row) {

@@ -1,63 +1,79 @@
 /* ============================================================
    js/pages/sponsor-check.js
    Orchestrates the full flow:
-   metadata → upload → parse → preview → check → results
+   metadata, upload, parse, preview, check, results.
+
+   v2 notes:
+   - Added 'unverified' status (new company, not on any list).
+   - Sample list auto-runs the check (sample is curated, no need
+     for a second confirm click).
+   - Confetti only when there are zero issues at all
+     (blocked + cooldown + alumni + unverified all zero).
    ============================================================ */
 
 (function () {
   'use strict';
 
   // ---------- Element refs ----------
-  const dropZone     = document.getElementById('drop-zone');
-  const fileInput    = document.getElementById('file-input');
-  const eventName    = document.getElementById('event-name');
-  const eventClub    = document.getElementById('event-club');
-  const eventSizeBtns= document.querySelectorAll('[data-event-size]');
+  const dropZone      = document.getElementById('drop-zone');
+  const fileInput     = document.getElementById('file-input');
+  const eventName     = document.getElementById('event-name');
+  const eventClub     = document.getElementById('event-club');
+  const eventSizeBtns = document.querySelectorAll('[data-event-size]');
 
-  const uploadState  = document.getElementById('state-upload');
-  const previewState = document.getElementById('state-preview');
-  const checkingState= document.getElementById('state-checking');
-  const resultsState = document.getElementById('state-results');
+  const uploadState   = document.getElementById('state-upload');
+  const previewState  = document.getElementById('state-preview');
+  const checkingState = document.getElementById('state-checking');
+  const resultsState  = document.getElementById('state-results');
 
-  const uploadStatus = document.getElementById('upload-status');
-  const previewBody  = document.getElementById('preview-body');
-  const previewTotal = document.getElementById('preview-total');
-  const previewCap   = document.getElementById('preview-cap');
-  const submitBtn    = document.getElementById('submit-check');
-  const reuploadBtn  = document.getElementById('reupload');
+  const uploadStatus  = document.getElementById('upload-status');
+  const previewBody   = document.getElementById('preview-body');
+  const previewTotal  = document.getElementById('preview-total');
+  const previewCap    = document.getElementById('preview-cap');
+  const submitBtn     = document.getElementById('submit-check');
+  const reuploadBtn   = document.getElementById('reupload');
 
-  const startOverBtn = document.getElementById('start-over');
+  const startOverBtn  = document.getElementById('start-over');
   const downloadCsvBtn = document.getElementById('download-csv');
   const emailBizcomBtn = document.getElementById('email-bizcom');
 
-  const resultsTbody = document.getElementById('results-tbody');
-  const filterChips  = document.querySelectorAll('[data-filter]');
-  const summary      = {
-    clear: document.getElementById('count-clear'),
-    caution: document.getElementById('count-caution'),
-    alumni: document.getElementById('count-alumni'),
-    blocked: document.getElementById('count-blocked'),
-    cooldown: document.getElementById('count-cooldown')
+  const resultsTbody  = document.getElementById('results-tbody');
+  const filterChips   = document.querySelectorAll('[data-filter]');
+  const summary = {
+    clear:      document.getElementById('count-clear'),
+    caution:    document.getElementById('count-caution'),
+    alumni:     document.getElementById('count-alumni'),
+    blocked:    document.getElementById('count-blocked'),
+    cooldown:   document.getElementById('count-cooldown'),
+    unverified: document.getElementById('count-unverified')
   };
 
   // ---------- State ----------
-  let parsedRows = [];   // [{ name, industry }]
-  let results    = [];   // [{ input, status, matched, industry, reason, ... }]
-  let eventSize  = 'medium';
+  let parsedRows = [];
+  let results = [];
+  let eventSize = 'medium';
   let activeFilter = 'all';
+  let isFromSample = false;
 
   const CAPS = { small: 300, medium: 600, large: 1000 };
-  const SIZE_LABELS = { small: 'Small (<50 attendees)', medium: 'Medium (50–150)', large: 'Large (>150)' };
+  const SIZE_LABELS = {
+    small:  'Small (under 50 attendees)',
+    medium: 'Medium (50 to 150 attendees)',
+    large:  'Large (over 150 attendees)'
+  };
 
-  // ---------- Event size segmented control ----------
+  // ---------- Event size tile picker ----------
   eventSizeBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
-      eventSizeBtns.forEach(function (b) { b.classList.remove('is-active'); });
+      eventSizeBtns.forEach(function (b) {
+        b.classList.remove('is-active');
+        b.setAttribute('aria-checked', 'false');
+      });
       btn.classList.add('is-active');
+      btn.setAttribute('aria-checked', 'true');
       eventSize = btn.getAttribute('data-event-size');
-      // Update cap display if preview is currently shown
       if (previewCap) {
-        previewCap.textContent = SIZE_LABELS[eventSize] + ' · cap ' + CAPS[eventSize].toLocaleString();
+        previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + CAPS[eventSize].toLocaleString();
       }
     });
   });
@@ -92,18 +108,16 @@
 
   // ---------- File handling ----------
   function handleFile(file) {
-    // Validation: type
     const okExt = /\.(csv|txt)$/i.test(file.name);
     if (!okExt) {
       shakeDropZone();
       window.toast({
         type: 'error',
         title: 'Wrong file type',
-        message: 'We accept .csv and .txt only. Convert .xlsx in Excel → Save As → CSV.'
+        message: 'Only .csv and .txt are accepted. Download the template, fill it in, and save as CSV.'
       });
       return;
     }
-    // Validation: size 5MB
     if (file.size > 5 * 1024 * 1024) {
       shakeDropZone();
       window.toast({
@@ -143,16 +157,15 @@
   }
 
   function showUploadStatus(file) {
-    uploadStatus.innerHTML = `
-      <div class="upload-status">
-        <div class="upload-status__icon"><i class="bi bi-file-earmark-text"></i></div>
-        <div class="upload-status__body">
-          <div class="upload-status__name">${escapeHtml(file.name)}</div>
-          <div class="upload-status__meta">${(file.size / 1024).toFixed(1)} KB · parsing…</div>
-          <div class="progress mt-2"><div class="progress__bar progress__bar--indeterminate"></div></div>
-        </div>
-      </div>
-    `;
+    uploadStatus.innerHTML =
+      '<div class="upload-status">' +
+        '<div class="upload-status__icon"><i class="bi bi-file-earmark-text"></i></div>' +
+        '<div class="upload-status__body">' +
+          '<div class="upload-status__name">' + escapeHtml(file.name) + '</div>' +
+          '<div class="upload-status__meta">' + (file.size / 1024).toFixed(1) + ' KB, parsing...</div>' +
+          '<div class="progress mt-2"><div class="progress__bar progress__bar--indeterminate"></div></div>' +
+        '</div>' +
+      '</div>';
   }
 
   // ---------- Parser (CSV/TXT) ----------
@@ -167,12 +180,11 @@
     let rows = [];
 
     if (isCsv) {
-      // Detect header
       const headerLine = lines[0];
       const headerCols = parseCsvLine(headerLine).map(function (c) { return c.toLowerCase().trim(); });
       const hasHeader = headerCols.some(function (c) { return /name|company/.test(c); });
       const nameIdx = hasHeader ? headerCols.findIndex(function (c) { return /name|company/.test(c); }) : 0;
-      const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type/.test(c); }) : -1;
+      const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type|code/.test(c); }) : -1;
       const dataLines = hasHeader ? lines.slice(1) : lines;
       dataLines.forEach(function (line) {
         const cols = parseCsvLine(line);
@@ -182,7 +194,6 @@
         rows.push({ name: name, industry: industry || null });
       });
     } else {
-      // TXT — one name per line
       lines.forEach(function (line) {
         const name = line.trim();
         if (name) rows.push({ name: name, industry: null });
@@ -193,7 +204,6 @@
       throw new Error('No company names found in the file.');
     }
 
-    // Validate against cap
     if (rows.length > CAPS[eventSize]) {
       showCapExceededModal(rows.length);
       return;
@@ -204,7 +214,6 @@
   }
 
   function parseCsvLine(line) {
-    // Minimal CSV parser handling quoted commas
     const out = [];
     let buf = '', inQ = false;
     for (let i = 0; i < line.length; i++) {
@@ -231,25 +240,39 @@
     previewState.classList.remove('d-none');
 
     previewTotal.textContent = parsedRows.length.toLocaleString();
-    previewCap.textContent = SIZE_LABELS[eventSize] + ' · cap ' + CAPS[eventSize].toLocaleString() + ' ✓';
+    previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + CAPS[eventSize].toLocaleString() + ' OK';
 
-    // First 10 rows
     previewBody.innerHTML = parsedRows.slice(0, 10).map(function (r, i) {
-      return `
-        <tr>
-          <td class="table__cell-secondary">${i + 1}</td>
-          <td class="table__cell-primary">${escapeHtml(r.name)}</td>
-          <td>${r.industry ? `<span class="tag">${escapeHtml(r.industry)}</span>` : '<span class="text-muted text-xs">auto</span>'}</td>
-        </tr>
-      `;
+      const indCell = r.industry
+        ? '<span class="tag">' + escapeHtml(r.industry) + '</span>'
+        : '<span class="text-muted text-xs">auto</span>';
+      return (
+        '<tr>' +
+          '<td class="table__cell-secondary">' + (i + 1) + '</td>' +
+          '<td class="table__cell-primary">' + escapeHtml(r.name) + '</td>' +
+          '<td>' + indCell + '</td>' +
+        '</tr>'
+      );
     }).join('');
 
     if (parsedRows.length > 10) {
-      previewBody.innerHTML += `
-        <tr><td colspan="3" class="text-center text-muted text-xs" style="padding: var(--space-3)">
-          + ${parsedRows.length - 10} more rows…
-        </td></tr>
-      `;
+      previewBody.innerHTML +=
+        '<tr><td colspan="3" class="text-center text-muted text-xs" style="padding: var(--space-3)">' +
+          '+ ' + (parsedRows.length - 10) + ' more rows...' +
+        '</td></tr>';
+    }
+
+    // If this came from the sample button, the user has already implicitly
+    // confirmed the data. Hide the check button and auto-run.
+    if (isFromSample && submitBtn) {
+      submitBtn.style.display = 'none';
+      setTimeout(function () {
+        // Reset the flag so a later manual upload behaves normally
+        isFromSample = false;
+        runCheck();
+      }, 600);
+    } else if (submitBtn) {
+      submitBtn.style.display = '';
     }
   }
 
@@ -272,25 +295,30 @@
     checkingState.classList.add('d-none');
     resultsState.classList.remove('d-none');
 
-    // Counts
-    const counts = { clear: 0, caution: 0, alumni: 0, blocked: 0, cooldown: 0, duplicate: 0 };
+    const counts = { clear: 0, caution: 0, alumni: 0, blocked: 0, cooldown: 0, unverified: 0, duplicate: 0 };
     results.forEach(function (r) {
       if (counts[r.status] !== undefined) counts[r.status]++;
     });
 
-    // Animate counts
     Object.keys(summary).forEach(function (key) {
       if (summary[key]) {
         summary[key].setAttribute('data-countup', counts[key] || 0);
         summary[key].textContent = '0';
-        window.animateCountUp(summary[key]);
+        if (typeof window.animateCountUp === 'function') {
+          window.animateCountUp(summary[key]);
+        } else {
+          summary[key].textContent = String(counts[key] || 0);
+        }
       }
     });
 
     renderTable();
 
-    // Confetti if 100% clear
-    if (counts.clear === results.length && results.length > 0 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Confetti only when there are zero issues to act on.
+    // "Issues" = blocked, cooldown, alumni (alumni still needs OAR coordination).
+    // Unverified is fine, that's just BIZCOM's normal job.
+    const hasIssues = counts.blocked > 0 || counts.cooldown > 0 || counts.alumni > 0;
+    if (!hasIssues && results.length > 0 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       if (window.confetti) {
         window.confetti({
           particleCount: 80,
@@ -301,7 +329,6 @@
       }
     }
 
-    // Scroll into view
     resultsState.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -311,35 +338,42 @@
       : results.filter(function (r) { return r.status === activeFilter; });
 
     if (filtered.length === 0) {
-      resultsTbody.innerHTML = `
-        <tr><td colspan="5">
-          <div class="empty-state">
-            <i class="bi bi-search empty-state__icon"></i>
-            <div class="empty-state__title">No matches for this filter</div>
-            <div class="empty-state__description">Try a different status or clear the filter.</div>
-          </div>
-        </td></tr>
-      `;
+      resultsTbody.innerHTML =
+        '<tr><td colspan="5">' +
+          '<div class="empty-state">' +
+            '<i class="bi bi-search empty-state__icon"></i>' +
+            '<div class="empty-state__title">No matches for this filter</div>' +
+            '<div class="empty-state__description">Try a different status or clear the filter.</div>' +
+          '</div>' +
+        '</td></tr>';
       return;
     }
 
     resultsTbody.innerHTML = filtered.map(function (r, i) {
       const pill = pillFor(r.status);
-      const industryLabel = r.industry ? industryDisplayName(r.industry) : '—';
-      const sourceLabel = r.classificationSource ? `<span class="text-xs text-muted">(${r.classificationSource})</span>` : '';
-      const matchedLabel = r.matched ? `<div class="table__cell-secondary">matched: ${escapeHtml(r.matched)}</div>` : '';
-      return `
-        <tr class="${r.status === 'blocked' || r.status === 'cooldown' ? 'is-flagged' : ''}">
-          <td class="table__cell-secondary" data-label="#">${i + 1}</td>
-          <td data-label="Company">
-            <div class="table__cell-primary">${escapeHtml(r.input)}</div>
-            ${matchedLabel}
-          </td>
-          <td data-label="Status">${pill}</td>
-          <td data-label="Industry"><span class="tag">${escapeHtml(industryLabel)}</span> ${sourceLabel}</td>
-          <td data-label="Reason" class="text-secondary text-xs">${escapeHtml(r.reason || '')}</td>
-        </tr>
-      `;
+      const industryLabel = r.industry ? industryDisplayName(r.industry) : '';
+      const sourceLabel = r.classificationSource
+        ? '<span class="text-xs text-muted">(' + r.classificationSource + ')</span>'
+        : '';
+      const matchedLabel = r.matched
+        ? '<div class="table__cell-secondary">matched: ' + escapeHtml(r.matched) + '</div>'
+        : '';
+      const flagClass = (r.status === 'blocked' || r.status === 'cooldown') ? 'is-flagged' : '';
+      return (
+        '<tr class="' + flagClass + '">' +
+          '<td class="table__cell-secondary" data-label="#">' + (i + 1) + '</td>' +
+          '<td data-label="Company">' +
+            '<div class="table__cell-primary">' + escapeHtml(r.input) + '</div>' +
+            matchedLabel +
+          '</td>' +
+          '<td data-label="Status">' + pill + '</td>' +
+          '<td data-label="Industry">' +
+            (industryLabel ? '<span class="tag">' + escapeHtml(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
+            ' ' + sourceLabel +
+          '</td>' +
+          '<td data-label="Reason" class="text-secondary text-xs">' + escapeHtml(r.reason || '') + '</td>' +
+        '</tr>'
+      );
     }).join('');
   }
 
@@ -354,15 +388,16 @@
 
   function pillFor(status) {
     const map = {
-      clear:    { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
-      caution:  { cls: 'pill--caution',  icon: 'bi-exclamation-circle-fill', label: 'Caution' },
-      alumni:   { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
-      blocked:  { cls: 'pill--blocked',  icon: 'bi-x-circle-fill',           label: 'Blocked' },
-      cooldown: { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },
-      duplicate:{ cls: 'pill--neutral',  icon: 'bi-files',                   label: 'Duplicate' }
+      clear:      { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
+      caution:    { cls: 'pill--caution',  icon: 'bi-exclamation-circle-fill', label: 'Caution' },
+      alumni:     { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
+      blocked:    { cls: 'pill--blocked',  icon: 'bi-x-circle-fill',           label: 'Blocked' },
+      cooldown:   { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },
+      unverified: { cls: 'pill--neutral',  icon: 'bi-question-circle-fill',    label: 'Unverified' },
+      duplicate:  { cls: 'pill--neutral',  icon: 'bi-files',                   label: 'Duplicate' }
     };
     const m = map[status] || map.duplicate;
-    return `<span class="pill ${m.cls}"><i class="bi ${m.icon} pill__icon"></i>${m.label}</span>`;
+    return '<span class="pill ' + m.cls + '"><i class="bi ' + m.icon + ' pill__icon"></i>' + m.label + '</span>';
   }
 
   function industryDisplayName(code) {
@@ -411,7 +446,7 @@
     emailBizcomBtn.addEventListener('click', function () {
       const event = eventName.value || '(unnamed event)';
       const club  = eventClub.value || '(club name)';
-      const subject = encodeURIComponent('[Sponsor Check] ' + event + ' — ' + club);
+      const subject = encodeURIComponent('[Sponsor Check] ' + event + ', ' + club);
       const body = encodeURIComponent(
         'Hi BIZCOM team,\n\n' +
         'Pre-check results for the following:\n\n' +
@@ -427,15 +462,15 @@
   }
 
   // ---------- Start over ----------
-  if (startOverBtn) {
-    startOverBtn.addEventListener('click', resetToUpload);
-  }
+  if (startOverBtn) startOverBtn.addEventListener('click', resetToUpload);
 
   function resetToUpload() {
     parsedRows = [];
     results = [];
+    isFromSample = false;
     if (fileInput) fileInput.value = '';
     if (uploadStatus) uploadStatus.innerHTML = '';
+    if (submitBtn) submitBtn.style.display = '';
     previewState.classList.add('d-none');
     checkingState.classList.add('d-none');
     resultsState.classList.add('d-none');
@@ -451,6 +486,11 @@
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+
+  // Expose hook for the inline loadSample() helper in sponsor-check.html
+  window.__markSampleLoad = function () {
+    isFromSample = true;
+  };
 })();
 
 // Shake keyframe for invalid-drop feedback
@@ -459,14 +499,13 @@
   if (document.getElementById(styleId)) return;
   const style = document.createElement('style');
   style.id = styleId;
-  style.textContent = `
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-6px); }
-      40% { transform: translateX(6px); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
-    }
-  `;
+  style.textContent =
+    '@keyframes shake {' +
+      '0%, 100% { transform: translateX(0); }' +
+      '20% { transform: translateX(-6px); }' +
+      '40% { transform: translateX(6px); }' +
+      '60% { transform: translateX(-4px); }' +
+      '80% { transform: translateX(4px); }' +
+    '}';
   document.head.appendChild(style);
 })();

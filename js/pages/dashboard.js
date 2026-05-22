@@ -1,192 +1,190 @@
 /* ============================================================
    js/pages/dashboard.js
-   Public dashboard: KPI tile counts + Chart.js charts.
+   Renders the Sponsor Directory:
+   - 15 industry category cards
+   - Browseable banned / closed / alumni tables with search
    ============================================================ */
 
 (function () {
   'use strict';
 
-  // Brand palette for charts
-  const C = {
-    navy:   '#2E529D',
-    navyL:  '#5A8CD2',
-    gold:   '#D6B238',
-    goldL:  '#F5D84C',
-    orange: '#CA581C',
-    orangeD:'#D33A03',
-    green:  '#2A9463',
-    greenL: '#79C076',
-    muted:  '#8A94A6'
+  // Map industry code to icon + short description + examples
+  const INDUSTRY_META = {
+    food_beverage:         { icon: 'bi-cup-hot-fill',          tone: 'navy',   examples: 'KOI Thé, LiHO, Starbucks, Subway' },
+    apparel_accessories:   { icon: 'bi-bag-fill',              tone: 'navy',   examples: 'Uniqlo, Charles & Keith, Adidas' },
+    beauty_personal_care:  { icon: 'bi-stars',                 tone: 'gold',   examples: 'Watsons, Sephora, The Body Shop' },
+    entertainment_leisure: { icon: 'bi-film',                  tone: 'gold',   examples: 'Cathay Cineplexes, Timezone' },
+    activities_experiences:{ icon: 'bi-controller',            tone: 'green',  examples: 'Climb Central, BoulderPlus, Escape Hunt' },
+    tech_electronics:      { icon: 'bi-cpu-fill',              tone: 'navy',   examples: 'Razer, Logitech, Challenger' },
+    education_services:    { icon: 'bi-mortarboard-fill',      tone: 'navy',   examples: 'tuition centres, learning studios' },
+    health_wellness:       { icon: 'bi-heart-pulse-fill',      tone: 'green',  examples: 'Anytime Fitness, ClassPass, yoga studios' },
+    transport_mobility:    { icon: 'bi-truck',                 tone: 'orange', examples: 'Grab, GetGo, SG Bike' },
+    home_lifestyle:        { icon: 'bi-house-heart-fill',      tone: 'gold',   examples: 'MUJI, IKEA, Daiso' },
+    professional_services: { icon: 'bi-briefcase-fill',        tone: 'navy',   examples: 'consulting, legal, accounting' },
+    media_publishing:      { icon: 'bi-newspaper',             tone: 'gold',   examples: 'magazines, podcasts, content houses' },
+    non_profit_government: { icon: 'bi-building',              tone: 'orange', examples: 'NGOs, statutory boards (route via OAR)' },
+    retail_general:        { icon: 'bi-shop',                  tone: 'navy',   examples: 'department stores, general retail' },
+    other:                 { icon: 'bi-three-dots',            tone: 'navy',   examples: 'anything else, BIZCOM will reclassify' }
   };
 
-  // Common Chart.js defaults
-  function applyDefaults() {
-    if (!window.Chart) return;
-    Chart.defaults.font.family = "Poppins, system-ui, sans-serif";
-    Chart.defaults.font.size = 12;
-    Chart.defaults.color = '#4A5568';
-    Chart.defaults.plugins.legend.display = false;
-    Chart.defaults.animation.duration = 800;
-    Chart.defaults.animation.easing = 'easeOutQuart';
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      Chart.defaults.animation.duration = 0;
+  function renderIndustries() {
+    const grid = document.getElementById('industries-grid');
+    if (!grid) return;
+    const industries = window.MOCK_DATA.industries;
+
+    grid.innerHTML = industries.map(function (ind) {
+      const meta = INDUSTRY_META[ind.code] || { icon: 'bi-tag', tone: 'navy', examples: '' };
+      return (
+        '<div class="industry-card industry-card--' + meta.tone + '">' +
+          '<div class="industry-card__icon"><i class="bi ' + meta.icon + '"></i></div>' +
+          '<div class="industry-card__body">' +
+            '<div class="industry-card__name">' + escapeHtml(ind.display_name) + '</div>' +
+            '<code class="industry-card__code">' + escapeHtml(ind.code) + '</code>' +
+            (meta.examples ? '<div class="industry-card__examples">' + escapeHtml(meta.examples) + '</div>' : '') +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // -- Restricted sponsors tabs and table --
+
+  let activeTab = 'banned';
+  let searchQuery = '';
+
+  function getIndustryDisplay(code) {
+    const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
+    return ind ? ind.display_name : code;
+  }
+
+  function rowsForTab(tab) {
+    const all = window.MOCK_DATA.sponsors;
+    if (tab === 'banned') return all.filter(function (s) { return s.category === 'banned'; });
+    if (tab === 'closed') return all.filter(function (s) { return s.category === 'closed'; });
+    if (tab === 'alumni') return all.filter(function (s) { return s.category === 'alumni'; });
+    return [];
+  }
+
+  function reasonFor(sponsor, tab) {
+    if (tab === 'banned') return sponsor.ban_reason || 'On the banned list';
+    if (tab === 'closed') return sponsor.notes || 'Ceased operations';
+    if (tab === 'alumni') return sponsor.alumni_owner ? ('Owned by ' + sponsor.alumni_owner) : 'Alumni-affiliated, OAR clearance needed';
+    return '';
+  }
+
+  function updateCounts() {
+    const elBanned = document.getElementById('count-banned');
+    const elClosed = document.getElementById('count-closed');
+    const elAlumni = document.getElementById('count-alumni');
+    if (elBanned) elBanned.textContent = rowsForTab('banned').length;
+    if (elClosed) elClosed.textContent = rowsForTab('closed').length;
+    if (elAlumni) elAlumni.textContent = rowsForTab('alumni').length;
+  }
+
+  function updateReasonHeader() {
+    const h = document.getElementById('reason-col-header');
+    if (!h) return;
+    if (activeTab === 'banned') h.textContent = 'Reason';
+    else if (activeTab === 'closed') h.textContent = 'Status';
+    else if (activeTab === 'alumni') h.textContent = 'Affiliation';
+  }
+
+  function renderRestricted() {
+    const tbody = document.getElementById('restricted-tbody');
+    const empty = document.getElementById('restricted-empty');
+    if (!tbody) return;
+
+    const rows = rowsForTab(activeTab);
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = q ? rows.filter(function (s) {
+      return s.name.toLowerCase().indexOf(q) !== -1
+          || getIndustryDisplay(s.industry).toLowerCase().indexOf(q) !== -1
+          || reasonFor(s, activeTab).toLowerCase().indexOf(q) !== -1;
+    }) : rows;
+
+    if (!filtered.length) {
+      tbody.innerHTML = '';
+      if (empty) empty.hidden = false;
+      return;
     }
+    if (empty) empty.hidden = true;
+
+    tbody.innerHTML = filtered.map(function (s) {
+      const pill = pillFor(activeTab);
+      return (
+        '<tr>' +
+          '<td>' +
+            '<div class="restricted-table__name">' + escapeHtml(s.name) + '</div>' +
+            '<div class="restricted-table__pill">' + pill + '</div>' +
+          '</td>' +
+          '<td class="restricted-table__industry">' + escapeHtml(getIndustryDisplay(s.industry)) + '</td>' +
+          '<td class="restricted-table__reason">' + escapeHtml(reasonFor(s, activeTab)) + '</td>' +
+        '</tr>'
+      );
+    }).join('');
   }
 
-  function init() {
-    if (!window.Chart) return;
-    applyDefaults();
-    renderIndustryBar();
-    renderWeeklyLine();
-    renderCategoryDonut();
-    renderHeatmap();
+  function pillFor(tab) {
+    if (tab === 'banned') return '<span class="pill pill--blocked"><i class="bi bi-x-circle-fill pill__icon"></i>Blocked</span>';
+    if (tab === 'closed') return '<span class="pill pill--blocked"><i class="bi bi-slash-circle-fill pill__icon"></i>Closed</span>';
+    if (tab === 'alumni') return '<span class="pill pill--alumni"><i class="bi bi-mortarboard-fill pill__icon"></i>Alumni</span>';
+    return '';
   }
 
-  // ---------- 1. Outreach by industry (top 10, last 30 days) ----------
-  function renderIndustryBar() {
-    const el = document.getElementById('chart-industry');
-    if (!el) return;
-    const data = [
-      { label: 'Food & Beverage',         value: 312 },
-      { label: 'Apparel & Accessories',   value: 187 },
-      { label: 'Tech & Electronics',      value: 142 },
-      { label: 'Beauty & Personal Care',  value: 108 },
-      { label: 'Activities',              value: 94 },
-      { label: 'Entertainment',           value: 82 },
-      { label: 'Health & Wellness',       value: 67 },
-      { label: 'Education',               value: 55 },
-      { label: 'Home & Lifestyle',        value: 41 },
-      { label: 'Professional Services',   value: 28 }
-    ];
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: data.map(d => d.label),
-        datasets: [{
-          data: data.map(d => d.value),
-          backgroundColor: C.navy,
-          hoverBackgroundColor: C.navyL,
-          borderRadius: 6,
-          maxBarThickness: 28
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { color: '#F0F0F0' }, ticks: { color: C.muted } },
-          y: { grid: { display: false }, ticks: { color: '#4A5568', font: { size: 11 } } }
-        }
-      }
+  function bindTabs() {
+    const tabs = document.querySelectorAll('.restricted-tab');
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        tabs.forEach(function (b) {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-selected', 'true');
+        activeTab = btn.getAttribute('data-tab');
+        updateReasonHeader();
+        renderRestricted();
+      });
     });
   }
 
-  // ---------- 2. Weekly submission volume (last 12 weeks) ----------
-  function renderWeeklyLine() {
-    const el = document.getElementById('chart-weekly');
-    if (!el) return;
-    const labels = [];
-    const values = [22, 18, 31, 28, 26, 35, 42, 39, 48, 51, 45, 56];
-    for (let i = 11; i >= 0; i--) labels.push('W-' + i);
-    new Chart(el, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          borderColor: C.navy,
-          backgroundColor: 'rgba(46, 82, 157, 0.08)',
-          borderWidth: 2,
-          tension: 0.35,
-          fill: true,
-          pointBackgroundColor: C.navy,
-          pointRadius: 3,
-          pointHoverRadius: 5
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false }, ticks: { color: C.muted } },
-          y: { grid: { color: '#F0F0F0' }, ticks: { color: C.muted }, beginAtZero: true }
-        }
-      }
+  function bindSearch() {
+    const input = document.getElementById('restricted-search-input');
+    if (!input) return;
+    input.addEventListener('input', function (e) {
+      searchQuery = e.target.value || '';
+      renderRestricted();
     });
   }
 
-  // ---------- 3. Category donut ----------
-  function renderCategoryDonut() {
-    const el = document.getElementById('chart-categories');
-    if (!el) return;
-    const data = {
-      labels: ['Master', 'Banned', 'Alumni', 'Unverified'],
-      values: [8821, 218, 47, 3317],
-      colors: [C.green, C.orange, C.navy, C.muted]
-    };
-    new Chart(el, {
-      type: 'doughnut',
-      data: {
-        labels: data.labels,
-        datasets: [{
-          data: data.values,
-          backgroundColor: data.colors,
-          borderColor: '#FFFFFF',
-          borderWidth: 3,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '65%'
-      }
-    });
-    // Populate legend
-    const legend = document.getElementById('chart-categories-legend');
-    if (legend) {
-      legend.innerHTML = data.labels.map((lbl, i) => `
-        <span class="chart-legend__item">
-          <span class="chart-legend__dot" style="background-color:${data.colors[i]}"></span>
-          ${lbl} <strong style="color:#0B103F;margin-left:4px">${data.values[i].toLocaleString()}</strong>
-        </span>
-      `).join('');
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Boot when DOM ready and MOCK_DATA loaded
+  function boot() {
+    if (!window.MOCK_DATA) {
+      // mock-data.js loads with defer too; wait one frame
+      requestAnimationFrame(boot);
+      return;
     }
+    renderIndustries();
+    updateCounts();
+    updateReasonHeader();
+    renderRestricted();
+    bindTabs();
+    bindSearch();
   }
 
-  // ---------- 4. Industry × category heatmap (rendered as stacked bar) ----------
-  function renderHeatmap() {
-    const el = document.getElementById('chart-heatmap');
-    if (!el) return;
-    const labels = ['F&B', 'Apparel', 'Beauty', 'Tech', 'Activities', 'Entertain.', 'Health'];
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Master',   data: [1240, 420, 380, 290, 180, 220, 160], backgroundColor: C.green },
-          { label: 'Banned',   data: [45, 0, 0, 0, 0, 12, 0],              backgroundColor: C.orange },
-          { label: 'Alumni',   data: [12, 4, 2, 5, 3, 1, 2],               backgroundColor: C.navy },
-          { label: 'Unverif.', data: [320, 110, 90, 80, 60, 70, 40],       backgroundColor: C.muted }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } } },
-        scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { color: C.muted } },
-          y: { stacked: true, grid: { color: '#F0F0F0' }, ticks: { color: C.muted } }
-        }
-      }
-    });
-  }
-
-  // Wait for Chart.js to load, then init
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 })();
