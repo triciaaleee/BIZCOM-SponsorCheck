@@ -406,9 +406,6 @@
 }
 
 .cta-strip__description {
-  position: relative;
-  font-size: var(--font-size-base);
-  color: rgba(255, 255, 255, 0.8);
   max-width: 560px;
   margin: 0 auto var(--space-5) auto;
 }
