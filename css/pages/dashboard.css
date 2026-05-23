@@ -34,13 +34,6 @@
   max-width: 640px;
 }
 
-.directory-section__footnote {
-  margin-top: var(--space-4);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  font-style: italic;
-}
-
 /* ---------- Industries grid ---------- */
 
 .industries-grid {
