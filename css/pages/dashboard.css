@@ -4,46 +4,6 @@
    Categories grid + restricted-sponsors tables with tabs.
    ============================================================ */
 
-/* ---------- Page header meta row ---------- */
-
-.directory-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.live-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  background-color: var(--surface-muted);
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
-}
-
-.live-indicator__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--color-green);
-  box-shadow: 0 0 0 4px rgba(42, 148, 99, 0.15);
-  animation: pulse-dot 2.5s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(42, 148, 99, 0.15); }
-  50%      { box-shadow: 0 0 0 8px rgba(42, 148, 99, 0.00); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-indicator__dot { animation: none; }
-}
-
 /* ---------- Directory sections ---------- */
 
 .directory-section {
@@ -178,37 +138,6 @@
 }
 
 /* ---------- Restricted sponsors: tabs ---------- */
-
-.restricted-search {
-  position: relative;
-  min-width: 240px;
-}
-
-.restricted-search__icon {
-  position: absolute;
-  left: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: var(--font-size-base);
-  pointer-events: none;
-}
-
-.restricted-search input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-7);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--surface-card);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-}
-
-.restricted-search input:focus {
-  outline: none;
-  border-color: var(--color-navy);
-  box-shadow: 0 0 0 3px rgba(46, 82, 157, 0.15);
-}
 
 .restricted-tabs {
   display: flex;
