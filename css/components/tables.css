@@ -112,6 +112,50 @@
   gap: var(--space-1);
 }
 
+/* ---------- Admin table wrappers ---------- */
+.admin-table-wrap {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.admin-table thead th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--text-muted);
+  background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.admin-table tbody tr:hover {
+  background-color: var(--surface-muted);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 /* ---------- Mobile: collapse to cards ---------- */
 
 @media (max-width: 640px) {

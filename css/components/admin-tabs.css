@@ -1,0 +1,57 @@
+/* ============================================================
+   components/admin-tabs.css
+   Filter tabs used on sponsors, submissions, and activity pages.
+   ============================================================ */
+
+.admin-tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.admin-tab:hover {
+  border-color: var(--color-navy);
+  color: var(--color-navy);
+}
+
+.admin-tab.is-active {
+  background-color: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+.admin-tab__count {
+  display: inline-flex;
+  min-width: 22px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(0, 0, 0, 0.08);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.admin-tab.is-active .admin-tab__count {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-inverse);
+}

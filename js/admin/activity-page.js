@@ -97,14 +97,14 @@
             : '';
         return (
           '<tr>' +
-            '<td><div class="activity-table__when">' + esc(formatDateTime(e.at)) + '</div></td>' +
+            '<td><div class="table__cell-secondary text-nowrap">' + esc(formatDateTime(e.at)) + '</div></td>' +
             '<td>' +
-              '<div class="activity-table__actor">' + esc(e.actor) + '</div>' +
+              '<div class="table__cell-secondary font-mono">' + esc(e.actor) + '</div>' +
               badge +
             '</td>' +
             '<td>' +
-              '<div>' + actionTag(e.action) + '<span class="activity-table__entity">' + esc(e.entity) + '</span></div>' +
-              '<div class="activity-table__details">' + esc(e.details || '') + '</div>' +
+              '<div>' + actionTag(e.action) + '<span class="table__cell-primary">' + esc(e.entity) + '</span></div>' +
+              '<div class="table__cell-secondary">' + esc(e.details || '') + '</div>' +
             '</td>' +
           '</tr>'
         );

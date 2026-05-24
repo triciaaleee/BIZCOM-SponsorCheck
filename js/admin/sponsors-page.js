@@ -30,7 +30,7 @@
     const emptyTitle = document.getElementById('sponsors-empty-title');
     const emptySub = document.getElementById('sponsors-empty-sub');
     const countEl = document.getElementById('sponsors-count');
-    const tabs = document.querySelectorAll('.sponsors-tab');
+    const tabs = document.querySelectorAll('.admin-tab');
     const searchInput = document.getElementById('sponsors-search-input');
     const industrySel = document.getElementById('sponsors-industry-filter');
 
@@ -138,13 +138,13 @@
         const notes = notesFor(s);
         return (
           '<tr>' +
-            '<td><div class="sponsors-table__name">' + esc(s.name) + '</div></td>' +
+            '<td><div class="table__cell-primary">' + esc(s.name) + '</div></td>' +
             '<td>' + statusPill(s.category) + '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(industryDisplay(s.industry)) + '</span></td>' +
-            '<td><div class="sponsors-table__notes" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
-            '<td><span class="sponsors-table__meta">' + esc(lastUpdatedFor(s.id)) + '</span></td>' +
+            '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
+            '<td><span class="table__cell-secondary">' + esc(lastUpdatedFor(s.id)) + '</span></td>' +
             '<td>' +
-              '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="sponsors-table__action" title="Edit">' +
+              '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="table__action" title="Edit">' +
                 '<i class="bi bi-pencil-fill"></i>' +
               '</a>' +
             '</td>' +

@@ -1,0 +1,96 @@
+/* ============================================================
+   components/admin-meta.css
+   Metadata list, activity mini-list, action tags.
+   ============================================================ */
+
+/* ---------- Meta list (key/value pairs) ---------- */
+.meta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.meta-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--font-size-xs);
+  border-bottom: 1px dashed var(--border-subtle);
+  padding-bottom: var(--space-2);
+}
+
+.meta-list li:last-child { border-bottom: 0; }
+
+.meta-list__key {
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.meta-list__val {
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ---------- Activity mini-list ---------- */
+.activity-mini {
+  margin-top: var(--space-5);
+}
+
+.activity-mini__title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.activity-mini__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.activity-mini__item {
+  font-size: var(--font-size-xs);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-subtle);
+}
+
+.activity-mini__when {
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.activity-mini__what {
+  color: var(--text-primary);
+}
+
+/* ---------- Action tags ---------- */
+.action-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  background-color: var(--surface-muted);
+  color: var(--text-muted);
+  margin-right: var(--space-2);
+}
+
+.action-tag--create { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
+.action-tag--update { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
+.action-tag--status { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
+.action-tag--admin  { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange-dark); }
+.action-tag--submit { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }

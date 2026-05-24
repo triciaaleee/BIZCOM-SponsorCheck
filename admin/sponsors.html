@@ -15,6 +15,10 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/components/buttons.css">
   <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/components/states.css">
+  <link rel="stylesheet" href="../css/components/tables.css">
+  <link rel="stylesheet" href="../css/components/admin-shell.css">
+  <link rel="stylesheet" href="../css/components/admin-tabs.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
@@ -22,7 +26,7 @@
 
 <main class="admin-main">
 
-  <div class="sponsors-page__toolbar">
+  <div class="page-toolbar">
     <div>
       <span class="text-secondary text-sm">
         Showing <strong id="sponsors-count">0</strong> sponsors
@@ -33,37 +37,37 @@
     </a>
   </div>
 
-  <div class="sponsors-page__filters">
-    <div class="sponsors-page__tabs" role="tablist" aria-label="Filter by status">
-      <button class="sponsors-tab is-active" data-status="all">
-        All <span class="sponsors-tab__count" id="tab-count-all">0</span>
+  <div class="page-filters">
+    <div class="admin-tabs" role="tablist" aria-label="Filter by status">
+      <button class="admin-tab is-active" data-status="all">
+        All <span class="admin-tab__count" id="tab-count-all">0</span>
       </button>
-      <button class="sponsors-tab" data-status="master">
-        Master <span class="sponsors-tab__count" id="tab-count-master">0</span>
+      <button class="admin-tab" data-status="master">
+        Master <span class="admin-tab__count" id="tab-count-master">0</span>
       </button>
-      <button class="sponsors-tab" data-status="banned">
-        Banned <span class="sponsors-tab__count" id="tab-count-banned">0</span>
+      <button class="admin-tab" data-status="banned">
+        Banned <span class="admin-tab__count" id="tab-count-banned">0</span>
       </button>
-      <button class="sponsors-tab" data-status="closed">
-        Closed <span class="sponsors-tab__count" id="tab-count-closed">0</span>
+      <button class="admin-tab" data-status="closed">
+        Closed <span class="admin-tab__count" id="tab-count-closed">0</span>
       </button>
-      <button class="sponsors-tab" data-status="alumni">
-        Alumni <span class="sponsors-tab__count" id="tab-count-alumni">0</span>
+      <button class="admin-tab" data-status="alumni">
+        Alumni <span class="admin-tab__count" id="tab-count-alumni">0</span>
       </button>
     </div>
 
-    <div class="sponsors-search">
-      <i class="bi bi-search sponsors-search__icon"></i>
-      <input type="search" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
+    <div class="search-field">
+      <i class="bi bi-search search-field__icon"></i>
+      <input type="search" class="form-input" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
     </div>
 
-    <select class="sponsors-industry-filter" id="sponsors-industry-filter" aria-label="Filter by industry">
+    <select class="form-input" id="sponsors-industry-filter" aria-label="Filter by industry">
       <option value="all">All industries</option>
     </select>
   </div>
 
-  <div class="sponsors-table-wrap">
-    <table class="sponsors-table" id="sponsors-table">
+  <div class="admin-table-wrap">
+    <table class="admin-table" id="sponsors-table">
       <thead>
         <tr>
           <th>Name</th>

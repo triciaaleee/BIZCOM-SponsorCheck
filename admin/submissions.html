@@ -16,6 +16,12 @@
   <link rel="stylesheet" href="../css/components/buttons.css">
   <link rel="stylesheet" href="../css/components/forms.css">
   <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/components/states.css">
+  <link rel="stylesheet" href="../css/components/tables.css">
+  <link rel="stylesheet" href="../css/components/admin-shell.css">
+  <link rel="stylesheet" href="../css/components/admin-tabs.css">
+  <link rel="stylesheet" href="../css/components/side-panel.css">
+  <link rel="stylesheet" href="../css/components/admin-meta.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/utilities.css">
@@ -24,23 +30,23 @@
 
 <main class="admin-main">
 
-  <div class="submissions-page__tabs" role="tablist" aria-label="Filter by status">
-    <button class="submissions-tab is-active" data-status="all">
-      All <span class="submissions-tab__count" id="sub-count-all">0</span>
+  <div class="admin-tabs" role="tablist" aria-label="Filter by status">
+    <button class="admin-tab is-active" data-status="all">
+      All <span class="admin-tab__count" id="sub-count-all">0</span>
     </button>
-    <button class="submissions-tab" data-status="new">
-      New <span class="submissions-tab__count" id="sub-count-new">0</span>
+    <button class="admin-tab" data-status="new">
+      New <span class="admin-tab__count" id="sub-count-new">0</span>
     </button>
-    <button class="submissions-tab" data-status="reviewing">
-      Reviewing <span class="submissions-tab__count" id="sub-count-reviewing">0</span>
+    <button class="admin-tab" data-status="reviewing">
+      Reviewing <span class="admin-tab__count" id="sub-count-reviewing">0</span>
     </button>
-    <button class="submissions-tab" data-status="completed">
-      Completed <span class="submissions-tab__count" id="sub-count-completed">0</span>
+    <button class="admin-tab" data-status="completed">
+      Completed <span class="admin-tab__count" id="sub-count-completed">0</span>
     </button>
   </div>
 
-  <div class="submissions-table-wrap">
-    <table class="submissions-table" id="submissions-table">
+  <div class="admin-table-wrap">
+    <table class="admin-table" id="submissions-table">
       <thead>
         <tr>
           <th>Event</th>
@@ -99,7 +105,7 @@
 
     <div class="side-panel__section">
       <div class="side-panel__section-title">Sponsor list (preview)</div>
-      <table class="panel-sponsor-list" id="panel-sponsors">
+      <table class="panel-table" id="panel-sponsors">
         <thead>
           <tr>
             <th>Company</th>

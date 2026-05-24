@@ -29,7 +29,7 @@
     // ---------- elements ----------
     const tbody = document.getElementById('submissions-tbody');
     const empty = document.getElementById('submissions-empty');
-    const tabs = document.querySelectorAll('.submissions-tab');
+    const tabs = document.querySelectorAll('.admin-tab');
 
     const backdrop = document.getElementById('panel-backdrop');
     const panel = document.getElementById('side-panel');
@@ -123,8 +123,8 @@
         return (
           '<tr data-sub-id="' + esc(s.id) + '">' +
             '<td>' +
-              '<div class="submissions-table__event">' + esc(s.event_name) + '</div>' +
-              '<div class="submissions-table__club">' + esc(s.club) + '</div>' +
+              '<div class="table__cell-primary">' + esc(s.event_name) + '</div>' +
+              '<div class="table__cell-secondary">' + esc(s.club) + '</div>' +
             '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(sizeLabel(s.event_size)) + '</span></td>' +
             '<td><span class="text-sm text-secondary">' + s.sponsor_count + '</span></td>' +

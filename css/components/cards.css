@@ -3,4 +3,71 @@
    Card surfaces. Use .card + optional variant.
    ============================================================ */
 
+/* ---------- Admin login card ---------- */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--surface-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-7) var(--space-6);
+}
+
+.login-card__brand {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.login-card__brand img {
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+.login-card__title {
+  text-align: center;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  margin: 0 0 var(--space-2) 0;
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.login-card__sub {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+.login-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login-card__error {
+  background-color: var(--status-blocked-bg, rgba(202, 88, 28, 0.08));
+  border: 1px solid rgba(202, 88, 28, 0.3);
+  color: var(--color-orange-dark);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  display: none;
+}
+
+.login-card__error.is-shown { display: block; }
+
+.login-card__footer {
+  margin-top: var(--space-5);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.login-card__footer a {
+  color: var(--color-navy);
+  font-weight: var(--font-weight-medium);
+}
+
 /* ---------- KPI tile (used on dashboard) ---------- */
