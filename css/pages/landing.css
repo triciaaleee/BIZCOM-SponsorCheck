@@ -62,7 +62,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__eyebrow, .hero__title .word {
+  .hero__title .word {
     opacity: 1;
     transform: none;
     animation: none;
@@ -403,11 +403,6 @@
   color: var(--text-inverse);
   margin-bottom: var(--space-3);
   letter-spacing: var(--letter-spacing-tight);
-}
-
-.cta-strip__description {
-  max-width: 560px;
-  margin: 0 auto var(--space-5) auto;
 }
 
 .cta-strip__actions {

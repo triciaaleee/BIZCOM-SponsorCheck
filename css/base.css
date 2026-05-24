@@ -84,26 +84,12 @@ p {
 
 p:last-child { margin-bottom: 0; }
 
-.text-lead {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
-  line-height: var(--line-height-normal);
-}
-
 .text-muted {
   color: var(--text-muted);
 }
 
 .text-secondary {
   color: var(--text-secondary);
-}
-
-.text-caption {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
 /* ---------- Links ---------- */

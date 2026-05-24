@@ -35,8 +35,7 @@
   box-shadow: var(--shadow-focus);
 }
 
-.btn:disabled,
-.btn.is-disabled {
+.btn:disabled {
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -66,8 +65,7 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.btn--primary:disabled,
-.btn--primary.is-disabled {
+.btn--primary:disabled {
   background-color: #D1D5DB;
   color: #8A94A6;
   box-shadow: none;
@@ -94,8 +92,7 @@
   border-color: var(--color-navy-dark);
 }
 
-.btn--secondary:disabled,
-.btn--secondary.is-disabled {
+.btn--secondary:disabled {
   color: var(--text-muted);
   border-color: var(--border-default);
   background-color: transparent;
@@ -114,17 +111,6 @@
 }
 
 /* ---------- Destructive ---------- */
-
-.btn--destructive {
-  background-color: var(--color-orange);
-  color: var(--text-inverse);
-}
-
-.btn--destructive:hover {
-  background-color: var(--color-orange-dark);
-  color: var(--text-inverse);
-  text-decoration: none;
-}
 
 /* ---------- Gold accent (delight CTA) ---------- */
 

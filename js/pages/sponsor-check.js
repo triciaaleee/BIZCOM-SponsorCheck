@@ -3,12 +3,16 @@
    Orchestrates the full flow:
    metadata, upload, parse, preview, check, results.
 
-   v2 notes:
-   - Added 'unverified' status (new company, not on any list).
-   - Sample list auto-runs the check (sample is curated, no need
-     for a second confirm click).
-   - Confetti only when there are zero issues at all
-     (blocked + cooldown + alumni + unverified all zero).
+   v3 notes:
+   - Default event size is 'small' (matches HTML).
+   - CSV-only uploads (no .txt).
+   - Email-to-BIZCOM button stays disabled until event name,
+     club, and size are all set.
+   - Results table shows only status, industry, and reason.
+     The matched-database-name and (provided|inherited|...) tags
+     have been removed for a cleaner student view.
+   - CSV download is sorted by status alphabetically, then by
+     company name, so BIZCOM can vet in one pass.
    ============================================================ */
 
 (function () {
@@ -51,7 +55,7 @@
   // ---------- State ----------
   let parsedRows = [];
   let results = [];
-  let eventSize = 'medium';
+  let eventSize = 'small';
   let activeFilter = 'all';
   let isFromSample = false;
 
@@ -61,6 +65,27 @@
     medium: 'Medium (50 to 150 attendees)',
     large:  'Large (over 150 attendees)'
   };
+
+  // ---------- Email button gating ----------
+  // The "Email to BIZCOM" button is only enabled when the three
+  // mandatory event-meta fields are filled in.
+  function updateEmailButtonState() {
+    if (!emailBizcomBtn) return;
+    const hasName = eventName && eventName.value.trim().length > 0;
+    const hasClub = eventClub && eventClub.value.trim().length > 0;
+    const hasSize = !!eventSize;
+    const ready = hasName && hasClub && hasSize;
+    emailBizcomBtn.disabled = !ready;
+    emailBizcomBtn.setAttribute('aria-disabled', String(!ready));
+    if (ready) {
+      emailBizcomBtn.removeAttribute('title');
+    } else {
+      emailBizcomBtn.setAttribute('title', 'Fill in event name, club, and size first');
+    }
+  }
+
+  if (eventName) eventName.addEventListener('input', updateEmailButtonState);
+  if (eventClub) eventClub.addEventListener('input', updateEmailButtonState);
 
   // ---------- Event size tile picker ----------
   eventSizeBtns.forEach(function (btn) {
@@ -75,6 +100,7 @@
       if (previewCap) {
         previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + CAPS[eventSize].toLocaleString();
       }
+      updateEmailButtonState();
     });
   });
 
@@ -108,13 +134,13 @@
 
   // ---------- File handling ----------
   function handleFile(file) {
-    const okExt = /\.(csv|txt)$/i.test(file.name);
+    const okExt = /\.csv$/i.test(file.name);
     if (!okExt) {
       shakeDropZone();
       window.toast({
         type: 'error',
         title: 'Wrong file type',
-        message: 'Only .csv and .txt are accepted. Download the template, fill it in, and save as CSV.'
+        message: 'Only .csv is accepted. Download the Excel template, fill it in, and save as CSV before uploading.'
       });
       return;
     }
@@ -168,37 +194,28 @@
       '</div>';
   }
 
-  // ---------- Parser (CSV/TXT) ----------
+  // ---------- Parser (CSV) ----------
   function parseContent(text, filename) {
-    const isCsv = /\.csv$/i.test(filename);
     const lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length > 0; });
 
     if (lines.length === 0) {
       throw new Error('This file appears to be empty.');
     }
 
-    let rows = [];
-
-    if (isCsv) {
-      const headerLine = lines[0];
-      const headerCols = parseCsvLine(headerLine).map(function (c) { return c.toLowerCase().trim(); });
-      const hasHeader = headerCols.some(function (c) { return /name|company/.test(c); });
-      const nameIdx = hasHeader ? headerCols.findIndex(function (c) { return /name|company/.test(c); }) : 0;
-      const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type|code/.test(c); }) : -1;
-      const dataLines = hasHeader ? lines.slice(1) : lines;
-      dataLines.forEach(function (line) {
-        const cols = parseCsvLine(line);
-        const name = (cols[nameIdx] || '').trim();
-        if (!name) return;
-        const industry = indIdx >= 0 ? (cols[indIdx] || '').trim() : '';
-        rows.push({ name: name, industry: industry || null });
-      });
-    } else {
-      lines.forEach(function (line) {
-        const name = line.trim();
-        if (name) rows.push({ name: name, industry: null });
-      });
-    }
+    const rows = [];
+    const headerLine = lines[0];
+    const headerCols = parseCsvLine(headerLine).map(function (c) { return c.toLowerCase().trim(); });
+    const hasHeader = headerCols.some(function (c) { return /name|company/.test(c); });
+    const nameIdx = hasHeader ? headerCols.findIndex(function (c) { return /name|company/.test(c); }) : 0;
+    const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type|code/.test(c); }) : -1;
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+    dataLines.forEach(function (line) {
+      const cols = parseCsvLine(line);
+      const name = (cols[nameIdx] || '').trim();
+      if (!name) return;
+      const industry = indIdx >= 0 ? (cols[indIdx] || '').trim() : '';
+      rows.push({ name: name, industry: industry || null });
+    });
 
     if (rows.length === 0) {
       throw new Error('No company names found in the file.');
@@ -352,24 +369,16 @@
     resultsTbody.innerHTML = filtered.map(function (r, i) {
       const pill = pillFor(r.status);
       const industryLabel = r.industry ? industryDisplayName(r.industry) : '';
-      const sourceLabel = r.classificationSource
-        ? '<span class="text-xs text-muted">(' + r.classificationSource + ')</span>'
-        : '';
-      const matchedLabel = r.matched
-        ? '<div class="table__cell-secondary">matched: ' + escapeHtml(r.matched) + '</div>'
-        : '';
       const flagClass = (r.status === 'blocked' || r.status === 'cooldown') ? 'is-flagged' : '';
       return (
         '<tr class="' + flagClass + '">' +
           '<td class="table__cell-secondary" data-label="#">' + (i + 1) + '</td>' +
           '<td data-label="Company">' +
             '<div class="table__cell-primary">' + escapeHtml(r.input) + '</div>' +
-            matchedLabel +
           '</td>' +
           '<td data-label="Status">' + pill + '</td>' +
           '<td data-label="Industry">' +
             (industryLabel ? '<span class="tag">' + escapeHtml(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
-            ' ' + sourceLabel +
           '</td>' +
           '<td data-label="Reason" class="text-secondary text-xs">' + escapeHtml(r.reason || '') + '</td>' +
         '</tr>'
@@ -410,7 +419,22 @@
     downloadCsvBtn.addEventListener('click', function () {
       const header = ['name', 'status', 'matched_name', 'industry_classified', 'classification_source', 'reason'];
       const lines = [header.join(',')];
-      results.forEach(function (r) {
+
+      // Sort by status alphabetically, then by company name within each status.
+      // This groups all rows of the same status together for easier vetting.
+      const sorted = results.slice().sort(function (a, b) {
+        const sa = (a.status || '').toLowerCase();
+        const sb = (b.status || '').toLowerCase();
+        if (sa < sb) return -1;
+        if (sa > sb) return 1;
+        const na = (a.input || '').toLowerCase();
+        const nb = (b.input || '').toLowerCase();
+        if (na < nb) return -1;
+        if (na > nb) return 1;
+        return 0;
+      });
+
+      sorted.forEach(function (r) {
         const row = [
           csvEscape(r.input),
           r.status,
@@ -444,17 +468,30 @@
   // ---------- Email BIZCOM ----------
   if (emailBizcomBtn) {
     emailBizcomBtn.addEventListener('click', function () {
-      const event = eventName.value || '(unnamed event)';
-      const club  = eventClub.value || '(club name)';
+      // Defensive guard: if the button is disabled (mandatory fields empty),
+      // do nothing. The disabled attribute should prevent the click event,
+      // but this catches edge cases where JS toggled the property only.
+      if (emailBizcomBtn.disabled) return;
+
+      const event = eventName.value.trim();
+      const club  = eventClub.value.trim();
+      if (!event || !club || !eventSize) {
+        updateEmailButtonState();
+        return;
+      }
+
       const subject = encodeURIComponent('[Sponsor Check] ' + event + ', ' + club);
       const body = encodeURIComponent(
         'Hi BIZCOM team,\n\n' +
-        'Pre-check results for the following:\n\n' +
+        'Please find our sponsor list for the following event:\n\n' +
         '  Event: ' + event + '\n' +
         '  Club:  ' + club + '\n' +
         '  Size:  ' + SIZE_LABELS[eventSize] + '\n' +
         '  Total: ' + results.length + ' sponsors\n\n' +
-        'Please find the annotated CSV attached.\n\n' +
+        'Attachments:\n' +
+        '  1. Annotated sponsor list (sponsor-check-results.csv)\n' +
+        '  2. Sponsorship deck\n' +
+        '  3. Outreach email template\n\n' +
         'Thanks!'
       );
       window.location.href = 'mailto:biz.secretary@sa.smu.edu.sg?subject=' + subject + '&body=' + body;
@@ -491,6 +528,9 @@
   window.__markSampleLoad = function () {
     isFromSample = true;
   };
+
+  // Run once at boot so the email button reflects the initial empty fields.
+  updateEmailButtonState();
 })();
 
 // Shake keyframe for invalid-drop feedback

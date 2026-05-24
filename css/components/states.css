@@ -35,14 +35,6 @@
   line-height: var(--line-height-normal);
 }
 
-.empty-state__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 /* ---------- Banner (page-level non-blocking message) ---------- */
 
 .banner {
@@ -56,23 +48,13 @@
   font-size: var(--font-size-sm);
 }
 
-.banner--info    { background-color: rgba(46, 82, 157, 0.05); border-left-color: var(--color-navy); }
-.banner--success { background-color: var(--status-clear-bg);  border-left-color: var(--color-green); }
-.banner--warning { background-color: var(--status-caution-bg); border-left-color: var(--color-gold); }
-.banner--error   { background-color: var(--status-blocked-bg); border-left-color: var(--color-orange); }
-
-.banner__icon {
+.banner--info    { background-color: rgba(46, 82, 157, 0.05); border-left-color: var(--color-navy); }banner__icon {
   flex-shrink: 0;
   font-size: var(--font-size-lg);
   color: var(--color-navy);
   margin-top: 1px;
 }
-
-.banner--success .banner__icon { color: var(--color-green); }
-.banner--warning .banner__icon { color: #8C7212; }
-.banner--error .banner__icon   { color: var(--color-orange); }
-
-.banner__body {
+banner__body {
   flex: 1;
   color: var(--text-primary);
   line-height: var(--line-height-snug);
@@ -86,23 +68,3 @@
 .banner__message {
   color: var(--text-secondary);
 }
-
-.banner__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.banner__close {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: 0;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-base);
-}
-
-.banner__close:hover { background-color: rgba(0, 0, 0, 0.04); color: var(--text-primary); }

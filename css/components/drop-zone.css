@@ -84,12 +84,6 @@
   cursor: pointer;
 }
 
-.drop-zone.is-disabled {
-  opacity: 0.5;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
 /* ---------- Compact status bar after file selected ---------- */
 
 .upload-status {

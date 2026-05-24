@@ -483,10 +483,6 @@
 }
 
 /* ---------- Hidden initial states ---------- */
-
-.hidden-state { display: none; }
-.is-shown { display: block; }
-
 /* ---------- Checking overlay ---------- */
 
 .checking-overlay {

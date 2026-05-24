@@ -156,10 +156,10 @@
             reason = '30-day outreach cap reached (' + outreachCount + ' of ' + cap + '). Wait for next cycle.';
           } else if (outreachCount >= cap - 2) {
             status = 'caution';
-            reason = 'Approaching 30-day cap (' + outreachCount + ' of ' + cap + ' contacts).';
+            reason = 'Approaching 30-day outreach cap.';
           } else {
             status = 'clear';
-            reason = 'Previously approved by BIZCOM (' + outreachCount + ' recent contacts).';
+            reason = 'Previously approved by BIZCOM.';
           }
           break;
         default:

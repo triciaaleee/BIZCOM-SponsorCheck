@@ -27,28 +27,6 @@
   .container { padding: 0 var(--layout-gutter-desktop); }
 }
 
-.container--narrow {
-  max-width: var(--layout-narrow-width);
-}
-
-/* ---------- Section spacing ---------- */
-
-.section {
-  padding: var(--space-8) 0;
-}
-
-.section--hero {
-  padding: var(--space-9) 0 var(--space-8) 0;
-}
-
-.section--compact {
-  padding: var(--space-6) 0;
-}
-
-.section--muted {
-  background-color: var(--surface-muted);
-}
-
 /* ---------- Navbar ---------- */
 
 .navbar {
@@ -236,7 +214,7 @@
 
 .footer__brand-img {
   display: block;
-  height: 80px;
+  height: 48px;
   width: auto;
   max-width: 200px;
   object-fit: contain;
@@ -287,27 +265,6 @@
     justify-content: space-between;
     align-items: center;
   }
-}
-
-/* ---------- Generic grids ---------- */
-
-.grid {
-  display: grid;
-  gap: var(--space-5);
-}
-
-.grid--cols-2 { grid-template-columns: 1fr; }
-.grid--cols-3 { grid-template-columns: 1fr; }
-.grid--cols-4 { grid-template-columns: 1fr; }
-
-@media (min-width: 640px) {
-  .grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
-  .grid--cols-4 { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (min-width: 1024px) {
-  .grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
-  .grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* ---------- Page header (for non-landing pages) ---------- */

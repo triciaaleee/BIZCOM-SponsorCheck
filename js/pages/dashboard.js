@@ -50,7 +50,6 @@
   // -- Restricted sponsors tabs and table --
 
   let activeTab = 'banned';
-  let searchQuery = '';
 
   function getIndustryDisplay(code) {
     const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
@@ -95,21 +94,15 @@
     if (!tbody) return;
 
     const rows = rowsForTab(activeTab);
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = q ? rows.filter(function (s) {
-      return s.name.toLowerCase().indexOf(q) !== -1
-          || getIndustryDisplay(s.industry).toLowerCase().indexOf(q) !== -1
-          || reasonFor(s, activeTab).toLowerCase().indexOf(q) !== -1;
-    }) : rows;
 
-    if (!filtered.length) {
+    if (!rows.length) {
       tbody.innerHTML = '';
       if (empty) empty.hidden = false;
       return;
     }
     if (empty) empty.hidden = true;
 
-    tbody.innerHTML = filtered.map(function (s) {
+    tbody.innerHTML = rows.map(function (s) {
       const pill = pillFor(activeTab);
       return (
         '<tr>' +
@@ -148,15 +141,6 @@
     });
   }
 
-  function bindSearch() {
-    const input = document.getElementById('restricted-search-input');
-    if (!input) return;
-    input.addEventListener('input', function (e) {
-      searchQuery = e.target.value || '';
-      renderRestricted();
-    });
-  }
-
   function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -179,7 +163,6 @@
     updateReasonHeader();
     renderRestricted();
     bindTabs();
-    bindSearch();
   }
 
   if (document.readyState === 'loading') {

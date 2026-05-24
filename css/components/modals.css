@@ -38,10 +38,6 @@
     opacity var(--duration-base) var(--ease-out);
 }
 
-.modal--wide .modal__dialog {
-  max-width: 720px;
-}
-
 .modal.is-open .modal__dialog {
   transform: scale(1);
   opacity: 1;

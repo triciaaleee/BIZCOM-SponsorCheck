@@ -46,17 +46,15 @@
         <a href="./standing-order.html" class="navbar__link">Standing order</a>
         <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
         <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-        <a href="./admin/login.html" class="navbar__link">Admin</a>
       </div>
       <button class="navbar__toggle" aria-label="Open menu" aria-expanded="false">
         <i class="bi bi-list"></i>
       </button>
     </div>
     <div class="navbar__drawer">
-      <a href="./sponsor-check.html" class="navbar__link">Checker</a>
-      <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
       <a href="./standing-order.html" class="navbar__link">Standing order</a>
-      <a href="./admin/login.html" class="navbar__link">Admin</a>
+      <a href="./dashboard.html" class="navbar__link">Sponsor directory</a>
+      <a href="./sponsor-check.html" class="navbar__link">Checker</a>
     </div>
   </nav>
 
@@ -88,22 +86,22 @@
             <div class="event-meta__grid">
               <div class="form-group">
                 <label class="form-label" for="event-name">Event name <span class="form-label__required">*</span></label>
-                <input type="text" class="form-input" id="event-name" placeholder="e.g. Bizad Charity Run 2026" autocomplete="off">
+                <input type="text" class="form-input" id="event-name" placeholder="e.g. Bizad Charity Run 2026" autocomplete="off" required>
               </div>
               <div class="form-group">
                 <label class="form-label" for="event-club">Submitting club <span class="form-label__required">*</span></label>
-                <input type="text" class="form-input" id="event-club" placeholder="e.g. Accountancy Society" autocomplete="off">
+                <input type="text" class="form-input" id="event-club" placeholder="e.g. Accountancy Society" autocomplete="off" required>
               </div>
               <div class="form-group" style="grid-column: 1 / -1">
                 <label class="form-label">Event size <span class="form-label__required">*</span></label>
                 <div class="size-picker" role="radiogroup" aria-label="Event size">
-                  <button type="button" class="size-tile" data-event-size="small" role="radio" aria-checked="false">
+                  <button type="button" class="size-tile is-active" data-event-size="small" role="radio" aria-checked="true">
                     <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
                     <div class="size-tile__name">Small</div>
                     <div class="size-tile__attendees">Under 50 attendees</div>
                     <div class="size-tile__cap">Cap: 300 sponsors</div>
                   </button>
-                  <button type="button" class="size-tile is-active" data-event-size="medium" role="radio" aria-checked="true">
+                  <button type="button" class="size-tile" data-event-size="medium" role="radio" aria-checked="false">
                     <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
                     <div class="size-tile__name">Medium</div>
                     <div class="size-tile__attendees">50 to 150 attendees</div>
@@ -136,9 +134,6 @@
               <div class="template-guide__actions">
                 <button type="button" class="btn btn--primary" id="download-xlsx-template">
                   <i class="bi bi-file-earmark-excel-fill"></i> Download Excel template
-                </button>
-                <button type="button" class="btn btn--secondary" onclick="downloadTemplate(); return false;">
-                  <i class="bi bi-filetype-csv"></i> Download CSV template
                 </button>
               </div>
 
@@ -180,17 +175,17 @@
                 <div class="event-meta__num">3</div>
                 <div>
                   <h2 class="event-meta__title">Upload your list</h2>
-                  <div class="event-meta__subtitle">CSV or TXT, up to 5 MB.</div>
+                  <div class="event-meta__subtitle">CSV only, up to 5 MB.</div>
                 </div>
               </div>
 
               <div class="drop-zone" id="drop-zone">
-                <input type="file" id="file-input" accept=".csv,.txt" aria-label="Upload sponsor list">
+                <input type="file" id="file-input" accept=".csv" aria-label="Upload sponsor list">
                 <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
                 <div class="drop-zone__title">Drop your sponsor list here</div>
                 <div class="drop-zone__hint">or click to browse</div>
                 <div class="drop-zone__divider">
-                  <span>CSV or TXT, up to 5 MB</span>
+                  <span>CSV only, up to 5 MB</span>
                   <span>&middot;</span>
                   <a href="#" onclick="loadSample(); return false;">Load sample list</a>
                 </div>
@@ -207,7 +202,7 @@
                 <div>
                   <h2 class="preview-card__title">Ready to check</h2>
                   <div class="preview-card__sub">
-                    <strong id="preview-total">0</strong> distinct companies &middot; <span id="preview-cap">Medium, cap 600 OK</span>
+                    <strong id="preview-total">0</strong> distinct companies &middot; <span id="preview-cap">Small, cap 300 OK</span>
                   </div>
                 </div>
                 <div class="preview-card__actions">
@@ -262,7 +257,7 @@
                   <button type="button" class="btn btn--secondary btn--sm" id="download-csv">
                     <i class="bi bi-download"></i> Download CSV
                   </button>
-                  <button type="button" class="btn btn--primary btn--sm" id="email-bizcom">
+                  <button type="button" class="btn btn--primary btn--sm" id="email-bizcom" disabled aria-disabled="true" title="Fill in event name, club, and size first">
                     <i class="bi bi-envelope-fill"></i> Email to BIZCOM
                   </button>
                 </div>
@@ -389,12 +384,12 @@
     </div>
     <div class="modal__body">
       <p>
-        Your event is classified <strong id="cap-modal-size">Medium</strong> with a cap of
-        <strong><span id="cap-modal-cap">600</span></strong> distinct sponsors. Your list has
+        Your event is classified <strong id="cap-modal-size">Small</strong> with a cap of
+        <strong><span id="cap-modal-cap">300</span></strong> distinct sponsors. Your list has
         <strong><span id="cap-modal-count">0</span></strong>.
       </p>
       <p class="text-secondary text-sm">
-        You can trim the list and re-upload, or reclassify your event as Large (cap 1,000) above.
+        You can trim the list and re-upload, or reclassify your event to a larger size above.
       </p>
     </div>
     <div class="modal__footer">
@@ -421,18 +416,6 @@
 <script src="./js/pages/sponsor-check.js" defer></script>
 
 <script>
-  function downloadTemplate() {
-    const csv = 'company_name,industry_code\nKOI Thé,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\n';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sponsor-check-template.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
   function loadSample() {
     const sampleCsv = 'company_name,industry_code\nKOI Thé,food_beverage\nLiHO TEA,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\nGrab,transport_mobility\nSingapore Pools,\nAIA Insurance,\nDBS Bank,\nTea Tribe,food_beverage\nCrave Bakery,food_beverage\nClimb Central,activities_experiences\nCathay Cineplexes,entertainment_leisure\n';
     const blob = new Blob([sampleCsv], { type: 'text/csv' });
@@ -442,7 +425,6 @@
     const input = document.getElementById('file-input');
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    // Tell sponsor-check.js this was from the sample button
     if (typeof window.__markSampleLoad === 'function') window.__markSampleLoad();
   }
 </script>

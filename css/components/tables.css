@@ -10,10 +10,6 @@
   background-color: var(--surface-card);
 }
 
-.table-wrapper--scroll {
-  overflow-x: auto;
-}
-
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -53,8 +49,6 @@
 }
 
 .table thead th.is-sorted-asc::after { content: "↑"; opacity: 1; color: var(--color-navy); }
-.table thead th.is-sorted-desc::after { content: "↓"; opacity: 1; color: var(--color-navy); }
-
 .table tbody td {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);

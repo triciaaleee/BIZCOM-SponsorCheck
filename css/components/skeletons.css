@@ -1,73 +1,7 @@
 /* ============================================================
    components/skeletons.css
-   Shimmer-style loading placeholders. Cycle ≥1200ms.
+   Loading indicators used by the checker.
    ============================================================ */
-
-.skeleton {
-  position: relative;
-  background-color: var(--surface-muted);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    transparent 100%
-  );
-  animation: skeleton-shimmer 1400ms infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton::after { animation: none; }
-}
-
-@keyframes skeleton-shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-/* ---------- Size helpers ---------- */
-
-.skeleton--text {
-  height: 1em;
-  border-radius: var(--radius-sm);
-}
-
-.skeleton--text-lg  { height: 1.5em; }
-.skeleton--text-xl  { height: 2em; }
-
-.skeleton--title {
-  height: 2.5em;
-  width: 60%;
-}
-
-.skeleton--button {
-  height: 40px;
-  width: 120px;
-  border-radius: var(--radius-md);
-}
-
-.skeleton--tile {
-  height: 140px;
-  border-radius: var(--radius-lg);
-}
-
-.skeleton--row {
-  height: 56px;
-  border-radius: 0;
-}
-
-.skeleton--circle {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-}
 
 /* ---------- Loading dot ---------- */
 
@@ -87,32 +21,4 @@
 
 @media (prefers-reduced-motion: reduce) {
   .loading-dot { animation: none; }
-}
-
-/* ---------- Live indicator dot (dashboard) ---------- */
-
-.live-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-}
-
-.live-indicator__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--color-green);
-  box-shadow: 0 0 0 0 rgba(42, 148, 99, 0.4);
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  0%   { box-shadow: 0 0 0 0   rgba(42, 148, 99, 0.5); }
-  100% { box-shadow: 0 0 0 8px rgba(42, 148, 99, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-indicator__dot { animation: none; }
 }
