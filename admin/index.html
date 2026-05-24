@@ -3,214 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin — BIZCOM SponsorCheck</title>
+  <title>SponsorCheck Admin</title>
+  <meta http-equiv="refresh" content="0; url=login.html">
   <link rel="icon" href="assets/favicon.png">
-
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
-
-  <link rel="stylesheet" href="../css/tokens.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/layout.css">
-
-  <link rel="stylesheet" href="../css/components/buttons.css">
-  <link rel="stylesheet" href="../css/components/forms.css">
-  <link rel="stylesheet" href="../css/components/cards.css">
-  <link rel="stylesheet" href="../css/components/pills.css">
-  <link rel="stylesheet" href="../css/components/tables.css">
-  <link rel="stylesheet" href="../css/components/modals.css">
-  <link rel="stylesheet" href="../css/components/toasts.css">
-  <link rel="stylesheet" href="../css/components/states.css">
-
-  <link rel="stylesheet" href="../css/pages/admin.css">
-  <link rel="stylesheet" href="../css/utilities.css">
 </head>
 <body>
-
-<div class="page">
-
-  <nav class="navbar">
-    <div class="navbar__container">
-      <a href="../index.html" class="navbar__brand">
-        <span class="navbar__brand-mark"><span>bi</span><span>z</span><span>com</span></span>
-        <span class="navbar__brand-sub">Admin</span>
-      </a>
-      <div class="navbar__nav">
-        <span class="text-xs text-muted">Signed in as <strong style="color:var(--text-primary)">biz.secretary@sa.smu.edu.sg</strong></span>
-        <a href="./login.html" class="navbar__link" style="margin-left: var(--space-3)"><i class="bi bi-box-arrow-right"></i> Sign out</a>
-      </div>
-    </div>
-  </nav>
-
-  <main class="page__main">
-    <div class="container">
-
-      <header class="page-header">
-        <div class="page-header__eyebrow">Admin console</div>
-        <h1 class="page-header__title">Sponsors</h1>
-        <p class="page-header__description">
-          Search, filter, and edit the sponsor database. Changes are logged to the audit trail.
-        </p>
-      </header>
-
-      <div class="admin">
-
-        <!-- Sidebar nav -->
-        <nav class="admin-nav" aria-label="Admin sections">
-          <ul class="admin-nav__list">
-            <li><a href="./index.html" class="admin-nav__link is-active"><i class="bi bi-table"></i> Sponsors</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-upload"></i> Bulk import</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-inbox"></i> Submissions</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-graph-up"></i> Outreach tracker</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-tags"></i> Industries</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-sliders"></i> Settings</a></li>
-            <li><a href="#" class="admin-nav__link"><i class="bi bi-journal-text"></i> Audit log</a></li>
-          </ul>
-        </nav>
-
-        <!-- Main column -->
-        <section class="admin-main">
-
-          <div class="admin-toolbar">
-            <div class="admin-toolbar__search">
-              <i class="bi bi-search admin-toolbar__icon"></i>
-              <input type="search" id="admin-search" placeholder="Search sponsors…" aria-label="Search">
-            </div>
-            <div class="admin-toolbar__actions">
-              <button class="btn btn--secondary btn--sm"><i class="bi bi-download"></i> Export</button>
-              <button class="btn btn--primary btn--sm"><i class="bi bi-plus-lg"></i> Add sponsor</button>
-            </div>
-          </div>
-
-          <div class="admin-filter-row">
-            <button class="filter-chip is-active" data-filter="all">All</button>
-            <button class="filter-chip" data-filter="master">Master</button>
-            <button class="filter-chip" data-filter="banned">Banned</button>
-            <button class="filter-chip" data-filter="closed">Closed</button>
-            <button class="filter-chip" data-filter="alumni">Alumni</button>
-            <button class="filter-chip" data-filter="watchlist">Watchlist</button>
-          </div>
-
-          <div class="table-wrapper table-wrapper--responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th style="width: 36px"><input type="checkbox" id="select-all"></th>
-                  <th class="is-sortable is-sorted-asc">Company</th>
-                  <th class="is-sortable">Industry</th>
-                  <th class="is-sortable">Category</th>
-                  <th class="is-sortable">Outreach 30d</th>
-                  <th style="width: 80px"></th>
-                </tr>
-              </thead>
-              <tbody id="admin-tbody"></tbody>
-            </table>
-            <div class="table-footer">
-              <span>Showing 1–20 of 12,403 · <strong>placeholder data</strong></span>
-              <div class="table-footer__nav">
-                <button class="btn btn--tertiary btn--sm" disabled><i class="bi bi-chevron-left"></i></button>
-                <button class="btn btn--tertiary btn--sm"><i class="bi bi-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-
-        </section>
-      </div>
-    </div>
-  </main>
-
-  <!-- Floating bulk-action bar -->
-  <div class="bulk-bar" id="bulk-bar">
-    <span class="bulk-bar__count"><span id="bulk-count">0</span> selected</span>
-    <div class="bulk-bar__actions">
-      <button class="bulk-bar__btn">Recategorise</button>
-      <button class="bulk-bar__btn">Export</button>
-      <button class="bulk-bar__btn bulk-bar__btn--destructive">Delete</button>
-    </div>
-  </div>
-</div>
-
-<script src="../js/components/navbar.js" defer></script>
-<script src="../js/components/toast.js" defer></script>
-<script src="../js/lib/mock-data.js" defer></script>
-<script>
-window.addEventListener('DOMContentLoaded', function () {
-  const tbody = document.getElementById('admin-tbody');
-  const data = window.MOCK_DATA.sponsors.slice(0, 20);
-
-  function pillFor(category) {
-    const map = {
-      master:    { cls: 'pill--clear',    icon: 'bi-check-circle-fill',   label: 'Master' },
-      banned:    { cls: 'pill--blocked',  icon: 'bi-x-circle-fill',       label: 'Banned' },
-      closed:    { cls: 'pill--blocked',  icon: 'bi-slash-circle-fill',   label: 'Closed' },
-      alumni:    { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',    label: 'Alumni' },
-      watchlist: { cls: 'pill--caution',  icon: 'bi-eye-fill',            label: 'Watchlist' }
-    };
-    const m = map[category] || { cls: 'pill--neutral', icon: 'bi-circle', label: category };
-    return `<span class="pill ${m.cls}"><i class="bi ${m.icon} pill__icon"></i>${m.label}</span>`;
-  }
-
-  function industryName(code) {
-    const ind = window.MOCK_DATA.industries.find(i => i.code === code);
-    return ind ? ind.display_name : code;
-  }
-
-  tbody.innerHTML = data.map(s => {
-    const outreach = window.MOCK_DATA.outreachCounts[s.id] || 0;
-    return `
-      <tr>
-        <td data-label="Select"><input type="checkbox" class="row-check"></td>
-        <td data-label="Company" class="table__cell-primary">${s.name}</td>
-        <td data-label="Industry"><span class="tag">${industryName(s.industry)}</span></td>
-        <td data-label="Category">${pillFor(s.category)}</td>
-        <td data-label="Outreach (30d)">${outreach || '—'}</td>
-        <td data-label="Actions" class="table__cell-actions">
-          <button class="btn btn--tertiary btn--sm btn--icon" aria-label="Edit"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn--tertiary btn--sm btn--icon" aria-label="Delete"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  // Bulk select
-  const bulkBar = document.getElementById('bulk-bar');
-  const bulkCount = document.getElementById('bulk-count');
-  const selectAll = document.getElementById('select-all');
-
-  function updateBulk() {
-    const checked = tbody.querySelectorAll('.row-check:checked').length;
-    bulkCount.textContent = checked;
-    bulkBar.classList.toggle('is-visible', checked > 0);
-  }
-
-  tbody.addEventListener('change', function (e) {
-    if (e.target.classList.contains('row-check')) updateBulk();
-  });
-  selectAll.addEventListener('change', function () {
-    tbody.querySelectorAll('.row-check').forEach(c => c.checked = selectAll.checked);
-    updateBulk();
-  });
-
-  // Demo: row edit toast
-  tbody.addEventListener('click', function (e) {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const label = btn.getAttribute('aria-label');
-    if (label === 'Edit') toast({ type: 'info', title: 'Edit mode', message: 'Inline edit will be wired up in Phase 1.' });
-    if (label === 'Delete') toast({ type: 'warning', title: 'Confirm required', message: 'Delete modal will appear here.' });
-  });
-
-  // Demo: filter chips
-  document.querySelectorAll('.filter-chip').forEach(chip => {
-    chip.addEventListener('click', function () {
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('is-active'));
-      chip.classList.add('is-active');
-      toast({ type: 'info', title: 'Filter applied', message: chip.textContent + ' (frontend prototype — no live filtering)' });
-    });
-  });
-});
-</script>
+  <p>Redirecting to <a href="login.html">sign-in</a>...</p>
+  <script>
+    (function () {
+      try {
+        var raw = sessionStorage.getItem('sponsorcheck_admin_session');
+        if (raw) {
+          var s = JSON.parse(raw);
+          if (s && s.email && s.role) {
+            window.location.replace('sponsors.html');
+            return;
+          }
+        }
+      } catch (e) {}
+      window.location.replace('login.html');
+    })();
+  </script>
 </body>
 </html>

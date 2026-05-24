@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sponsor, SponsorCheck Admin</title>
+  <link rel="icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
+
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
+  <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/components/toasts.css">
+  <link rel="stylesheet" href="../css/pages/admin.css">
+  <link rel="stylesheet" href="../css/utilities.css">
+</head>
+<body>
+
+<main class="admin-main">
+
+  <a href="sponsors.html" class="sponsor-detail__back">
+    <i class="bi bi-arrow-left"></i> Back to sponsors
+  </a>
+
+  <div class="sponsor-detail">
+
+    <div class="sponsor-detail__main">
+      <h2 class="sponsor-detail__heading" id="sponsor-form-heading">Sponsor</h2>
+
+      <form id="sponsor-form">
+        <div class="form-group">
+          <label class="form-label" for="sp-name">Company name <span class="form-label__required">*</span></label>
+          <input type="text" class="form-input" id="sp-name" placeholder="e.g. Razer" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status <span class="form-label__required">*</span></label>
+          <div class="status-picker" role="radiogroup" aria-label="Sponsor status">
+            <button type="button" class="status-picker__tile is-active" data-status="master" role="radio" aria-checked="true">
+              <i class="bi bi-check-circle-fill"></i>
+              <span>Master</span>
+            </button>
+            <button type="button" class="status-picker__tile" data-status="banned" role="radio" aria-checked="false">
+              <i class="bi bi-x-octagon-fill"></i>
+              <span>Banned</span>
+            </button>
+            <button type="button" class="status-picker__tile" data-status="closed" role="radio" aria-checked="false">
+              <i class="bi bi-slash-circle-fill"></i>
+              <span>Closed</span>
+            </button>
+            <button type="button" class="status-picker__tile" data-status="alumni" role="radio" aria-checked="false">
+              <i class="bi bi-mortarboard-fill"></i>
+              <span>Alumni</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sp-industry">Industry <span class="form-label__required">*</span></label>
+          <select class="form-input" id="sp-industry" required></select>
+        </div>
+
+        <!-- Status-specific fields -->
+        <div class="form-group" id="grp-notes">
+          <label class="form-label" for="sp-notes">Notes (optional)</label>
+          <textarea class="form-input" id="sp-notes" rows="3" placeholder="Any context for BIZCOM, e.g. previous events..."></textarea>
+        </div>
+
+        <div class="form-group" id="grp-ban-reason" style="display: none">
+          <label class="form-label" for="sp-ban-reason">Ban reason <span class="form-label__required">*</span></label>
+          <input type="text" class="form-input" id="sp-ban-reason" placeholder="e.g. Annex A - Gaming & Betting">
+          <div class="form-helper">Reference the SMUSA Sponsorship Standing Order Annex A or B.</div>
+        </div>
+
+        <div class="form-group" id="grp-alumni-owner" style="display: none">
+          <label class="form-label" for="sp-alumni-owner">Alumni owner <span class="form-label__required">*</span></label>
+          <input type="text" class="form-input" id="sp-alumni-owner" placeholder="e.g. Wong YJ, BBM 2019">
+          <div class="form-helper">Name + degree + graduation year if known.</div>
+        </div>
+
+        <div class="form-group" id="grp-closed-notes" style="display: none">
+          <label class="form-label" for="sp-closed-notes">Closed notes</label>
+          <input type="text" class="form-input" id="sp-closed-notes" placeholder="e.g. Ceased operations 2020">
+        </div>
+
+        <div class="sponsor-detail__form-actions">
+          <a href="sponsors.html" class="btn btn--secondary btn--sm">Cancel</a>
+          <button type="submit" class="btn btn--primary btn--sm" id="sp-save">
+            <i class="bi bi-check-lg"></i> <span id="sp-save-label">Save changes</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="sponsor-detail__danger" id="danger-zone" style="display: none">
+        <button type="button" class="sponsor-detail__danger-link" id="sp-delete">
+          <i class="bi bi-trash"></i> Delete sponsor
+        </button>
+      </div>
+    </div>
+
+    <aside class="sponsor-detail__side" id="sponsor-side">
+      <div class="sponsor-detail__heading" style="font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: var(--letter-spacing-wide); color: var(--text-muted);">Metadata</div>
+      <ul class="meta-list" id="meta-list">
+        <li><span class="meta-list__key">ID</span><span class="meta-list__val" id="meta-id">-</span></li>
+        <li><span class="meta-list__key">Created</span><span class="meta-list__val" id="meta-created">-</span></li>
+        <li><span class="meta-list__key">Last updated</span><span class="meta-list__val" id="meta-updated">-</span></li>
+        <li><span class="meta-list__key">Outreach (30d)</span><span class="meta-list__val" id="meta-outreach">-</span></li>
+      </ul>
+
+      <div class="activity-mini">
+        <div class="activity-mini__title">Activity for this sponsor</div>
+        <ul class="activity-mini__list" id="activity-mini-list">
+          <li class="activity-mini__item" style="border-left-color: transparent;">
+            <span class="text-muted text-xs">No activity recorded.</span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+</main>
+
+<script src="../js/lib/mock-data.js" defer></script>
+<script src="../js/components/toast.js" defer></script>
+<script src="../js/admin/admin-shell.js" defer></script>
+<script src="../js/admin/sponsor-page.js" defer></script>
+</body>
+</html>

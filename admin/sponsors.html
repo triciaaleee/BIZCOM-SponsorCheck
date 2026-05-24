@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sponsors, SponsorCheck Admin</title>
+  <link rel="icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
+
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/pages/admin.css">
+  <link rel="stylesheet" href="../css/utilities.css">
+</head>
+<body>
+
+<main class="admin-main">
+
+  <div class="sponsors-page__toolbar">
+    <div>
+      <span class="text-secondary text-sm">
+        Showing <strong id="sponsors-count">0</strong> sponsors
+      </span>
+    </div>
+    <a href="sponsor.html" class="btn btn--primary btn--sm">
+      <i class="bi bi-plus-lg"></i> Add sponsor
+    </a>
+  </div>
+
+  <div class="sponsors-page__filters">
+    <div class="sponsors-page__tabs" role="tablist" aria-label="Filter by status">
+      <button class="sponsors-tab is-active" data-status="all">
+        All <span class="sponsors-tab__count" id="tab-count-all">0</span>
+      </button>
+      <button class="sponsors-tab" data-status="master">
+        Master <span class="sponsors-tab__count" id="tab-count-master">0</span>
+      </button>
+      <button class="sponsors-tab" data-status="banned">
+        Banned <span class="sponsors-tab__count" id="tab-count-banned">0</span>
+      </button>
+      <button class="sponsors-tab" data-status="closed">
+        Closed <span class="sponsors-tab__count" id="tab-count-closed">0</span>
+      </button>
+      <button class="sponsors-tab" data-status="alumni">
+        Alumni <span class="sponsors-tab__count" id="tab-count-alumni">0</span>
+      </button>
+    </div>
+
+    <div class="sponsors-search">
+      <i class="bi bi-search sponsors-search__icon"></i>
+      <input type="search" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
+    </div>
+
+    <select class="sponsors-industry-filter" id="sponsors-industry-filter" aria-label="Filter by industry">
+      <option value="all">All industries</option>
+    </select>
+  </div>
+
+  <div class="sponsors-table-wrap">
+    <table class="sponsors-table" id="sponsors-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Industry</th>
+          <th>Notes</th>
+          <th>Last updated</th>
+          <th style="width: 64px"></th>
+        </tr>
+      </thead>
+      <tbody id="sponsors-tbody"></tbody>
+    </table>
+    <div class="empty-card" id="sponsors-empty" style="display: none">
+      <i class="bi bi-inbox"></i>
+      <div class="empty-card__title" id="sponsors-empty-title">No sponsors yet</div>
+      <div class="empty-card__sub" id="sponsors-empty-sub">Add your first sponsor to get started.</div>
+      <a href="sponsor.html" class="btn btn--primary btn--sm">
+        <i class="bi bi-plus-lg"></i> Add sponsor
+      </a>
+    </div>
+  </div>
+
+</main>
+
+<script src="../js/lib/mock-data.js" defer></script>
+<script src="../js/admin/admin-shell.js" defer></script>
+<script src="../js/admin/sponsors-page.js" defer></script>
+</body>
+</html>

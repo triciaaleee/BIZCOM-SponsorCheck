@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Submissions, SponsorCheck Admin</title>
+  <link rel="icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
+
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
+  <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/components/toasts.css">
+  <link rel="stylesheet" href="../css/pages/admin.css">
+  <link rel="stylesheet" href="../css/utilities.css">
+</head>
+<body>
+
+<main class="admin-main">
+
+  <div class="submissions-page__tabs" role="tablist" aria-label="Filter by status">
+    <button class="submissions-tab is-active" data-status="all">
+      All <span class="submissions-tab__count" id="sub-count-all">0</span>
+    </button>
+    <button class="submissions-tab" data-status="new">
+      New <span class="submissions-tab__count" id="sub-count-new">0</span>
+    </button>
+    <button class="submissions-tab" data-status="reviewing">
+      Reviewing <span class="submissions-tab__count" id="sub-count-reviewing">0</span>
+    </button>
+    <button class="submissions-tab" data-status="completed">
+      Completed <span class="submissions-tab__count" id="sub-count-completed">0</span>
+    </button>
+  </div>
+
+  <div class="submissions-table-wrap">
+    <table class="submissions-table" id="submissions-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Size</th>
+          <th>Sponsors</th>
+          <th>Submitted</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="submissions-tbody"></tbody>
+    </table>
+    <div class="empty-card" id="submissions-empty" style="display: none">
+      <i class="bi bi-inbox"></i>
+      <div class="empty-card__title">No submissions in this view</div>
+      <div class="empty-card__sub">Submissions appear here when clubs email their cleaned sponsor lists.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Side panel + backdrop -->
+<div class="side-panel-backdrop" id="panel-backdrop"></div>
+<aside class="side-panel" id="side-panel" aria-hidden="true" aria-labelledby="panel-title">
+  <header class="side-panel__header">
+    <div>
+      <h2 class="side-panel__title" id="panel-title">Submission</h2>
+      <div class="side-panel__sub" id="panel-sub"></div>
+    </div>
+    <button class="side-panel__close" id="panel-close" aria-label="Close panel">
+      <i class="bi bi-x"></i>
+    </button>
+  </header>
+
+  <div class="side-panel__body">
+    <div class="side-panel__section">
+      <div class="side-panel__section-title">Status</div>
+      <div class="panel-status-picker" role="radiogroup" aria-label="Submission status">
+        <button type="button" class="panel-status-picker__tile" data-panel-status="new" role="radio" aria-checked="false">New</button>
+        <button type="button" class="panel-status-picker__tile" data-panel-status="reviewing" role="radio" aria-checked="false">Reviewing</button>
+        <button type="button" class="panel-status-picker__tile" data-panel-status="completed" role="radio" aria-checked="false">Completed</button>
+      </div>
+    </div>
+
+    <div class="side-panel__section">
+      <div class="side-panel__section-title">Event details</div>
+      <ul class="meta-list">
+        <li><span class="meta-list__key">Event</span><span class="meta-list__val" id="panel-event">-</span></li>
+        <li><span class="meta-list__key">Club</span><span class="meta-list__val" id="panel-club">-</span></li>
+        <li><span class="meta-list__key">Size</span><span class="meta-list__val" id="panel-size">-</span></li>
+        <li><span class="meta-list__key">Contact</span><span class="meta-list__val" id="panel-contact">-</span></li>
+        <li><span class="meta-list__key">Sponsor count</span><span class="meta-list__val" id="panel-spcount">-</span></li>
+        <li><span class="meta-list__key">Submitted</span><span class="meta-list__val" id="panel-submitted">-</span></li>
+        <li><span class="meta-list__key">Last reviewed</span><span class="meta-list__val" id="panel-reviewed">-</span></li>
+      </ul>
+    </div>
+
+    <div class="side-panel__section">
+      <div class="side-panel__section-title">Sponsor list (preview)</div>
+      <table class="panel-sponsor-list" id="panel-sponsors">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="panel-sponsors-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="side-panel__section">
+      <div class="side-panel__section-title">Admin notes</div>
+      <textarea class="form-input" id="panel-notes" rows="4" placeholder="Notes for handover, e.g. 'reminded club to coordinate with OAR'..."></textarea>
+    </div>
+  </div>
+
+  <footer class="side-panel__footer">
+    <button type="button" class="btn btn--secondary btn--sm" id="panel-cancel">Close</button>
+    <button type="button" class="btn btn--primary btn--sm" id="panel-save">
+      <i class="bi bi-check-lg"></i> Save
+    </button>
+  </footer>
+</aside>
+
+<script src="../js/lib/mock-data.js" defer></script>
+<script src="../js/components/toast.js" defer></script>
+<script src="../js/admin/admin-shell.js" defer></script>
+<script src="../js/admin/submissions-page.js" defer></script>
+</body>
+</html>
