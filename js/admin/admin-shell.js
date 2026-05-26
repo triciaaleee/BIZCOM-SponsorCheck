@@ -55,19 +55,6 @@
     window.MOCK_DATA.activity.unshift(entry);
   }
 
-  // ---------- Demo banner ----------
-
-  function renderDemoBanner() {
-    const banner = document.createElement('div');
-    banner.className = 'demo-banner';
-    banner.innerHTML =
-      '<i class="bi bi-cone-striped"></i>' +
-      '<span><strong>Demo mode.</strong> ' +
-      'Mock authentication, mock data. ' +
-      'Changes do not persist across browser sessions.</span>';
-    return banner;
-  }
-
   // ---------- Sidebar ----------
 
   const NAV_ITEMS = [
@@ -151,6 +138,16 @@
       .replace(/'/g, '&#39;');
   }
 
+  // Sponsor name wrapped in a Google Maps search link. Appended " Singapore"
+  // narrows results to local hits since most SG sponsor names are chains.
+  function mapsLink(name) {
+    const safe = escapeHtml(name);
+    const q = encodeURIComponent(name + ' Singapore');
+    return '<a class="maps-link" href="https://www.google.com/maps/search/?api=1&query=' + q + '"' +
+           ' target="_blank" rel="noopener" title="Look up on Google Maps">' +
+           safe + ' <i class="bi bi-geo-alt"></i></a>';
+  }
+
   // ---------- Mount ----------
 
   function mount(opts) {
@@ -190,8 +187,6 @@
       shell.appendChild(sidebar);
       shell.appendChild(content);
 
-      // Demo banner at very top, above shell
-      body.insertBefore(renderDemoBanner(), body.firstChild);
       body.appendChild(shell);
 
       // Reveal the main content (was hidden via CSS to prevent flash)
@@ -219,6 +214,7 @@
     setSession: setSession,
     clearSession: clearSession,
     logActivity: logActivity,
-    escapeHtml: escapeHtml
+    escapeHtml: escapeHtml,
+    mapsLink: mapsLink
   };
 })();

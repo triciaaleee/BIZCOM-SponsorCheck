@@ -56,7 +56,7 @@
     }
 
     function statusPill(category) {
-      const labels = { master: 'Master', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
+      const labels = { master: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
       const cls = 'status-pill--' + category;
       return '<span class="status-pill ' + cls + '">' + (labels[category] || category) + '</span>';
     }
@@ -133,12 +133,13 @@
       empty.style.display = 'none';
 
       const esc = window.AdminShell.escapeHtml;
+      const mapsLink = window.AdminShell.mapsLink;
 
       tbody.innerHTML = rows.map(function (s) {
         const notes = notesFor(s);
         return (
           '<tr>' +
-            '<td><div class="table__cell-primary">' + esc(s.name) + '</div></td>' +
+            '<td><div class="table__cell-primary">' + mapsLink(s.name) + '</div></td>' +
             '<td>' + statusPill(s.category) + '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(industryDisplay(s.industry)) + '</span></td>' +
             '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +

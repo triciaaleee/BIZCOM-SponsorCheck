@@ -164,11 +164,12 @@
         : 'Not yet reviewed';
 
       // Sponsor list mini-table
+      const mapsLink = window.AdminShell.mapsLink;
       if (sub.sponsor_list && sub.sponsor_list.length) {
         panelSponsorsTbody.innerHTML = sub.sponsor_list.map(function (r) {
           return (
             '<tr>' +
-              '<td>' + esc(r.name) + '</td>' +
+              '<td>' + mapsLink(r.name) + '</td>' +
               '<td>' + rowStatusPill(r.status) + '</td>' +
             '</tr>'
           );

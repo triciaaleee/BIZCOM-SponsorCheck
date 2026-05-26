@@ -5,27 +5,30 @@
    ============================================================ */
 
 /* ============================================================
-   DEMO BANNER
+   MAPS LINK (sponsor name, opens Google Maps in a new tab)
    ============================================================ */
 
-.demo-banner {
-  position: relative;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background-color: #FFF4D6;
-  border-bottom: 1px solid var(--color-gold);
-  color: #6B5410;
-  font-size: var(--font-size-xs);
-  text-align: center;
+.maps-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border-default);
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
 }
 
-.demo-banner i {
-  font-size: var(--font-size-base);
-  color: var(--color-orange);
+.maps-link:hover {
+  color: var(--color-navy);
+  border-bottom-color: var(--color-navy);
+}
+
+.maps-link .bi-geo-alt {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.maps-link:hover .bi-geo-alt {
+  color: var(--color-navy);
 }
 
 /* ============================================================
@@ -36,10 +39,6 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.login-shell .demo-banner {
-  position: static;
 }
 
 .login-page {

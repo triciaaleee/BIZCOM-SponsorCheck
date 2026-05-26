@@ -97,7 +97,7 @@
         return;
       }
       original = JSON.parse(JSON.stringify(sponsor));
-      heading.textContent = 'Edit sponsor';
+      heading.innerHTML = 'Edit ' + window.AdminShell.mapsLink(sponsor.name);
       saveLabel.textContent = 'Save changes';
       nameEl.value = sponsor.name;
       industryEl.value = sponsor.industry;

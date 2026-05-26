@@ -15,29 +15,14 @@
 
 .login-card__brand {
   text-align: center;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .login-card__brand img {
-  height: 40px;
+  height: 72px;
   width: auto;
-  max-width: 160px;
+  max-width: 240px;
   object-fit: contain;
-}
-
-.login-card__title {
-  text-align: center;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
-  margin: 0 0 var(--space-2) 0;
-  letter-spacing: var(--letter-spacing-tight);
-}
-
-.login-card__sub {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-5);
 }
 
 .login-card__form {
