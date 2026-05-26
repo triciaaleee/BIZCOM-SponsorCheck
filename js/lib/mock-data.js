@@ -44,16 +44,16 @@ window.MOCK_DATA = {
     { id: 's15', name: 'Cathay Cineplexes', normalised: 'cathay cineplexes',industry: 'entertainment_leisure', category: 'master',    notes: '' },
 
     // banned per Annex A / B
-    { id: 's20', name: 'Singapore Pools',    normalised: 'singapore pools',  industry: 'entertainment_leisure', category: 'banned',    ban_reason: 'Annex A — Gaming & Betting' },
-    { id: 's21', name: 'Asia Pacific Breweries', normalised: 'asia pacific breweries', industry: 'food_beverage', category: 'banned', ban_reason: 'Annex A — Alcoholic Products' },
-    { id: 's22', name: 'Marlboro',           normalised: 'marlboro',         industry: 'retail_general',        category: 'banned',    ban_reason: 'Annex A — Tobacco Products' },
-    { id: 's23', name: 'Durex',              normalised: 'durex',            industry: 'beauty_personal_care',  category: 'banned',    ban_reason: 'Annex A — Sexual Products' },
-    { id: 's24', name: 'AIA Insurance',      normalised: 'aia',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A — Insurance Companies' },
-    { id: 's25', name: 'Prudential',         normalised: 'prudential',       industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A — Insurance Companies' },
-    { id: 's26', name: 'Shaw Foundation',    normalised: 'shaw foundation',  industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A — Foundations' },
-    { id: 's27', name: 'Lee Foundation',     normalised: 'lee foundation',   industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A — Foundations' },
-    { id: 's28', name: 'DBS Bank',           normalised: 'dbs',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B — Banks & Financial' },
-    { id: 's29', name: 'OCBC Bank',          normalised: 'ocbc',             industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B — Banks & Financial' },
+    { id: 's20', name: 'Singapore Pools',    normalised: 'singapore pools',  industry: 'entertainment_leisure', category: 'banned',    ban_reason: 'Annex A, Gaming & Betting' },
+    { id: 's21', name: 'Asia Pacific Breweries', normalised: 'asia pacific breweries', industry: 'food_beverage', category: 'banned', ban_reason: 'Annex A, Alcoholic Products' },
+    { id: 's22', name: 'Marlboro',           normalised: 'marlboro',         industry: 'retail_general',        category: 'banned',    ban_reason: 'Annex A, Tobacco Products' },
+    { id: 's23', name: 'Durex',              normalised: 'durex',            industry: 'beauty_personal_care',  category: 'banned',    ban_reason: 'Annex A, Sexual Products' },
+    { id: 's24', name: 'AIA Insurance',      normalised: 'aia',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A, Insurance Companies' },
+    { id: 's25', name: 'Prudential',         normalised: 'prudential',       industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A, Insurance Companies' },
+    { id: 's26', name: 'Shaw Foundation',    normalised: 'shaw foundation',  industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A, Foundations' },
+    { id: 's27', name: 'Lee Foundation',     normalised: 'lee foundation',   industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A, Foundations' },
+    { id: 's28', name: 'DBS Bank',           normalised: 'dbs',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
+    { id: 's29', name: 'OCBC Bank',          normalised: 'ocbc',             industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
 
     // closed / defunct
     { id: 's40', name: 'Robinsons',          normalised: 'robinsons',        industry: 'retail_general',        category: 'closed',    notes: 'Ceased operations 2020' },
@@ -65,14 +65,14 @@ window.MOCK_DATA = {
     { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    alumni_owner: 'Kumar A, ISIT 2020' }
   ],
 
-  // Simulated outreach counts (last 30 days) — keyed by sponsor id
+  // Simulated outreach counts (last 30 days), keyed by sponsor id
   outreachCounts: {
-    's1':  9,   // KOI — heavily contacted
-    's2':  10,  // LiHO — at cap
+    's1':  9,   // KOI, heavily contacted
+    's2':  10,  // LiHO, at cap
     's3':  3,
     's4':  1,
     's5':  4,
-    's11': 11,  // Grab — over cap → cooldown
+    's11': 11,  // Grab, over cap → cooldown
     's15': 2
   },
 
@@ -249,7 +249,7 @@ window.MOCK_DATA = {
     { id: 'a-096', at: '2026-05-19T09:22:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.status_changed',    entity: 'Robinsons',                  details: 'Status changed from "master" to "closed". Notes: "Ceased operations 2020"' },
     { id: 'a-095', at: '2026-05-17T09:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'submission.status_changed', entity: 'Freshmen Welcome Tea',       details: 'Status changed from "reviewing" to "completed"' },
     { id: 'a-094', at: '2026-05-15T14:10:00+08:00', actor: 'biz.outreach@sa.smu.edu.sg', action: 'sponsor.created',           entity: 'Tea Tribe',                  details: 'Added as alumni, owner "Wong YJ, BBM 2019"' },
-    { id: 'a-093', at: '2026-05-14T11:33:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.updated',           entity: 'AIA Insurance',              details: 'Ban reason updated to "Annex A — Insurance Companies"' },
+    { id: 'a-093', at: '2026-05-14T11:33:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.updated',           entity: 'AIA Insurance',              details: 'Ban reason updated to "Annex A, Insurance Companies"' },
     { id: 'a-092', at: '2026-05-12T15:42:00+08:00', actor: 'biz.outreach@sa.smu.edu.sg', action: 'submission.status_changed', entity: 'Hackathon 2026',             details: 'Status changed from "reviewing" to "completed". 3 sponsors removed from list.' },
     { id: 'a-091', at: '2026-05-11T13:25:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'submission.status_changed', entity: 'Annual Dinner & Dance',      details: 'Status changed from "reviewing" to "completed"' },
     { id: 'a-090', at: '2026-05-10T08:14:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'submission.received',       entity: 'Hackathon 2026',             details: 'New submission from SMU Tech, 89 sponsors' },
@@ -257,7 +257,7 @@ window.MOCK_DATA = {
     { id: 'a-088', at: '2026-05-06T10:15:00+08:00', actor: 'biz.deputy@sa.smu.edu.sg',   action: 'sponsor.created',           entity: 'Crave Bakery',               details: 'Added as alumni, owner "Tan ML, ACCT 2017"' },
     { id: 'a-087', at: '2026-05-03T13:20:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'admin.added',               entity: 'biz.outreach@sa.smu.edu.sg', details: 'New admin invited' },
     { id: 'a-086', at: '2026-04-28T09:45:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.updated',           entity: 'Razer',                      details: 'Notes updated' },
-    { id: 'a-085', at: '2026-04-20T11:11:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.status_changed',    entity: 'Singapore Pools',            details: 'Status changed from "master" to "banned". Reason: Annex A — Gaming & Betting' },
+    { id: 'a-085', at: '2026-04-20T11:11:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.status_changed',    entity: 'Singapore Pools',            details: 'Status changed from "master" to "banned". Reason: Annex A, Gaming & Betting' },
     { id: 'a-084', at: '2026-04-15T15:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'Logitech',                   details: 'Added as master, industry tech_electronics' },
     { id: 'a-083', at: '2026-04-04T10:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'KOI Thé',                    details: 'Added as master, industry food_beverage' },
     { id: 'a-082', at: '2026-01-04T09:30:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'admin.added',               entity: 'biz.deputy@sa.smu.edu.sg',   details: 'New admin invited' },

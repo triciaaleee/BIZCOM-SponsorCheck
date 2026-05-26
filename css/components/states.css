@@ -76,13 +76,16 @@
   font-size: var(--font-size-sm);
 }
 
-.banner--info    { background-color: rgba(46, 82, 157, 0.05); border-left-color: var(--color-navy); }banner__icon {
+.banner--info { background-color: rgba(46, 82, 157, 0.05); border-left-color: var(--color-navy); }
+
+.banner__icon {
   flex-shrink: 0;
   font-size: var(--font-size-lg);
   color: var(--color-navy);
   margin-top: 1px;
 }
-banner__body {
+
+.banner__body {
   flex: 1;
   color: var(--text-primary);
   line-height: var(--line-height-snug);

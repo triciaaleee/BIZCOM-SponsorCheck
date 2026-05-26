@@ -66,27 +66,16 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* Sponsor category modifiers */
 .status-pill--master   { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
 .status-pill--banned   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange-dark); }
 .status-pill--closed   { background-color: var(--surface-muted); color: var(--text-muted); }
 .status-pill--alumni   { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
 
-/* Submission status pills */
-.sub-status-pill {
-  display: inline-flex;
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.sub-status-pill--new        { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
-.sub-status-pill--reviewing  { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
-.sub-status-pill--completed  { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
-
-/* ---------- Size variants ---------- */
-
-/* ---------- Pill in a button-row context (smaller gap) ---------- */
+/* Submission status modifiers */
+.status-pill--new        { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
+.status-pill--reviewing  { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
+.status-pill--completed  { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
 
 /* ---------- Industry tag (neutral, smaller) ---------- */
 

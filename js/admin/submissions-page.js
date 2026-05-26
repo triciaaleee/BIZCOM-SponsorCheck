@@ -61,7 +61,7 @@
 
     function statusPill(status) {
       const labels = { new: 'New', reviewing: 'Reviewing', completed: 'Completed' };
-      return '<span class="sub-status-pill sub-status-pill--' + status + '">' + (labels[status] || status) + '</span>';
+      return '<span class="status-pill status-pill--' + status + '">' + (labels[status] || status) + '</span>';
     }
 
     function sizeLabel(s) {

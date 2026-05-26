@@ -88,30 +88,6 @@
   font-size: var(--font-size-xs);
 }
 
-.table__cell-actions {
-  display: flex;
-  gap: var(--space-1);
-  justify-content: flex-end;
-}
-
-/* ---------- Pagination footer ---------- */
-
-.table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--surface-muted);
-  border-top: 1px solid var(--border-subtle);
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-}
-
-.table-footer__nav {
-  display: flex;
-  gap: var(--space-1);
-}
-
 /* ---------- Admin table wrappers ---------- */
 .admin-table-wrap {
   background-color: var(--surface-card);

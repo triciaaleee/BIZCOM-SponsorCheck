@@ -67,23 +67,3 @@
   cursor: not-allowed;
 }
 
-/* ---------- Select ---------- */
-
-/* ---------- Radio / checkbox groups (event-size choice etc.) ---------- */
-
-.checkbox {
-  position: relative;
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-}
-
-.checkbox input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-/* ---------- Segmented control (event size selector) ---------- */
