@@ -49,7 +49,8 @@
     alumni:     document.getElementById('count-alumni'),
     blocked:    document.getElementById('count-blocked'),
     cooldown:   document.getElementById('count-cooldown'),
-    unverified: document.getElementById('count-unverified')
+    unverified: document.getElementById('count-unverified'),
+    duplicate:  document.getElementById('count-duplicate')
   };
 
   // ---------- State ----------
@@ -328,6 +329,18 @@
         }
       }
     });
+
+    // Duplicate-row nudge banner. Visible only when count > 0.
+    const dupBanner = document.getElementById('duplicate-banner');
+    const dupCountEl = document.getElementById('duplicate-banner-count');
+    if (dupBanner && dupCountEl) {
+      if (counts.duplicate > 0) {
+        dupCountEl.textContent = String(counts.duplicate);
+        dupBanner.hidden = false;
+      } else {
+        dupBanner.hidden = true;
+      }
+    }
 
     renderTable();
 

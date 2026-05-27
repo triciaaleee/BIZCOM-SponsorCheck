@@ -190,24 +190,42 @@
     const delay = (opts && typeof opts.delay === 'number') ? opts.delay : (800 + Math.random() * 1200);
     return new Promise(function (resolve) {
       setTimeout(function () {
-        const seen = new Set();
+        // First pass: vet each row, mark duplicates against earlier occurrences.
+        // seenAt is a Map<normalisedName, 1-indexed firstRowPosition>.
+        // dupesOfCanonical groups duplicate row positions under their canonical row index.
+        const seenAt = new Map();
+        const dupesOfCanonical = new Map();
         const results = [];
-        rows.forEach(function (row) {
+
+        rows.forEach(function (row, i) {
           const norm = normalise(row.name);
-          if (seen.has(norm)) {
+          const oneIdx = i + 1;
+          if (seenAt.has(norm)) {
+            const firstIdx = seenAt.get(norm);
             results.push({
               input: row.name,
               status: 'duplicate',
               matched: null,
               industry: null,
               classificationSource: null,
-              reason: 'Duplicate within this submission'
+              reason: 'Duplicate of row ' + firstIdx + ' (' + row.name + ')'
             });
+            if (!dupesOfCanonical.has(firstIdx)) dupesOfCanonical.set(firstIdx, []);
+            dupesOfCanonical.get(firstIdx).push(oneIdx);
             return;
           }
-          seen.add(norm);
+          seenAt.set(norm, oneIdx);
           results.push(checkOne(row.name, row.industry));
         });
+
+        // Second pass: annotate each canonical row's reason with where it also appears.
+        dupesOfCanonical.forEach(function (dupIndexes, canonicalIdx) {
+          const canonicalResult = results[canonicalIdx - 1];
+          if (!canonicalResult) return;
+          const extra = 'Also appears on row' + (dupIndexes.length > 1 ? 's ' : ' ') + dupIndexes.join(', ');
+          canonicalResult.reason = (canonicalResult.reason || '') + ' ' + extra;
+        });
+
         resolve(results);
       }, delay);
     });

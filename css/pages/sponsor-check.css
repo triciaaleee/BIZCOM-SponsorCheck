@@ -300,6 +300,10 @@
   margin-top: var(--space-1);
 }
 
+#duplicate-banner {
+  margin-bottom: var(--space-4);
+}
+
 .summary__stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -312,7 +316,7 @@
 }
 
 @media (min-width: 1024px) {
-  .summary__stats { grid-template-columns: repeat(6, 1fr); }
+  .summary__stats { grid-template-columns: repeat(7, 1fr); }
 }
 
 .summary-stat {
@@ -331,6 +335,7 @@
 .summary-stat--blocked    { border-left-color: var(--color-orange); }
 .summary-stat--cooldown   { border-left-color: var(--color-orange-dark); }
 .summary-stat--unverified { border-left-color: var(--text-muted); }
+.summary-stat--duplicate  { border-left-color: var(--border-default); }
 
 .summary-stat__value {
   font-size: var(--font-size-2xl);

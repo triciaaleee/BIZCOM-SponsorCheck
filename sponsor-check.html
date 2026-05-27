@@ -244,6 +244,19 @@
 
           <!-- STATE: RESULTS -->
           <div id="state-results" class="d-none">
+
+            <div class="banner banner--info" id="duplicate-banner" hidden>
+              <i class="bi bi-info-circle-fill banner__icon"></i>
+              <div class="banner__body">
+                <div class="banner__title">
+                  <span id="duplicate-banner-count">0</span> duplicate rows in your list
+                </div>
+                <div class="banner__message">
+                  Remove the duplicates from your CSV before emailing BIZCOM. The same sponsor only needs to be checked once.
+                </div>
+              </div>
+            </div>
+
             <div class="summary">
               <div class="summary__top">
                 <div>
@@ -288,6 +301,10 @@
                   <div class="summary-stat__value" id="count-unverified">0</div>
                   <div class="summary-stat__label">Unverified</div>
                 </div>
+                <div class="summary-stat summary-stat--duplicate">
+                  <div class="summary-stat__value" id="count-duplicate">0</div>
+                  <div class="summary-stat__label">Duplicate</div>
+                </div>
               </div>
             </div>
 
@@ -300,6 +317,7 @@
                 <button class="filter-chip" data-filter="blocked">Blocked</button>
                 <button class="filter-chip" data-filter="cooldown">Cooldown</button>
                 <button class="filter-chip" data-filter="unverified">Unverified</button>
+                <button class="filter-chip" data-filter="duplicate">Duplicate</button>
               </div>
             </div>
 
@@ -334,6 +352,7 @@
               <li><strong>Blocked</strong>: banned per Annex A or B, or company has closed.</li>
               <li><strong>Cooldown</strong>: 30-day outreach cap reached, wait for next cycle.</li>
               <li><strong>Unverified</strong>: new company, BIZCOM has not vetted yet.</li>
+              <li><strong>Duplicate</strong>: the same company appears twice in your list. Remove the extra rows before submitting.</li>
             </ul>
           </div>
 
