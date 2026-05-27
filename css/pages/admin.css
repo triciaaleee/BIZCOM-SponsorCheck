@@ -54,13 +54,94 @@
    SPONSORS LIST PAGE
    ============================================================ */
 
+/* Welcome card at the top of sponsors.html. Greeting + 3 KPI tiles. */
+.welcome-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--color-gold);
+}
+
+.welcome-card__greeting {
+  min-width: 0;
+}
+
+.welcome-card__hello {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-tight);
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text-primary);
+}
+
+.welcome-card__hello .welcome-card__name { color: var(--color-navy); }
+
+.welcome-card__sub {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.welcome-card__kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
+  min-width: 130px;
+}
+
+.kpi-tile__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.kpi-tile__label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-semibold);
+}
+
+.kpi-tile--gold .kpi-tile__value { color: #8C7212; }
+.kpi-tile--orange .kpi-tile__value { color: var(--color-orange); }
+.kpi-tile--green .kpi-tile__value { color: var(--color-green-dark); }
+
 .page-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .page-filters {
@@ -68,7 +149,7 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .search-field {

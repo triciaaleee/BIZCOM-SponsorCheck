@@ -26,6 +26,29 @@
 
 <main class="admin-main">
 
+  <section class="welcome-card" id="welcome-card">
+    <div class="welcome-card__greeting">
+      <h2 class="welcome-card__hello">
+        Hi, <span class="welcome-card__name" id="welcome-name">there</span>.
+      </h2>
+      <p class="welcome-card__sub" id="welcome-sub">Here's your queue at a glance.</p>
+    </div>
+    <div class="welcome-card__kpis">
+      <div class="kpi-tile kpi-tile--gold">
+        <div class="kpi-tile__value" id="kpi-due-soon">0</div>
+        <div class="kpi-tile__label">Due this week</div>
+      </div>
+      <div class="kpi-tile kpi-tile--orange">
+        <div class="kpi-tile__value" id="kpi-at-cap">0</div>
+        <div class="kpi-tile__label">Sponsors near cap</div>
+      </div>
+      <div class="kpi-tile kpi-tile--green">
+        <div class="kpi-tile__value" id="kpi-new-subs">0</div>
+        <div class="kpi-tile__label">New submissions</div>
+      </div>
+    </div>
+  </section>
+
   <div class="page-toolbar">
     <div>
       <span class="text-secondary text-sm">
@@ -87,6 +110,10 @@
       <a href="sponsor.html" class="btn btn--primary btn--sm">
         <i class="bi bi-plus-lg"></i> Add sponsor
       </a>
+    </div>
+    <div class="admin-table-footer" id="sponsors-pager" hidden>
+      <div class="admin-table-footer__range" id="sponsors-range"></div>
+      <nav class="admin-table-footer__nav" id="sponsors-pager-nav" aria-label="Pagination"></nav>
     </div>
   </div>
 

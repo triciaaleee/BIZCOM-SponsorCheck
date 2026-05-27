@@ -14,17 +14,30 @@
   <link rel="stylesheet" href="../css/tokens.css">
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
   <link rel="stylesheet" href="../css/components/pills.css">
   <link rel="stylesheet" href="../css/components/states.css">
   <link rel="stylesheet" href="../css/components/tables.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/components/admin-meta.css">
+  <link rel="stylesheet" href="../css/components/toasts.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
 <body>
 
 <main class="admin-main">
+
+  <div class="page-toolbar">
+    <div>
+      <span class="text-secondary text-sm">
+        Showing <strong id="activity-count">0</strong> entries
+      </span>
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" id="clear-old-btn" hidden>
+      <i class="bi bi-eraser"></i> Clear <span id="clear-old-count">0</span> entries before this week
+    </button>
+  </div>
 
   <div class="page-filters">
     <select class="form-input" id="filter-actor" aria-label="Filter by admin">
@@ -43,12 +56,6 @@
       <option value="submission.viewed">Submission viewed</option>
       <option value="admin.added">Admin added</option>
     </select>
-
-    <div style="flex: 1"></div>
-
-    <span class="text-secondary text-sm">
-      <strong id="activity-count">0</strong> entries
-    </span>
   </div>
 
   <div class="admin-table-wrap">
@@ -72,6 +79,7 @@
 </main>
 
 <script src="../js/lib/mock-data.js" defer></script>
+<script src="../js/components/toast.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>
 <script src="../js/admin/activity-page.js" defer></script>
 </body>

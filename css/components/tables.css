@@ -88,6 +88,65 @@
   font-size: var(--font-size-xs);
 }
 
+/* ---------- Admin table footer (pagination) ---------- */
+.admin-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-muted);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.admin-table-footer__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.admin-table-footer__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.admin-table-footer__btn:hover:not(:disabled) {
+  background-color: var(--surface-card);
+  color: var(--color-navy);
+}
+
+.admin-table-footer__btn.is-active {
+  background-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+.admin-table-footer__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-table-footer__ellipsis {
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  user-select: none;
+}
+
 /* ---------- Admin table wrappers ---------- */
 .admin-table-wrap {
   background-color: var(--surface-card);

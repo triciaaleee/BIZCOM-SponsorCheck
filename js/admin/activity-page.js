@@ -28,6 +28,8 @@
     const tbody = document.getElementById('activity-tbody');
     const empty = document.getElementById('activity-empty');
     const countEl = document.getElementById('activity-count');
+    const clearBtn = document.getElementById('clear-old-btn');
+    const clearCountEl = document.getElementById('clear-old-count');
     const actorSel = document.getElementById('filter-actor');
     const actionSel = document.getElementById('filter-action');
 
@@ -69,6 +71,23 @@
       return admin.role;
     }
 
+    // Start of the current ISO week (Monday 00:00 in viewer's local tz).
+    function startOfThisWeek() {
+      const d = new Date();
+      const dow = d.getDay(); // Sun=0, Mon=1, ... Sat=6
+      const daysFromMonday = (dow + 6) % 7;
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - daysFromMonday);
+      return d.getTime();
+    }
+
+    function countPreWeek() {
+      const cutoff = startOfThisWeek();
+      return window.MOCK_DATA.activity.filter(function (e) {
+        return new Date(e.at).getTime() < cutoff;
+      }).length;
+    }
+
     // ---------- render ----------
     function getFiltered() {
       return window.MOCK_DATA.activity.filter(function (e) {
@@ -76,6 +95,32 @@
         if (actionFilter !== 'all' && e.action !== actionFilter) return false;
         return true;
       });
+    }
+
+    function renderToolbar() {
+      const preWeek = countPreWeek();
+      clearCountEl.textContent = preWeek;
+      // Clear button is super-admin only AND only shown when there's something to clear.
+      clearBtn.hidden = !(session.role === 'super_admin' && preWeek > 0);
+    }
+
+    function clearOldEntries() {
+      const preWeek = countPreWeek();
+      if (preWeek === 0) return;
+      const msg = 'Clear ' + preWeek + ' entries from before this week? This cannot be undone.';
+      if (!confirm(msg)) return;
+
+      const cutoff = startOfThisWeek();
+      window.MOCK_DATA.activity = window.MOCK_DATA.activity.filter(function (e) {
+        return new Date(e.at).getTime() >= cutoff;
+      });
+
+      window.toast && window.toast({
+        type: 'success', title: 'Cleared', message: preWeek + ' old entries removed.'
+      });
+
+      renderToolbar();
+      render();
     }
 
     function render() {
@@ -120,7 +165,9 @@
       actionFilter = e.target.value;
       render();
     });
+    clearBtn.addEventListener('click', clearOldEntries);
 
+    renderToolbar();
     render();
   }
 
