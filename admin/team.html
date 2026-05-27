@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team, SponsorCheck Admin</title>
+  <link rel="icon" href="assets/favicon.png">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap">
+
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components/buttons.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
+  <link rel="stylesheet" href="../css/components/pills.css">
+  <link rel="stylesheet" href="../css/components/states.css">
+  <link rel="stylesheet" href="../css/components/tables.css">
+  <link rel="stylesheet" href="../css/components/modals.css">
+  <link rel="stylesheet" href="../css/components/admin-shell.css">
+  <link rel="stylesheet" href="../css/components/admin-meta.css">
+  <link rel="stylesheet" href="../css/components/toasts.css">
+  <link rel="stylesheet" href="../css/pages/admin.css">
+  <link rel="stylesheet" href="../css/utilities.css">
+</head>
+<body>
+
+<main class="admin-main">
+
+  <div class="page-toolbar">
+    <div>
+      <span class="text-secondary text-sm">
+        Showing <strong id="team-count">0</strong> admins
+      </span>
+    </div>
+    <button type="button" class="btn btn--primary btn--sm" data-modal-open="invite-modal">
+      <i class="bi bi-plus-lg"></i> Invite admin
+    </button>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table" id="team-table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Added</th>
+          <th>Added by</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="team-tbody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Invite modal -->
+<div class="modal" id="invite-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="invite-title">
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <h2 class="modal__title" id="invite-title">Invite admin</h2>
+      <button class="modal__close" data-modal-close aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </header>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" for="invite-email">Email <span class="form-label__required">*</span></label>
+        <input type="email" class="form-input" id="invite-email" placeholder="name@sa.smu.edu.sg" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="invite-role">Role</label>
+        <select class="form-input" id="invite-role">
+          <option value="admin">Admin</option>
+          <option value="super_admin">Super-admin</option>
+        </select>
+        <div class="form-helper">Super-admins can manage other admins and hard-delete sponsors.</div>
+      </div>
+    </div>
+    <footer class="modal__footer">
+      <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn--primary btn--sm" id="invite-submit">
+        <i class="bi bi-check-lg"></i> Send invite
+      </button>
+    </footer>
+  </div>
+</div>
+
+<!-- Transfer super-admin modal -->
+<div class="modal" id="transfer-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="transfer-title">
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <h2 class="modal__title" id="transfer-title">Transfer super-admin role</h2>
+      <button class="modal__close" data-modal-close aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </header>
+    <div class="modal__body">
+      <p>
+        You're about to transfer the super-admin role to
+        <strong id="transfer-target-email">someone</strong>.
+      </p>
+      <p>
+        After transfer, they become the new super-admin and you become a regular admin.
+        You will lose the ability to manage other admins. Continue?
+      </p>
+    </div>
+    <footer class="modal__footer">
+      <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn--primary btn--sm" id="transfer-confirm">
+        <i class="bi bi-arrow-left-right"></i> Transfer role
+      </button>
+    </footer>
+  </div>
+</div>
+
+<script src="../js/lib/mock-data.js" defer></script>
+<script src="../js/components/toast.js" defer></script>
+<script src="../js/components/modal.js" defer></script>
+<script src="../js/admin/admin-shell.js" defer></script>
+<script src="../js/admin/team-page.js" defer></script>
+</body>
+</html>

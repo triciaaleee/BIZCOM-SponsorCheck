@@ -58,12 +58,13 @@
   // ---------- Sidebar ----------
 
   const NAV_ITEMS = [
-    { href: 'sponsors.html',    label: 'Sponsors',    icon: 'bi-building'   },
-    { href: 'submissions.html', label: 'Submissions', icon: 'bi-inbox-fill' },
-    { href: 'activity.html',    label: 'Activity',    icon: 'bi-clock-history' }
+    { href: 'sponsors.html',    label: 'Sponsors',    icon: 'bi-building'      },
+    { href: 'submissions.html', label: 'Submissions', icon: 'bi-inbox-fill'    },
+    { href: 'activity.html',    label: 'Activity',    icon: 'bi-clock-history' },
+    { href: 'team.html',        label: 'Team',        icon: 'bi-people-fill',  superOnly: true }
   ];
 
-  function renderSidebar(currentPage) {
+  function renderSidebar(currentPage, session) {
     const aside = document.createElement('aside');
     aside.className = 'admin-nav';
     aside.setAttribute('aria-label', 'Admin navigation');
@@ -80,6 +81,7 @@
     list.className = 'admin-nav__list';
 
     NAV_ITEMS.forEach(function (item) {
+      if (item.superOnly && session.role !== 'super_admin') return;
       const a = document.createElement('a');
       a.href = item.href;
       a.className = 'admin-nav__link' + (item.href === currentPage ? ' is-active' : '');
@@ -160,6 +162,12 @@
       return null;
     }
 
+    // Super-admin guard: bounce non-super-admins to sponsors list.
+    if (opts.requiresSuperAdmin && session && session.role !== 'super_admin') {
+      window.location.href = 'sponsors.html';
+      return null;
+    }
+
     // Mount demo banner + sidebar + top bar around the existing main content.
     if (!opts.skipShell) {
       const body = document.body;
@@ -173,7 +181,7 @@
       const shell = document.createElement('div');
       shell.className = 'admin-shell';
 
-      const sidebar = renderSidebar(opts.currentPage);
+      const sidebar = renderSidebar(opts.currentPage, session);
       const content = document.createElement('div');
       content.className = 'admin-content';
 

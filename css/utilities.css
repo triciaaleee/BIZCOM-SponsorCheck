@@ -18,6 +18,7 @@
 
 /* ---------- Text helpers ---------- */
 .text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
 .text-xs { font-size: var(--font-size-xs) !important; }
 .text-sm { font-size: var(--font-size-sm) !important; }
 
