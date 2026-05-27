@@ -30,6 +30,17 @@
 
 <main class="admin-main">
 
+  <div class="page-toolbar">
+    <div>
+      <span class="text-secondary text-sm">
+        Showing <strong id="submissions-count">0</strong> submissions
+      </span>
+    </div>
+    <button type="button" class="btn btn--primary btn--sm" id="add-submission">
+      <i class="bi bi-plus-lg"></i> Add submission
+    </button>
+  </div>
+
   <div class="admin-tabs" role="tablist" aria-label="Filter by status">
     <button class="admin-tab is-active" data-status="all">
       All <span class="admin-tab__count" id="sub-count-all">0</span>
@@ -50,10 +61,8 @@
       <thead>
         <tr>
           <th>Event</th>
-          <th>Size</th>
-          <th>Sponsors</th>
-          <th>Submitted</th>
           <th>Status</th>
+          <th>Complete by</th>
         </tr>
       </thead>
       <tbody id="submissions-tbody"></tbody>
@@ -92,18 +101,45 @@
 
     <div class="side-panel__section">
       <div class="side-panel__section-title">Event details</div>
+      <div class="form-group">
+        <label class="form-label" for="panel-event-input">Event name <span class="form-label__required">*</span></label>
+        <input type="text" class="form-input" id="panel-event-input" placeholder="e.g. Bizad Charity Run 2026">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panel-club-input">Club <span class="form-label__required">*</span></label>
+        <input type="text" class="form-input" id="panel-club-input" placeholder="e.g. Accountancy Society">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panel-contact-input">Contact email <span class="form-label__required">*</span></label>
+        <input type="email" class="form-input" id="panel-contact-input" placeholder="contact@smu.edu.sg">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panel-size-input">Event size</label>
+        <select class="form-input" id="panel-size-input">
+          <option value="small">Small (&lt;50)</option>
+          <option value="medium">Medium (50-150)</option>
+          <option value="large">Large (&gt;150)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panel-spcount-input">Sponsor count</label>
+        <input type="number" class="form-input" id="panel-spcount-input" min="0" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="panel-complete-by-input">Complete by <span class="form-label__required">*</span></label>
+        <input type="date" class="form-input" id="panel-complete-by-input">
+      </div>
+    </div>
+
+    <div class="side-panel__section" id="panel-meta-section">
+      <div class="side-panel__section-title">Review history</div>
       <ul class="meta-list">
-        <li><span class="meta-list__key">Event</span><span class="meta-list__val" id="panel-event">-</span></li>
-        <li><span class="meta-list__key">Club</span><span class="meta-list__val" id="panel-club">-</span></li>
-        <li><span class="meta-list__key">Size</span><span class="meta-list__val" id="panel-size">-</span></li>
-        <li><span class="meta-list__key">Contact</span><span class="meta-list__val" id="panel-contact">-</span></li>
-        <li><span class="meta-list__key">Sponsor count</span><span class="meta-list__val" id="panel-spcount">-</span></li>
         <li><span class="meta-list__key">Submitted</span><span class="meta-list__val" id="panel-submitted">-</span></li>
         <li><span class="meta-list__key">Last reviewed</span><span class="meta-list__val" id="panel-reviewed">-</span></li>
       </ul>
     </div>
 
-    <div class="side-panel__section">
+    <div class="side-panel__section" id="panel-sponsors-section">
       <div class="side-panel__section-title">Sponsor list (preview)</div>
       <table class="panel-table" id="panel-sponsors">
         <thead>
@@ -125,7 +161,7 @@
   <footer class="side-panel__footer">
     <button type="button" class="btn btn--secondary btn--sm" id="panel-cancel">Close</button>
     <button type="button" class="btn btn--primary btn--sm" id="panel-save">
-      <i class="bi bi-check-lg"></i> Save
+      <i class="bi bi-check-lg"></i> <span id="panel-save-label">Save</span>
     </button>
   </footer>
 </aside>
