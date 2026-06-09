@@ -53,8 +53,9 @@
 
     // Welcome card greeting and KPIs.
     function renderWelcome() {
-      // Local-part of email as a friendly name fallback.
-      welcomeName.textContent = session.email.split('@')[0];
+      // Prefer the admin's name from the team record; fall back to the
+      // email local-part if name wasn't set.
+      welcomeName.textContent = session.name || session.email.split('@')[0];
 
       const subs = window.MOCK_DATA.submissions || [];
       const today = new Date(); today.setHours(0, 0, 0, 0);

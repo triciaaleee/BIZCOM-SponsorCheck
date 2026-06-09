@@ -44,6 +44,7 @@
     <table class="admin-table" id="team-table">
       <thead>
         <tr>
+          <th>Name</th>
           <th>Email</th>
           <th>Role</th>
           <th>Added</th>
@@ -67,6 +68,11 @@
       </button>
     </header>
     <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label" for="invite-name">Name <span class="form-label__required">*</span></label>
+        <input type="text" class="form-input" id="invite-name" placeholder="Wei Jie" autocomplete="off">
+        <div class="form-helper">Shown in the dashboard greeting and on the team list.</div>
+      </div>
       <div class="form-group">
         <label class="form-label" for="invite-email">Email <span class="form-label__required">*</span></label>
         <input type="email" class="form-input" id="invite-email" placeholder="name@sa.smu.edu.sg" autocomplete="off">

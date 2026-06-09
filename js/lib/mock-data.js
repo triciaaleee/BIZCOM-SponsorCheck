@@ -104,9 +104,9 @@ window.MOCK_DATA = {
   // Registered admins. The super-admin seat transfers via the team
   // page (not built in v1 admin); for now the seat is fixed.
   admins: [
-    { email: 'biz@sa.smu.edu.sg',          role: 'super_admin', added_at: '2026-01-01', added_by: 'system' },
-    { email: 'biz.deputy@sa.smu.edu.sg',   role: 'admin',       added_at: '2026-01-04', added_by: 'biz@sa.smu.edu.sg' },
-    { email: 'biz.outreach@sa.smu.edu.sg', role: 'admin',       added_at: '2026-02-12', added_by: 'biz@sa.smu.edu.sg' }
+    { email: 'biz@sa.smu.edu.sg',          name: 'Tricia',       role: 'super_admin', added_at: '2026-01-01', added_by: 'system' },
+    { email: 'biz.deputy@sa.smu.edu.sg',   name: 'Wei Jie',      role: 'admin',       added_at: '2026-01-04', added_by: 'biz@sa.smu.edu.sg' },
+    { email: 'biz.outreach@sa.smu.edu.sg', name: 'Arjun',        role: 'admin',       added_at: '2026-02-12', added_by: 'biz@sa.smu.edu.sg' }
   ],
 
   // Submission inbox. Each row is one club's emailed sponsor list.

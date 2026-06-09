@@ -51,6 +51,7 @@
       // Mock success: persist session and redirect
       window.AdminShell.setSession({
         email: found.email,
+        name: found.name || found.email.split('@')[0],
         role: found.role,
         signed_in_at: new Date().toISOString()
       });

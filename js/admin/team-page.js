@@ -26,6 +26,7 @@
     const tbody = document.getElementById('team-tbody');
     const countEl = document.getElementById('team-count');
 
+    const inviteName = document.getElementById('invite-name');
     const inviteEmail = document.getElementById('invite-email');
     const inviteRole = document.getElementById('invite-role');
     const inviteSubmit = document.getElementById('invite-submit');
@@ -102,7 +103,8 @@
 
         return (
           '<tr>' +
-            '<td><div class="table__cell-primary">' + esc(a.email) + youTag + '</div></td>' +
+            '<td><div class="table__cell-primary">' + esc(a.name || '(unnamed)') + youTag + '</div></td>' +
+            '<td><span class="text-sm text-secondary">' + esc(a.email) + '</span></td>' +
             '<td>' + roleBadge(a.role) + '</td>' +
             '<td><span class="text-xs text-muted">' + esc(formatDate(a.added_at)) + '</span></td>' +
             '<td><span class="text-xs text-muted">' + esc(shortActor(a.added_by)) + '</span></td>' +
@@ -127,14 +129,20 @@
 
     // ---------- invite ----------
     function resetInviteForm() {
+      inviteName.value = '';
       inviteEmail.value = '';
       inviteRole.value = 'admin';
     }
 
     function submitInvite() {
+      const name = inviteName.value.trim();
       const email = inviteEmail.value.trim().toLowerCase();
       const role = inviteRole.value;
 
+      if (!name) {
+        window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter the admin’s name.' });
+        return;
+      }
       if (!emailLooksValid(email)) {
         window.toast && window.toast({ type: 'error', title: 'Invalid email', message: 'Enter a valid email address.' });
         return;
@@ -156,15 +164,23 @@
         return;
       }
 
-      window.MOCK_DATA.admins.push({
+      const newAdmin = {
         email: email,
+        name: name,
         role: role,
         added_at: new Date().toISOString().slice(0, 10),
         added_by: session.email
-      });
+      };
+      window.MOCK_DATA.admins.push(newAdmin);
 
-      window.AdminShell.logActivity('admin.added', email, 'Invited as ' + role);
-      window.toast && window.toast({ type: 'success', title: 'Admin added', message: email });
+      window.AdminShell.logActivity('admin.added', email, name + ' invited as ' + role);
+
+      // Fire the invite email (mock now, Supabase later).
+      if (window.AdminShell.sendInviteEmail) {
+        window.AdminShell.sendInviteEmail(newAdmin);
+      } else {
+        window.toast && window.toast({ type: 'success', title: 'Admin added', message: email });
+      }
 
       resetInviteForm();
       window.closeModal && window.closeModal('invite-modal');
