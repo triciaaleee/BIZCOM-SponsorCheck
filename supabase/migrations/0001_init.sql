@@ -93,16 +93,6 @@ create table if not exists public.admins (
   user_id   uuid references auth.users(id) on delete set null  -- linked on first sign-in
 );
 
--- Append-only audit trail (newest first when ordered by `at` desc).
-create table if not exists public.activity_log (
-  id      uuid primary key default gen_random_uuid(),
-  at      timestamptz not null default now(),
-  actor   text not null,        -- admin email or 'system'
-  action  text not null,        -- e.g. 'sponsor.created', 'submission.status_changed'
-  entity  text,                 -- sponsor name / event name / admin email
-  details text
-);
-
 -- Single-row global settings (caps + cooldown window). The id check pins it
 -- to exactly one row.
 create table if not exists public.settings (
@@ -126,9 +116,6 @@ create index if not exists outreach_contacted_at_idx   on public.outreach_log (c
 create index if not exists submissions_status_idx      on public.submissions (status);
 create index if not exists submissions_submitted_idx   on public.submissions (submitted_at desc);
 create index if not exists subsponsors_submission_idx  on public.submission_sponsors (submission_id);
-create index if not exists activity_at_idx             on public.activity_log (at desc);
-create index if not exists activity_actor_idx          on public.activity_log (actor);
-create index if not exists activity_action_idx         on public.activity_log (action);
 
 -- ============================================================
 -- HELPER FUNCTIONS (auth) — SECURITY DEFINER so they can read the
@@ -224,7 +211,6 @@ alter table public.outreach_log        enable row level security;
 alter table public.submissions         enable row level security;
 alter table public.submission_sponsors enable row level security;
 alter table public.admins              enable row level security;
-alter table public.activity_log        enable row level security;
 alter table public.settings            enable row level security;
 
 -- ---- industries: public read, admin write ----
@@ -275,15 +261,6 @@ create policy admins_read  on public.admins for select using (public.is_admin())
 create policy admins_write on public.admins for all
   using (public.is_super_admin()) with check (public.is_super_admin());
 
--- ---- activity_log: admins read + append; super-admin clears (weekly) ----
-drop policy if exists activity_read   on public.activity_log;
-drop policy if exists activity_insert on public.activity_log;
-drop policy if exists activity_delete on public.activity_log;
-create policy activity_read   on public.activity_log for select using (public.is_admin());
-create policy activity_insert on public.activity_log for insert with check (public.is_admin());
-create policy activity_delete on public.activity_log for delete using (public.is_super_admin());
--- (no update policy = append-only)
-
 -- ---- settings: public read (caps shown to students), super-admin updates ----
 drop policy if exists settings_read   on public.settings;
 drop policy if exists settings_update on public.settings;
@@ -307,5 +284,5 @@ grant insert on public.submissions, public.submission_sponsors to anon, authenti
 grant select, insert, update, delete on
   public.industries, public.sponsors, public.outreach_log,
   public.submissions, public.submission_sponsors,
-  public.admins, public.activity_log, public.settings
+  public.admins, public.settings
   to authenticated;

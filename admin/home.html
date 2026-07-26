@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Submissions, SponsorCheck Admin</title>
+  <title>Home, SponsorCheck Admin</title>
   <link rel="icon" href="assets/favicon.png">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
@@ -19,7 +19,6 @@
   <link rel="stylesheet" href="../css/components/states.css">
   <link rel="stylesheet" href="../css/components/tables.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
-  <link rel="stylesheet" href="../css/components/admin-tabs.css">
   <link rel="stylesheet" href="../css/components/side-panel.css">
   <link rel="stylesheet" href="../css/components/admin-meta.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
@@ -30,53 +29,46 @@
 
 <main class="admin-main">
 
-  <div class="page-toolbar">
-    <div>
-      <span class="text-secondary text-sm">
-        Showing <strong id="submissions-count">0</strong> submissions
-      </span>
+  <section class="welcome-card" id="welcome-card">
+    <div class="welcome-card__greeting">
+      <h2 class="welcome-card__hello">
+        Hi, <span class="welcome-card__name" id="welcome-name">there</span>.
+      </h2>
+      <p class="welcome-card__sub" id="welcome-sub">Here's your queue at a glance.</p>
     </div>
-    <button type="button" class="btn btn--primary btn--sm" id="add-submission">
-      <i class="bi bi-plus-lg"></i> Add submission
-    </button>
-  </div>
-
-  <div class="admin-tabs" role="tablist" aria-label="Filter by status">
-    <button class="admin-tab is-active" data-status="all">
-      All <span class="admin-tab__count" id="sub-count-all">0</span>
-    </button>
-    <button class="admin-tab" data-status="new">
-      New <span class="admin-tab__count" id="sub-count-new">0</span>
-    </button>
-    <button class="admin-tab" data-status="reviewing">
-      Reviewing <span class="admin-tab__count" id="sub-count-reviewing">0</span>
-    </button>
-    <button class="admin-tab" data-status="completed">
-      Completed <span class="admin-tab__count" id="sub-count-completed">0</span>
-    </button>
-  </div>
-
-  <div class="admin-table-wrap">
-    <table class="admin-table" id="submissions-table">
-      <thead>
-        <tr>
-          <th>Event</th>
-          <th>Status</th>
-          <th>Complete by</th>
-        </tr>
-      </thead>
-      <tbody id="submissions-tbody"></tbody>
-    </table>
-    <div class="empty-card" id="submissions-empty" style="display: none">
-      <i class="bi bi-inbox"></i>
-      <div class="empty-card__title">No submissions in this view</div>
-      <div class="empty-card__sub">Submissions appear here when clubs email their cleaned sponsor lists.</div>
+    <div class="pending" id="pending">
+      <div class="pending__head">
+        <span class="pending__title">Pending</span>
+        <span class="pending__count" id="pending-count">0 to finish</span>
+      </div>
+      <ul class="pending__list" id="pending-list"></ul>
+      <div class="pending__empty" id="pending-empty" hidden>All caught up — no pending submissions.</div>
     </div>
-  </div>
+  </section>
+
+  <section class="calendar" id="calendar" aria-label="Submissions by month">
+    <div class="calendar__toolbar">
+      <div class="calendar__nav">
+        <button type="button" class="calendar__nav-btn" id="cal-prev" aria-label="Previous year">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <h2 class="calendar__year" id="cal-year">2026</h2>
+        <button type="button" class="calendar__nav-btn" id="cal-next" aria-label="Next year">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      <div class="calendar__legend" aria-label="Status colour key">
+        <span class="calendar__legend-item"><span class="calendar__legend-dot calendar__legend-dot--new"></span> New</span>
+        <span class="calendar__legend-item"><span class="calendar__legend-dot calendar__legend-dot--reviewing"></span> Reviewing</span>
+        <span class="calendar__legend-item"><span class="calendar__legend-dot calendar__legend-dot--completed"></span> Completed</span>
+      </div>
+    </div>
+    <div class="calendar__grid" id="calendar-grid"></div>
+  </section>
 
 </main>
 
-<!-- Side panel + backdrop -->
+<!-- Side panel + backdrop: create / edit a submission -->
 <div class="side-panel-backdrop" id="panel-backdrop"></div>
 <aside class="side-panel" id="side-panel" aria-hidden="true" aria-labelledby="panel-title">
   <header class="side-panel__header">
@@ -97,6 +89,9 @@
         <button type="button" class="panel-status-picker__tile" data-panel-status="reviewing" role="radio" aria-checked="false">Reviewing</button>
         <button type="button" class="panel-status-picker__tile" data-panel-status="completed" role="radio" aria-checked="false">Completed</button>
       </div>
+      <ul class="meta-list" id="panel-submitted-line" style="margin-top: var(--space-4)">
+        <li><span class="meta-list__key">Submitted</span><span class="meta-list__val" id="panel-submitted">-</span></li>
+      </ul>
     </div>
 
     <div class="side-panel__section">
@@ -131,27 +126,6 @@
       </div>
     </div>
 
-    <div class="side-panel__section" id="panel-meta-section">
-      <div class="side-panel__section-title">Review history</div>
-      <ul class="meta-list">
-        <li><span class="meta-list__key">Submitted</span><span class="meta-list__val" id="panel-submitted">-</span></li>
-        <li><span class="meta-list__key">Last reviewed</span><span class="meta-list__val" id="panel-reviewed">-</span></li>
-      </ul>
-    </div>
-
-    <div class="side-panel__section" id="panel-sponsors-section">
-      <div class="side-panel__section-title">Sponsor list (preview)</div>
-      <table class="panel-table" id="panel-sponsors">
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="panel-sponsors-tbody"></tbody>
-      </table>
-    </div>
-
     <div class="side-panel__section">
       <div class="side-panel__section-title">Admin notes</div>
       <textarea class="form-input" id="panel-notes" rows="4" placeholder="Notes for handover, e.g. 'reminded club to coordinate with OAR'..."></textarea>
@@ -169,6 +143,6 @@
 <script src="../js/lib/mock-data.js" defer></script>
 <script src="../js/components/toast.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>
-<script src="../js/admin/submissions-page.js" defer></script>
+<script src="../js/admin/home-page.js" defer></script>
 </body>
 </html>

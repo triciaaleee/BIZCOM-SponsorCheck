@@ -109,53 +109,14 @@
 
       // Populate side panel
       document.getElementById('meta-id').textContent = sponsor.id;
-      const creationLog = window.MOCK_DATA.activity.find(function (a) {
-        return a.entity === sponsor.name && a.action === 'sponsor.created';
-      });
-      document.getElementById('meta-created').textContent = creationLog
-        ? formatDate(creationLog.at) + ' by ' + creationLog.actor.split('@')[0] + '@'
-        : 'Unknown';
-
-      const lastLog = window.MOCK_DATA.activity.find(function (a) {
-        return a.entity === sponsor.name && a.action.indexOf('sponsor.') === 0;
-      });
-      document.getElementById('meta-updated').textContent = lastLog
-        ? formatDate(lastLog.at) + ' by ' + lastLog.actor.split('@')[0] + '@'
-        : 'Unknown';
 
       const oc = window.MOCK_DATA.outreachCounts[sponsor.id];
       document.getElementById('meta-outreach').textContent = (oc != null ? oc : 0) + ' / ' + window.MOCK_DATA.settings.outreach_cap_per_30d;
-
-      // Per-sponsor activity log
-      renderSponsorActivity(sponsor.name);
 
       // Show danger zone for super-admin
       if (session.role === 'super_admin') {
         dangerZone.style.display = '';
       }
-    }
-
-    function renderSponsorActivity(sponsorName) {
-      const list = document.getElementById('activity-mini-list');
-      const entries = window.MOCK_DATA.activity.filter(function (a) {
-        return a.entity === sponsorName;
-      });
-      if (!entries.length) return;
-      list.innerHTML = entries.map(function (e) {
-        return (
-          '<li class="activity-mini__item">' +
-            '<div class="activity-mini__when">' + esc(formatDate(e.at)) + ', ' + esc(e.actor.split('@')[0]) + '@</div>' +
-            '<div class="activity-mini__what">' + esc(e.details || e.action) + '</div>' +
-          '</li>'
-        );
-      }).join('');
-    }
-
-    function formatDate(iso) {
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return iso;
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
     // ---------- save ----------

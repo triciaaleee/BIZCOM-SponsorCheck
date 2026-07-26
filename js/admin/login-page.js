@@ -15,7 +15,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     const existing = window.AdminShell && window.AdminShell.getSession();
     if (existing) {
-      window.location.href = 'sponsors.html';
+      window.location.href = 'home.html';
       return;
     }
 
@@ -56,7 +56,7 @@
         signed_in_at: new Date().toISOString()
       });
 
-      window.location.href = 'sponsors.html';
+      window.location.href = 'home.html';
     });
   });
 })();

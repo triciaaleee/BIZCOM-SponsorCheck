@@ -40,27 +40,16 @@
 
   // ---------- Activity log ----------
 
-  function logActivity(action, entity, details) {
-    if (!window.MOCK_DATA) return;
-    const session = getSession();
-    if (!session) return;
-    const entry = {
-      id: 'a-' + Date.now().toString(36),
-      at: new Date().toISOString(),
-      actor: session.email,
-      action: action,
-      entity: entity,
-      details: details || ''
-    };
-    window.MOCK_DATA.activity.unshift(entry);
-  }
+  // The Activity page and its mock data were removed. logActivity is kept as a
+  // no-op so existing call sites stay valid; wire a Supabase audit insert here
+  // if a server-side audit trail is reintroduced later.
+  function logActivity(/* action, entity, details */) {}
 
   // ---------- Sidebar ----------
 
   const NAV_ITEMS = [
+    { href: 'home.html',        label: 'Home',        icon: 'bi-house-door-fill' },
     { href: 'sponsors.html',    label: 'Sponsors',    icon: 'bi-building'      },
-    { href: 'submissions.html', label: 'Submissions', icon: 'bi-inbox-fill'    },
-    { href: 'activity.html',    label: 'Activity',    icon: 'bi-clock-history' },
     { href: 'team.html',        label: 'Team',        icon: 'bi-people-fill',  superOnly: true }
   ];
 
@@ -70,7 +59,7 @@
     aside.setAttribute('aria-label', 'Admin navigation');
 
     const brand = document.createElement('a');
-    brand.href = 'sponsors.html';
+    brand.href = 'home.html';
     brand.className = 'admin-nav__brand';
     brand.innerHTML =
       '<img src="../admin/assets/bizcom-logo.png" alt="SMU BIZCOM">' +

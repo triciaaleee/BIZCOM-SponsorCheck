@@ -100,40 +100,485 @@
   margin: 0;
 }
 
-.welcome-card__kpis {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.kpi-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3) var(--space-4);
+/* Pending-submissions panel in the home banner (right side of welcome card). */
+.pending {
+  flex: 1 1 380px;
+  min-width: 280px;
+  max-width: 460px;
   background-color: var(--surface-muted);
   border-radius: var(--radius-md);
-  min-width: 130px;
+  padding: var(--space-3) var(--space-4);
 }
 
-.kpi-tile__value {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
-  color: var(--text-primary);
-  line-height: 1;
+.pending__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
 }
 
-.kpi-tile__label {
+.pending__title {
   font-size: var(--font-size-xs);
-  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-wide);
   font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
 }
 
-.kpi-tile--gold .kpi-tile__value { color: #8C7212; }
-.kpi-tile--orange .kpi-tile__value { color: var(--color-orange); }
-.kpi-tile--green .kpi-tile__value { color: var(--color-green-dark); }
+.pending__count {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.pending__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 176px;
+  overflow: auto;
+}
+
+.pending__empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-2);
+}
+
+.pending-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.pending-item:hover {
+  background-color: var(--surface-card);
+}
+
+.pending-item__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pending-item__text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.pending-item__event {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-item__club {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Due-date chip */
+.due-chip {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background-color: rgba(46, 82, 157, 0.08);
+  color: var(--text-secondary);
+}
+
+.due-chip--soon {
+  background-color: rgba(214, 178, 56, 0.20);
+  color: #8C7212;
+}
+
+.due-chip--overdue {
+  background-color: rgba(202, 88, 28, 0.12);
+  color: var(--color-orange-dark);
+}
+
+/* ============================================================
+   SPONSORS PAGE — outreach cap alert
+   ============================================================ */
+
+.cap-alert {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.cap-alert::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--color-orange);
+}
+
+.cap-alert__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.cap-alert__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.cap-alert__title i {
+  color: var(--color-orange);
+}
+
+.cap-alert__sub {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.cap-alert__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.cap-alert__empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.cap-item__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.cap-item__link:hover {
+  background-color: var(--surface-muted);
+}
+
+.cap-item__name {
+  flex: 0 0 auto;
+  min-width: 140px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.cap-item__meter {
+  flex: 1;
+  min-width: 80px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--surface-muted);
+  overflow: hidden;
+}
+
+.cap-item__link:hover .cap-item__meter {
+  background-color: var(--surface-card);
+}
+
+.cap-item__bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--color-gold);
+}
+
+.cap-item__bar--over {
+  background-color: var(--color-orange);
+}
+
+.cap-item__count {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: #8C7212;
+  white-space: nowrap;
+}
+
+.cap-item__count--over {
+  color: var(--color-orange-dark);
+}
+
+/* ============================================================
+   HOME PAGE — SUBMISSIONS CALENDAR
+   12 months (3x4) for a year. Past months are greyed but stay
+   fully editable; the current month is highlighted.
+   ============================================================ */
+
+.calendar {
+  margin-bottom: var(--space-6);
+}
+
+.calendar__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.calendar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.calendar__nav-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default);
+  background-color: var(--surface-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.calendar__nav-btn:hover {
+  border-color: var(--color-navy);
+  color: var(--color-navy);
+}
+
+.calendar__year {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+  margin: 0;
+  min-width: 4ch;
+  text-align: center;
+}
+
+.calendar__legend {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.calendar__legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--text-muted);
+}
+
+.calendar__legend-dot--new { background-color: var(--color-navy); }
+.calendar__legend-dot--reviewing { background-color: var(--color-gold); }
+.calendar__legend-dot--completed { background-color: var(--color-green-dark); }
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .calendar__grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .calendar__grid { grid-template-columns: 1fr; }
+}
+
+.cal-cell {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.cal-cell.is-current {
+  border-color: var(--color-navy);
+  box-shadow: 0 0 0 2px rgba(46, 82, 157, 0.12);
+}
+
+/* Past months: muted, but every control inside stays clickable/editable. */
+.cal-cell.is-past {
+  background-color: var(--surface-muted);
+}
+
+.cal-cell.is-past .cal-cell__month,
+.cal-cell.is-past .cal-cell__count,
+.cal-cell.is-past .cal-sub__name {
+  color: var(--text-muted);
+}
+
+.cal-cell__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-cell__month {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cal-cell__badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  background-color: var(--color-navy);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.cal-cell__add {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-navy);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.cal-cell__add:hover {
+  background-color: rgba(46, 82, 157, 0.10);
+}
+
+.cal-cell__count {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.cal-cell__empty {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.cal-cell__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+  max-height: 148px;
+}
+
+.cal-sub {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.cal-sub__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.cal-sub__club {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-sub:hover {
+  background-color: var(--surface-muted);
+}
+
+.cal-cell.is-past .cal-sub:hover {
+  background-color: var(--surface-card);
+}
+
+.cal-sub__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-sub__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+  background-color: var(--text-muted);
+}
+
+.cal-sub__dot--new { background-color: var(--color-navy); }
+.cal-sub__dot--reviewing { background-color: var(--color-gold); }
+.cal-sub__dot--completed { background-color: var(--color-green-dark); }
 
 .page-toolbar {
   display: flex;
@@ -189,6 +634,34 @@
 
 .table__action:hover {
   background-color: rgba(46, 82, 157, 0.10);
+}
+
+/* ============================================================
+   TEAM PAGE — inline name editing
+   ============================================================ */
+
+/* Small pencil button that sits beside an admin's name. */
+.table__action--inline {
+  width: 26px;
+  height: 26px;
+  vertical-align: middle;
+  color: var(--text-muted);
+}
+
+.table__action--inline:hover {
+  color: var(--color-navy);
+}
+
+.team-name-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.team-name-input {
+  max-width: 200px;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
 }
 
 /* ============================================================

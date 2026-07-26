@@ -50,12 +50,6 @@
       return '<span class="role-badge role-badge--admin">Admin</span>';
     }
 
-    function shortActor(email) {
-      if (!email) return '-';
-      if (email === 'system') return 'system';
-      return email.split('@')[0] + '@';
-    }
-
     function emailLooksValid(s) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
@@ -103,11 +97,17 @@
 
         return (
           '<tr>' +
-            '<td><div class="table__cell-primary">' + esc(a.name || '(unnamed)') + youTag + '</div></td>' +
+            '<td>' +
+              '<div class="table__cell-primary" data-name-wrap="' + esc(a.email) + '">' +
+                '<span class="team-name">' + esc(a.name || '(unnamed)') + '</span>' + youTag +
+                ' <button type="button" class="table__action table__action--inline" data-action="edit-name" data-email="' + esc(a.email) + '" title="Edit name" aria-label="Edit name">' +
+                  '<i class="bi bi-pencil"></i>' +
+                '</button>' +
+              '</div>' +
+            '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(a.email) + '</span></td>' +
             '<td>' + roleBadge(a.role) + '</td>' +
             '<td><span class="text-xs text-muted">' + esc(formatDate(a.added_at)) + '</span></td>' +
-            '<td><span class="text-xs text-muted">' + esc(shortActor(a.added_by)) + '</span></td>' +
             '<td class="text-right">' + actions + '</td>' +
           '</tr>'
         );
@@ -123,8 +123,57 @@
           const email = btn.getAttribute('data-email');
           if (action === 'remove') removeAdmin(email);
           if (action === 'transfer') openTransferModal(email);
+          if (action === 'edit-name') startEditName(email);
         });
       });
+    }
+
+    // ---------- inline name editing ----------
+    function startEditName(email) {
+      const admin = findAdmin(email);
+      if (!admin) return;
+      const wrap = tbody.querySelector('[data-name-wrap="' + email + '"]');
+      if (!wrap) return;
+
+      wrap.innerHTML =
+        '<span class="team-name-edit">' +
+          '<input type="text" class="form-input team-name-input" value="' + esc(admin.name || '') + '" maxlength="60" aria-label="Admin name">' +
+          '<button type="button" class="btn btn--primary btn--sm" data-name-save title="Save"><i class="bi bi-check-lg"></i></button>' +
+          '<button type="button" class="btn btn--secondary btn--sm" data-name-cancel title="Cancel"><i class="bi bi-x"></i></button>' +
+        '</span>';
+
+      const input = wrap.querySelector('.team-name-input');
+      input.focus();
+      input.select();
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); saveName(email, input.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); render(); }
+      });
+      wrap.querySelector('[data-name-save]').addEventListener('click', function () { saveName(email, input.value); });
+      wrap.querySelector('[data-name-cancel]').addEventListener('click', function () { render(); });
+    }
+
+    function saveName(email, value) {
+      const admin = findAdmin(email);
+      if (!admin) return;
+      const name = value.trim();
+      if (!name) {
+        window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter a name.' });
+        return;
+      }
+      if (name === admin.name) { render(); return; }
+
+      admin.name = name;
+      // If editing your own record, keep the live session name in sync so the
+      // top-bar greeting and home page reflect the change immediately.
+      if (email === session.email) {
+        session.name = name;
+        window.AdminShell.setSession(session);
+      }
+
+      window.AdminShell.logActivity('admin.updated', email, 'Name changed to "' + name + '"');
+      window.toast && window.toast({ type: 'success', title: 'Name updated', message: name });
+      render();
     }
 
     // ---------- invite ----------

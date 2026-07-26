@@ -26,27 +26,15 @@
 
 <main class="admin-main">
 
-  <section class="welcome-card" id="welcome-card">
-    <div class="welcome-card__greeting">
-      <h2 class="welcome-card__hello">
-        Hi, <span class="welcome-card__name" id="welcome-name">there</span>.
-      </h2>
-      <p class="welcome-card__sub" id="welcome-sub">Here's your queue at a glance.</p>
+  <section class="cap-alert" id="cap-alert">
+    <div class="cap-alert__head">
+      <span class="cap-alert__title">
+        <i class="bi bi-exclamation-triangle-fill"></i> Reaching outreach cap this month
+      </span>
+      <span class="cap-alert__sub" id="cap-alert-sub">At or near the 30-day cap</span>
     </div>
-    <div class="welcome-card__kpis">
-      <div class="kpi-tile kpi-tile--gold">
-        <div class="kpi-tile__value" id="kpi-due-soon">0</div>
-        <div class="kpi-tile__label">Due this week</div>
-      </div>
-      <div class="kpi-tile kpi-tile--orange">
-        <div class="kpi-tile__value" id="kpi-at-cap">0</div>
-        <div class="kpi-tile__label">Sponsors near cap</div>
-      </div>
-      <div class="kpi-tile kpi-tile--green">
-        <div class="kpi-tile__value" id="kpi-new-subs">0</div>
-        <div class="kpi-tile__label">New submissions</div>
-      </div>
-    </div>
+    <ul class="cap-alert__list" id="cap-list"></ul>
+    <div class="cap-alert__empty" id="cap-empty" hidden>No sponsors are near the cap right now.</div>
   </section>
 
   <div class="page-toolbar">
@@ -97,7 +85,6 @@
           <th>Status</th>
           <th>Industry</th>
           <th>Notes</th>
-          <th>Last updated</th>
           <th style="width: 64px"></th>
         </tr>
       </thead>

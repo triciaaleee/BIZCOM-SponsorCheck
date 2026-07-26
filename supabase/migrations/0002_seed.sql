@@ -86,7 +86,7 @@ insert into public.outreach_log (sponsor_id, contacted_at)
 select s.id,
        now() - ((g.i % 28) || ' days')::interval - (g.i || ' hours')::interval
 from (values
-  ('koi the',           9),
+  ('koi',               9),
   ('liho tea',          10),
   ('starbucks',         3),
   ('subway',            1),
@@ -160,30 +160,3 @@ from (values
 ) as x(event_name, position, name, status, industry)
 join public.submissions sub on sub.event_name = x.event_name
 where not exists (select 1 from public.submission_sponsors);
-
--- ---------- activity_log -----------------------------------------------------
-insert into public.activity_log (at, actor, action, entity, details)
-select * from (values
-  ('2026-05-23T17:02:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.viewed',         'Code Sprint 2026',           'Opened submission for review'),
-  ('2026-05-22T15:30:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'sponsor.updated',           'KOI',                        'Industry changed from "other" to "food_beverage"'),
-  ('2026-05-22T11:14:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.received',       'Bizad Charity Run 2026',     'New submission from Accountancy Society, 47 sponsors'),
-  ('2026-05-21T10:05:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'submission.status_changed', 'Loop Music Festival',        'Status changed from "new" to "reviewing"'),
-  ('2026-05-20T16:48:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'Challenger',                 'Added as master, industry tech_electronics'),
-  ('2026-05-19T09:22:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.status_changed',    'Robinsons',                  'Status changed from "master" to "closed". Notes: "Ceased operations 2020"'),
-  ('2026-05-17T09:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.status_changed', 'Freshmen Welcome Tea',       'Status changed from "reviewing" to "completed"'),
-  ('2026-05-15T14:10:00+08:00'::timestamptz, 'biz.outreach@sa.smu.edu.sg', 'sponsor.created',           'Tea Tribe',                  'Added as alumni, owner "Wong YJ, BBM 2019"'),
-  ('2026-05-14T11:33:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.updated',           'AIA Insurance',              'Ban reason updated to "Annex A, Insurance Companies"'),
-  ('2026-05-12T15:42:00+08:00'::timestamptz, 'biz.outreach@sa.smu.edu.sg', 'submission.status_changed', 'Hackathon 2026',             'Status changed from "reviewing" to "completed". 3 sponsors removed from list.'),
-  ('2026-05-11T13:25:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.status_changed', 'Annual Dinner & Dance',      'Status changed from "reviewing" to "completed"'),
-  ('2026-05-10T08:14:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.received',       'Hackathon 2026',             'New submission from SMU Tech, 89 sponsors'),
-  ('2026-05-08T16:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.status_changed',    'Crystal Jade Express',       'Status changed from "master" to "closed". Notes: "Brand discontinued 2023"'),
-  ('2026-05-06T10:15:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'sponsor.created',           'Crave Bakery',               'Added as alumni, owner "Tan ML, ACCT 2017"'),
-  ('2026-05-03T13:20:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'admin.added',               'biz.outreach@sa.smu.edu.sg', 'New admin invited'),
-  ('2026-04-28T09:45:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.updated',           'Razer',                      'Notes updated'),
-  ('2026-04-20T11:11:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.status_changed',    'Singapore Pools',            'Status changed from "master" to "banned". Reason: Annex A, Gaming & Betting'),
-  ('2026-04-15T15:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'Logitech',                   'Added as master, industry tech_electronics'),
-  ('2026-04-04T10:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'KOI',                        'Added as master, industry food_beverage'),
-  ('2026-01-04T09:30:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'admin.added',               'biz.deputy@sa.smu.edu.sg',   'New admin invited'),
-  ('2026-01-01T00:00:00+08:00'::timestamptz, 'system',                     'admin.added',               'biz@sa.smu.edu.sg',          'Super-admin seat initialised')
-) as v(at, actor, action, entity, details)
-where not exists (select 1 from public.activity_log);

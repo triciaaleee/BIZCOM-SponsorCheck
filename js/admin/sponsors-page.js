@@ -35,10 +35,6 @@
     const tabs = document.querySelectorAll('.admin-tab');
     const searchInput = document.getElementById('sponsors-search-input');
     const industrySel = document.getElementById('sponsors-industry-filter');
-    const welcomeName = document.getElementById('welcome-name');
-    const kpiDueSoon = document.getElementById('kpi-due-soon');
-    const kpiAtCap = document.getElementById('kpi-at-cap');
-    const kpiNewSubs = document.getElementById('kpi-new-subs');
     const pager = document.getElementById('sponsors-pager');
     const pagerNav = document.getElementById('sponsors-pager-nav');
     const pagerRange = document.getElementById('sponsors-range');
@@ -50,36 +46,6 @@
       opt.textContent = ind.display_name;
       industrySel.appendChild(opt);
     });
-
-    // Welcome card greeting and KPIs.
-    function renderWelcome() {
-      // Prefer the admin's name from the team record; fall back to the
-      // email local-part if name wasn't set.
-      welcomeName.textContent = session.name || session.email.split('@')[0];
-
-      const subs = window.MOCK_DATA.submissions || [];
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(today.getTime() + 7 * 86400000);
-
-      const dueSoon = subs.filter(function (s) {
-        if (s.status === 'completed' || !s.complete_by) return false;
-        const d = new Date(s.complete_by);
-        return d.getTime() <= weekEnd.getTime();
-      }).length;
-
-      const newSubs = subs.filter(function (s) { return s.status === 'new'; }).length;
-
-      const cap = (window.MOCK_DATA.settings && window.MOCK_DATA.settings.outreach_cap_per_30d) || 10;
-      const counts = window.MOCK_DATA.outreachCounts || {};
-      const atCap = Object.keys(counts).filter(function (id) {
-        return counts[id] >= cap - 2;
-      }).length;
-
-      kpiDueSoon.textContent = dueSoon;
-      kpiAtCap.textContent = atCap;
-      kpiNewSubs.textContent = newSubs;
-    }
-    renderWelcome();
 
     // ----------------- helpers -----------------
     const STATUS_TO_CATEGORY = {
@@ -98,25 +64,6 @@
       const labels = { master: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
       const cls = 'status-pill--' + category;
       return '<span class="status-pill ' + cls + '">' + (labels[category] || category) + '</span>';
-    }
-
-    function lastUpdatedFor(sponsorId) {
-      // Walk activity log for the latest entry matching this sponsor name.
-      // (In a real backend this would be sponsor.updated_at; here we synthesise.)
-      const sponsor = window.MOCK_DATA.sponsors.find(function (s) { return s.id === sponsorId; });
-      if (!sponsor) return '';
-      const log = window.MOCK_DATA.activity.find(function (a) {
-        return (a.entity === sponsor.name) && a.action.indexOf('sponsor.') === 0;
-      });
-      if (!log) return '';
-      return formatDateShort(log.at) + ', by ' + log.actor.split('@')[0] + '@';
-    }
-
-    function formatDateShort(iso) {
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return '';
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return d.getDate() + ' ' + months[d.getMonth()];
     }
 
     function notesFor(sponsor) {
@@ -152,7 +99,73 @@
       });
     }
 
+    // Sponsors at or near the rolling 30-day outreach cap. Always visible at the
+    // top of the page (independent of the search box), so the team can see which
+    // sponsors are maxed out before reaching out again.
+    function renderCapAlert() {
+      const capList = document.getElementById('cap-list');
+      const capEmpty = document.getElementById('cap-empty');
+      const capSub = document.getElementById('cap-alert-sub');
+      if (!capList) return;
+
+      const esc = window.AdminShell.escapeHtml;
+      const cap = (window.MOCK_DATA.settings && window.MOCK_DATA.settings.outreach_cap_per_30d) || 10;
+      const counts = window.MOCK_DATA.outreachCounts || {};
+      const threshold = cap - 2; // "reaching" = within 2 of the cap or over it
+
+      capSub.textContent = 'At or near the 30-day cap of ' + cap;
+
+      const rows = Object.keys(counts)
+        .filter(function (id) { return counts[id] >= threshold; })
+        .map(function (id) {
+          const sp = window.MOCK_DATA.sponsors.find(function (s) { return s.id === id; });
+          return sp ? { id: id, name: sp.name, count: counts[id] } : null;
+        })
+        .filter(Boolean)
+        .sort(function (a, b) { return b.count - a.count; });
+
+      if (!rows.length) {
+        capList.innerHTML = '';
+        capEmpty.hidden = false;
+        return;
+      }
+      capEmpty.hidden = true;
+
+      capList.innerHTML = rows.map(function (r) {
+        const over = r.count >= cap;
+        const pct = Math.min(100, Math.round((r.count / cap) * 100));
+        return (
+          '<li class="cap-item">' +
+            '<a class="cap-item__link" href="sponsor.html?id=' + encodeURIComponent(r.id) + '">' +
+              '<span class="cap-item__name">' + esc(r.name) + '</span>' +
+              '<span class="cap-item__meter"><span class="cap-item__bar' + (over ? ' cap-item__bar--over' : '') + '" style="width:' + pct + '%"></span></span>' +
+              '<span class="cap-item__count' + (over ? ' cap-item__count--over' : '') + '">' + r.count + ' / ' + cap + '</span>' +
+            '</a>' +
+          '</li>'
+        );
+      }).join('');
+    }
+
+    // The list is search-driven: nothing is shown until the admin narrows down
+    // by a search term, a status tab, or an industry. Keeps the page fast and
+    // uncluttered as the database grows.
+    function hasActiveQuery() {
+      return searchQuery.trim() !== '' || activeStatus !== 'all' || industryFilter !== 'all';
+    }
+
     function render() {
+      if (!hasActiveQuery()) {
+        tbody.innerHTML = '';
+        countEl.textContent = 0;
+        pager.hidden = true;
+        empty.style.display = '';
+        empty.classList.add('empty-card--search');
+        emptyTitle.textContent = 'Search the sponsor list';
+        emptySub.textContent = 'Type a company name, or pick a status or industry, to see matching sponsors.';
+        return;
+      }
+      empty.classList.remove('empty-card--search');
+
       const rows = getFilteredSponsors();
       countEl.textContent = rows.length;
 
@@ -160,13 +173,8 @@
         tbody.innerHTML = '';
         empty.style.display = '';
         pager.hidden = true;
-        if (searchQuery || industryFilter !== 'all' || activeStatus !== 'all') {
-          emptyTitle.textContent = 'No sponsors match';
-          emptySub.textContent = 'Try clearing your filters or search term.';
-        } else {
-          emptyTitle.textContent = 'No sponsors yet';
-          emptySub.textContent = 'Add your first sponsor to get started.';
-        }
+        emptyTitle.textContent = 'No sponsors match';
+        emptySub.textContent = 'Try a different name or clear your filters.';
         return;
       }
 
@@ -190,7 +198,6 @@
             '<td>' + statusPill(s.category) + '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(industryDisplay(s.industry)) + '</span></td>' +
             '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
-            '<td><span class="table__cell-secondary">' + esc(lastUpdatedFor(s.id)) + '</span></td>' +
             '<td>' +
               '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="table__action" title="Edit">' +
                 '<i class="bi bi-pencil-fill"></i>' +
@@ -295,6 +302,7 @@
 
     // ----------------- boot -----------------
     renderCounts();
+    renderCapAlert();
     render();
   }
 

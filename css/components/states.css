@@ -12,7 +12,9 @@
   text-align: center;
 }
 
-.empty-card i {
+/* Direct child only — the decorative icon. Icons nested inside buttons or
+   other content within the card keep their own sizing. */
+.empty-card > i {
   font-size: 48px;
   color: var(--text-muted);
   margin-bottom: var(--space-3);
