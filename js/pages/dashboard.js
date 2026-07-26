@@ -10,20 +10,20 @@
 
   // Map industry code to icon + short description + examples
   const INDUSTRY_META = {
-    food_beverage:         { icon: 'bi-cup-hot-fill',          tone: 'navy',   examples: 'KOI Thé, LiHO, Starbucks, Subway' },
-    apparel_accessories:   { icon: 'bi-bag-fill',              tone: 'navy',   examples: 'Uniqlo, Charles & Keith, Adidas' },
-    beauty_personal_care:  { icon: 'bi-stars',                 tone: 'gold',   examples: 'Watsons, Sephora, The Body Shop' },
-    entertainment_leisure: { icon: 'bi-film',                  tone: 'gold',   examples: 'Cathay Cineplexes, Timezone' },
-    activities_experiences:{ icon: 'bi-controller',            tone: 'green',  examples: 'Climb Central, BoulderPlus, Escape Hunt' },
-    tech_electronics:      { icon: 'bi-cpu-fill',              tone: 'navy',   examples: 'Razer, Logitech, Challenger' },
-    education_services:    { icon: 'bi-mortarboard-fill',      tone: 'navy',   examples: 'tuition centres, learning studios' },
-    health_wellness:       { icon: 'bi-heart-pulse-fill',      tone: 'green',  examples: 'Anytime Fitness, ClassPass, yoga studios' },
-    transport_mobility:    { icon: 'bi-truck',                 tone: 'orange', examples: 'Grab, GetGo, SG Bike' },
-    home_lifestyle:        { icon: 'bi-house-heart-fill',      tone: 'gold',   examples: 'MUJI, IKEA, Daiso' },
-    professional_services: { icon: 'bi-briefcase-fill',        tone: 'navy',   examples: 'consulting, legal, accounting' },
-    media_publishing:      { icon: 'bi-newspaper',             tone: 'gold',   examples: 'magazines, podcasts, content houses' },
-    non_profit_government: { icon: 'bi-building',              tone: 'orange', examples: 'NGOs, statutory boards (route via OAR)' },
-    retail_general:        { icon: 'bi-shop',                  tone: 'navy',   examples: 'department stores, general retail' },
+    food_beverage:         { icon: 'bi-cup-hot-fill',          tone: 'navy',   examples: 'e.g. KOI, Starbucks, Subway' },
+    apparel_accessories:   { icon: 'bi-bag-fill',              tone: 'navy',   examples: 'e.g. Uniqlo, Charles & Keith, Adidas' },
+    beauty_personal_care:  { icon: 'bi-stars',                 tone: 'gold',   examples: 'e.g. Watsons, Sephora, The Body Shop' },
+    entertainment_leisure: { icon: 'bi-film',                  tone: 'gold',   examples: 'e.g. Cathay Cineplexes, Timezone' },
+    activities_experiences:{ icon: 'bi-controller',            tone: 'green',  examples: 'e.g. Climb Central, Boulder Planet, Xcape' },
+    tech_electronics:      { icon: 'bi-cpu-fill',              tone: 'navy',   examples: 'e.g. Razer, Logitech, Challenger' },
+    education_services:    { icon: 'bi-mortarboard-fill',      tone: 'navy',   examples: 'e.g. tuition centres, learning studios' },
+    health_wellness:       { icon: 'bi-heart-pulse-fill',      tone: 'green',  examples: 'e.g. Anytime Fitness, ClassPass, yoga studios' },
+    transport_mobility:    { icon: 'bi-truck',                 tone: 'orange', examples: 'e.g. Grab, GetGo, SG Bike' },
+    home_lifestyle:        { icon: 'bi-house-heart-fill',      tone: 'gold',   examples: 'e.g. MUJI, IKEA, Daiso' },
+    professional_services: { icon: 'bi-briefcase-fill',        tone: 'navy',   examples: 'e.g. consulting, legal, accounting' },
+    media_publishing:      { icon: 'bi-newspaper',             tone: 'gold',   examples: 'e.g. magazines, podcasts, content houses' },
+    non_profit_government: { icon: 'bi-building',              tone: 'orange', examples: 'e.g. NGOs, statutory boards (route via OAR)' },
+    retail_general:        { icon: 'bi-shop',                  tone: 'navy',   examples: 'e.g. department stores, general retail' },
     other:                 { icon: 'bi-three-dots',            tone: 'navy',   examples: 'anything else, BIZCOM will reclassify' }
   };
 

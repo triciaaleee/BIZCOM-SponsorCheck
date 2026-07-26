@@ -27,7 +27,7 @@ window.MOCK_DATA = {
   // Sample sponsors covering each status category
   sponsors: [
     // master (approved)
-    { id: 's1',  name: 'KOI Thé',           normalised: 'koi the',          industry: 'food_beverage',         category: 'master',    notes: '' },
+    { id: 's1',  name: 'KOI',               normalised: 'koi',              industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's2',  name: 'LiHO TEA',          normalised: 'liho tea',         industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's3',  name: 'Starbucks',         normalised: 'starbucks',        industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's4',  name: 'Subway',            normalised: 'subway',           industry: 'food_beverage',         category: 'master',    notes: '' },
@@ -126,7 +126,7 @@ window.MOCK_DATA = {
       reviewed_at: null,
       notes: '',
       sponsor_list: [
-        { name: 'KOI Thé',          status: 'caution',    industry: 'food_beverage' },
+        { name: 'KOI',               status: 'caution',    industry: 'food_beverage' },
         { name: 'LiHO TEA',         status: 'cooldown',   industry: 'food_beverage' },
         { name: 'Uniqlo',           status: 'clear',      industry: 'apparel_accessories' },
         { name: 'Tea Tribe',        status: 'alumni',     industry: 'food_beverage' },
@@ -190,7 +190,7 @@ window.MOCK_DATA = {
       reviewed_at: '2026-05-17T09:00:00+08:00',
       notes: 'Approved. Reminded club to coordinate with OAR on the 2 alumni sponsors before reaching out.',
       sponsor_list: [
-        { name: 'KOI Thé',          status: 'caution',    industry: 'food_beverage' },
+        { name: 'KOI',               status: 'caution',    industry: 'food_beverage' },
         { name: 'Tea Tribe',        status: 'alumni',     industry: 'food_beverage' },
         { name: 'Watsons',          status: 'clear',      industry: 'beauty_personal_care' }
       ]
@@ -249,7 +249,7 @@ window.MOCK_DATA = {
   // Activity log. Append-only; newest first.
   activity: [
     { id: 'a-101', at: '2026-05-23T17:02:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'submission.viewed',         entity: 'Code Sprint 2026',           details: 'Opened submission for review' },
-    { id: 'a-100', at: '2026-05-22T15:30:00+08:00', actor: 'biz.deputy@sa.smu.edu.sg',   action: 'sponsor.updated',           entity: 'KOI Thé',                    details: 'Industry changed from "other" to "food_beverage"' },
+    { id: 'a-100', at: '2026-05-22T15:30:00+08:00', actor: 'biz.deputy@sa.smu.edu.sg',   action: 'sponsor.updated',           entity: 'KOI',                        details: 'Industry changed from "other" to "food_beverage"' },
     { id: 'a-099', at: '2026-05-22T11:14:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'submission.received',       entity: 'Bizad Charity Run 2026',     details: 'New submission from Accountancy Society, 47 sponsors' },
     { id: 'a-098', at: '2026-05-21T10:05:00+08:00', actor: 'biz.deputy@sa.smu.edu.sg',   action: 'submission.status_changed', entity: 'Loop Music Festival',        details: 'Status changed from "new" to "reviewing"' },
     { id: 'a-097', at: '2026-05-20T16:48:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'Challenger',                 details: 'Added as master, industry tech_electronics' },
@@ -266,7 +266,7 @@ window.MOCK_DATA = {
     { id: 'a-086', at: '2026-04-28T09:45:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.updated',           entity: 'Razer',                      details: 'Notes updated' },
     { id: 'a-085', at: '2026-04-20T11:11:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.status_changed',    entity: 'Singapore Pools',            details: 'Status changed from "master" to "banned". Reason: Annex A, Gaming & Betting' },
     { id: 'a-084', at: '2026-04-15T15:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'Logitech',                   details: 'Added as master, industry tech_electronics' },
-    { id: 'a-083', at: '2026-04-04T10:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'KOI Thé',                    details: 'Added as master, industry food_beverage' },
+    { id: 'a-083', at: '2026-04-04T10:00:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'sponsor.created',           entity: 'KOI',                        details: 'Added as master, industry food_beverage' },
     { id: 'a-082', at: '2026-01-04T09:30:00+08:00', actor: 'biz@sa.smu.edu.sg',          action: 'admin.added',               entity: 'biz.deputy@sa.smu.edu.sg',   details: 'New admin invited' },
     { id: 'a-081', at: '2026-01-01T00:00:00+08:00', actor: 'system',                     action: 'admin.added',               entity: 'biz@sa.smu.edu.sg',          details: 'Super-admin seat initialised' }
   ]

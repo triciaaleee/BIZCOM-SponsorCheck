@@ -43,7 +43,7 @@ on conflict (email) do nothing;
 -- ---------- sponsors ---------------------------------------------------------
 -- master (approved)
 insert into public.sponsors (name, normalised, industry, category, notes, ban_reason, alumni_owner) values
-  ('KOI Thé',            'koi the',                'food_beverage',          'master', '', null, null),
+  ('KOI',                'koi',                    'food_beverage',          'master', '', null, null),
   ('LiHO TEA',           'liho tea',               'food_beverage',          'master', '', null, null),
   ('Starbucks',          'starbucks',              'food_beverage',          'master', '', null, null),
   ('Subway',             'subway',                 'food_beverage',          'master', '', null, null),
@@ -81,7 +81,7 @@ on conflict (normalised) do nothing;
 -- ---------- outreach_log -----------------------------------------------------
 -- One row per contact, spread across the last ~28 days so the 30-day view
 -- reproduces the mock outreachCounts:
---   KOI Thé 9, LiHO TEA 10, Starbucks 3, Subway 1, Uniqlo 4, Grab 11, Cathay Cineplexes 2
+--   KOI 9, LiHO TEA 10, Starbucks 3, Subway 1, Uniqlo 4, Grab 11, Cathay Cineplexes 2
 insert into public.outreach_log (sponsor_id, contacted_at)
 select s.id,
        now() - ((g.i % 28) || ' days')::interval - (g.i || ' hours')::interval
@@ -135,7 +135,7 @@ where not exists (select 1 from public.submissions);
 insert into public.submission_sponsors (submission_id, position, name, status, industry)
 select sub.id, x.position, x.name, x.status, x.industry
 from (values
-  ('Bizad Charity Run 2026', 1, 'KOI Thé',          'caution',    'food_beverage'),
+  ('Bizad Charity Run 2026', 1, 'KOI',               'caution',    'food_beverage'),
   ('Bizad Charity Run 2026', 2, 'LiHO TEA',         'cooldown',   'food_beverage'),
   ('Bizad Charity Run 2026', 3, 'Uniqlo',           'clear',      'apparel_accessories'),
   ('Bizad Charity Run 2026', 4, 'Tea Tribe',        'alumni',     'food_beverage'),
@@ -151,7 +151,7 @@ from (values
   ('Code Sprint 2026',       1, 'Razer',            'clear',      'tech_electronics'),
   ('Code Sprint 2026',       2, 'Logitech',         'clear',      'tech_electronics'),
   ('Code Sprint 2026',       3, 'Challenger',       'unverified', 'tech_electronics'),
-  ('Freshmen Welcome Tea',   1, 'KOI Thé',          'caution',    'food_beverage'),
+  ('Freshmen Welcome Tea',   1, 'KOI',               'caution',    'food_beverage'),
   ('Freshmen Welcome Tea',   2, 'Tea Tribe',        'alumni',     'food_beverage'),
   ('Freshmen Welcome Tea',   3, 'Watsons',          'clear',      'beauty_personal_care'),
   ('Hackathon 2026',         1, 'Grab',             'cooldown',   'transport_mobility'),
@@ -165,7 +165,7 @@ where not exists (select 1 from public.submission_sponsors);
 insert into public.activity_log (at, actor, action, entity, details)
 select * from (values
   ('2026-05-23T17:02:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.viewed',         'Code Sprint 2026',           'Opened submission for review'),
-  ('2026-05-22T15:30:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'sponsor.updated',           'KOI Thé',                    'Industry changed from "other" to "food_beverage"'),
+  ('2026-05-22T15:30:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'sponsor.updated',           'KOI',                        'Industry changed from "other" to "food_beverage"'),
   ('2026-05-22T11:14:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'submission.received',       'Bizad Charity Run 2026',     'New submission from Accountancy Society, 47 sponsors'),
   ('2026-05-21T10:05:00+08:00'::timestamptz, 'biz.deputy@sa.smu.edu.sg',   'submission.status_changed', 'Loop Music Festival',        'Status changed from "new" to "reviewing"'),
   ('2026-05-20T16:48:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'Challenger',                 'Added as master, industry tech_electronics'),
@@ -182,7 +182,7 @@ select * from (values
   ('2026-04-28T09:45:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.updated',           'Razer',                      'Notes updated'),
   ('2026-04-20T11:11:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.status_changed',    'Singapore Pools',            'Status changed from "master" to "banned". Reason: Annex A, Gaming & Betting'),
   ('2026-04-15T15:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'Logitech',                   'Added as master, industry tech_electronics'),
-  ('2026-04-04T10:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'KOI Thé',                    'Added as master, industry food_beverage'),
+  ('2026-04-04T10:00:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'sponsor.created',           'KOI',                        'Added as master, industry food_beverage'),
   ('2026-01-04T09:30:00+08:00'::timestamptz, 'biz@sa.smu.edu.sg',          'admin.added',               'biz.deputy@sa.smu.edu.sg',   'New admin invited'),
   ('2026-01-01T00:00:00+08:00'::timestamptz, 'system',                     'admin.added',               'biz@sa.smu.edu.sg',          'Super-admin seat initialised')
 ) as v(at, actor, action, entity, details)

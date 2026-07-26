@@ -20,7 +20,7 @@
     // ---- Sheet 1: sponsors-to-fill ----
     const sponsorsAoa = [
       ['company_name', 'industry_code'],
-      ['KOI Thé', 'food_beverage'],
+      ['KOI', 'food_beverage'],
       ['Uniqlo', 'apparel_accessories'],
       ['Logitech', 'tech_electronics'],
       ['', ''],
@@ -36,7 +36,7 @@
     // ---- Sheet 2: industry_codes reference ----
     const codes = [
       ['code',                       'display_name',              'examples'],
-      ['food_beverage',              'Food & Beverage',           'KOI Thé, LiHO, Starbucks, Subway'],
+      ['food_beverage',              'Food & Beverage',           'KOI, LiHO, Starbucks, Subway'],
       ['apparel_accessories',        'Apparel & Accessories',     'Uniqlo, Charles & Keith, Adidas'],
       ['beauty_personal_care',       'Beauty & Personal Care',    'Watsons, Sephora, The Body Shop'],
       ['entertainment_leisure',      'Entertainment & Leisure',   'Cathay Cineplexes, Timezone'],
