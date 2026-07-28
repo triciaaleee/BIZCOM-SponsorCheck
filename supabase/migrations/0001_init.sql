@@ -35,14 +35,21 @@ create table if not exists public.sponsors (
   notes        text not null default '',
   ban_reason   text,            -- populated when category = 'banned'
   alumni_owner text,            -- populated when category = 'alumni'
+  -- Outreach cap/cooldown state (see settings.outreach_cap). The running count
+  -- is derived in the sponsor_outreach view from outreach_log rows since
+  -- count_reset_at. When the count hits the cap, cooldown_started_at is stamped;
+  -- when the cooldown elapses the count is zeroed by advancing count_reset_at
+  -- and cooldown_started_at is cleared.
+  cooldown_started_at timestamptz,
+  count_reset_at      timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
 
--- Append-only record of every time a sponsor was contacted. The rolling
--- 30-day count (used for cooldown / cap logic) is derived from this in the
--- sponsor_outreach_30d view, so the count decays correctly over time rather
--- than being a frozen integer.
+-- Append-only record of every time a sponsor was contacted. The cumulative
+-- outreach count (used for cap / cooldown logic) is derived from this in the
+-- sponsor_outreach view — counting rows since the sponsor's count_reset_at —
+-- rather than being a frozen integer.
 create table if not exists public.outreach_log (
   id            uuid primary key default gen_random_uuid(),
   sponsor_id    uuid not null references public.sponsors(id) on delete cascade,
@@ -94,15 +101,17 @@ create table if not exists public.admins (
 );
 
 -- Single-row global settings (caps + cooldown window). The id check pins it
--- to exactly one row.
+-- to exactly one row. `outreach_cap` is a CUMULATIVE cap: it counts total
+-- outreach to a company (not a rolling 30-day window); once reached, the
+-- company enters a cooldown of `cooldown_days` and its count resets afterwards.
 create table if not exists public.settings (
-  id                   boolean primary key default true check (id),
-  outreach_cap_per_30d int not null default 10,
-  cooldown_days        int not null default 30,
-  event_cap_small      int not null default 300,
-  event_cap_medium     int not null default 600,
-  event_cap_large      int not null default 1000,
-  updated_at           timestamptz not null default now()
+  id                boolean primary key default true check (id),
+  outreach_cap      int not null default 10,
+  cooldown_days     int not null default 30,
+  event_cap_small   int not null default 300,
+  event_cap_medium  int not null default 600,
+  event_cap_large   int not null default 1000,
+  updated_at        timestamptz not null default now()
 );
 
 -- ============================================================
@@ -178,13 +187,24 @@ create trigger trg_settings_updated
 -- VIEWS
 -- ============================================================
 
--- Rolling 30-day contact count per sponsor (0 for sponsors never contacted).
--- Owned by the migration role, so it reads outreach_log past RLS and exposes
--- only the aggregate — anon can see counts without seeing raw contact rows.
-create or replace view public.sponsor_outreach_30d as
+-- Cumulative outreach count per sponsor (0 for sponsors never contacted), plus
+-- live cooldown state. The count sums outreach_log rows since the sponsor's
+-- count_reset_at (nulls count everything); in_cooldown is driven by the
+-- cooldown_started_at timer against settings.cooldown_days. Owned by the
+-- migration role, so it reads outreach_log past RLS and exposes only the
+-- aggregate — anon can see counts without seeing raw contact rows.
+create or replace view public.sponsor_outreach as
   select
     s.id as sponsor_id,
-    count(o.id) filter (where o.contacted_at >= now() - interval '30 days') as contact_count
+    count(o.id) filter (
+      where o.contacted_at > coalesce(s.count_reset_at, '-infinity'::timestamptz)
+    ) as contact_count,
+    s.cooldown_started_at,
+    (
+      s.cooldown_started_at is not null
+      and now() < s.cooldown_started_at
+                  + make_interval(days => (select cooldown_days from public.settings limit 1))
+    ) as in_cooldown
   from public.sponsors s
   left join public.outreach_log o on o.sponsor_id = s.id
   group by s.id;
@@ -199,8 +219,7 @@ create or replace view public.dashboard_stats as
     (select count(*) from public.sponsors where category = 'alumni')    as alumni,
     (select count(*) from public.submissions
        where submitted_at >= date_trunc('month', now()))                as submissions_this_month,
-    (select count(*) from public.sponsor_outreach_30d v
-       where v.contact_count >= (select outreach_cap_per_30d from public.settings limit 1)) as in_cooldown;
+    (select count(*) from public.sponsor_outreach v where v.in_cooldown) as in_cooldown;
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -275,7 +294,7 @@ grant usage on schema public to anon, authenticated;
 
 -- public, read-only data
 grant select on public.industries, public.sponsors, public.settings to anon, authenticated;
-grant select on public.sponsor_outreach_30d, public.dashboard_stats   to anon, authenticated;
+grant select on public.sponsor_outreach, public.dashboard_stats       to anon, authenticated;
 
 -- students can lodge a submission + its rows
 grant insert on public.submissions, public.submission_sponsors to anon, authenticated;

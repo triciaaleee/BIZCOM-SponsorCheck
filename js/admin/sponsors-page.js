@@ -21,9 +21,7 @@
 
     // ----------------- state -----------------
     const PAGE_SIZE = 50;
-    let activeStatus = 'all';
     let searchQuery = '';
-    let industryFilter = 'all';
     let currentPage = 1;
 
     // ----------------- elements -----------------
@@ -32,29 +30,12 @@
     const emptyTitle = document.getElementById('sponsors-empty-title');
     const emptySub = document.getElementById('sponsors-empty-sub');
     const countEl = document.getElementById('sponsors-count');
-    const tabs = document.querySelectorAll('.admin-tab');
     const searchInput = document.getElementById('sponsors-search-input');
-    const industrySel = document.getElementById('sponsors-industry-filter');
     const pager = document.getElementById('sponsors-pager');
     const pagerNav = document.getElementById('sponsors-pager-nav');
     const pagerRange = document.getElementById('sponsors-range');
 
-    // Populate industry dropdown
-    window.MOCK_DATA.industries.forEach(function (ind) {
-      const opt = document.createElement('option');
-      opt.value = ind.code;
-      opt.textContent = ind.display_name;
-      industrySel.appendChild(opt);
-    });
-
     // ----------------- helpers -----------------
-    const STATUS_TO_CATEGORY = {
-      master:   'master',
-      banned:   'banned',
-      closed:   'closed',
-      alumni:   'alumni'
-    };
-
     function industryDisplay(code) {
       const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
       return ind ? ind.display_name : code;
@@ -73,35 +54,22 @@
     }
 
     // ----------------- render -----------------
+    // Search-only: the list is driven purely by the name search box. Status and
+    // industry filters were removed — at thousands of rows, browsing the whole
+    // list isn't useful, so the admin searches for the company they need.
     function getFilteredSponsors() {
       const all = window.MOCK_DATA.sponsors;
       const q = searchQuery.trim().toLowerCase();
+      if (!q) return [];
       return all.filter(function (s) {
-        if (activeStatus !== 'all' && s.category !== STATUS_TO_CATEGORY[activeStatus]) return false;
-        if (industryFilter !== 'all' && s.industry !== industryFilter) return false;
-        if (q && s.name.toLowerCase().indexOf(q) === -1) return false;
-        return true;
+        return s.name.toLowerCase().indexOf(q) !== -1;
       });
     }
 
-    function renderCounts() {
-      const all = window.MOCK_DATA.sponsors;
-      const counts = {
-        all: all.length,
-        master: 0, banned: 0, closed: 0, alumni: 0
-      };
-      all.forEach(function (s) {
-        if (counts[s.category] !== undefined) counts[s.category]++;
-      });
-      Object.keys(counts).forEach(function (k) {
-        const el = document.getElementById('tab-count-' + k);
-        if (el) el.textContent = counts[k];
-      });
-    }
-
-    // Sponsors at or near the rolling 30-day outreach cap. Always visible at the
-    // top of the page (independent of the search box), so the team can see which
-    // sponsors are maxed out before reaching out again.
+    // Companies whose cooldown ends in the current calendar month — i.e. those
+    // that free up for outreach again this month. Always
+    // visible at the top of the page (independent of the search box), so the
+    // team can see which sponsors are maxed out before reaching out again.
     function renderCapAlert() {
       const capList = document.getElementById('cap-list');
       const capEmpty = document.getElementById('cap-empty');
@@ -109,20 +77,25 @@
       if (!capList) return;
 
       const esc = window.AdminShell.escapeHtml;
-      const cap = (window.MOCK_DATA.settings && window.MOCK_DATA.settings.outreach_cap_per_30d) || 10;
-      const counts = window.MOCK_DATA.outreachCounts || {};
-      const threshold = cap - 2; // "reaching" = within 2 of the cap or over it
+      const outreach = window.MOCK_DATA.outreach || {};
+      const now = new Date();
+      const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-      capSub.textContent = 'At or near the 30-day cap of ' + cap;
+      capSub.textContent = 'Free to approach again in ' + MONTHS[now.getMonth()];
 
-      const rows = Object.keys(counts)
-        .filter(function (id) { return counts[id] >= threshold; })
+      const rows = Object.keys(outreach)
         .map(function (id) {
           const sp = window.MOCK_DATA.sponsors.find(function (s) { return s.id === id; });
-          return sp ? { id: id, name: sp.name, count: counts[id] } : null;
+          if (!sp) return null;
+          const st = window.Caps.state(id);
+          // Only companies whose cooldown ends in the current calendar month.
+          if (!st.inCooldown || !st.cooldownEndsAt) return null;
+          const ends = st.cooldownEndsAt;
+          if (ends.getFullYear() !== now.getFullYear() || ends.getMonth() !== now.getMonth()) return null;
+          return { id: id, name: sp.name, ends: ends };
         })
         .filter(Boolean)
-        .sort(function (a, b) { return b.count - a.count; });
+        .sort(function (a, b) { return a.ends - b.ends; }); // soonest to free up first
 
       if (!rows.length) {
         capList.innerHTML = '';
@@ -132,25 +105,22 @@
       capEmpty.hidden = true;
 
       capList.innerHTML = rows.map(function (r) {
-        const over = r.count >= cap;
-        const pct = Math.min(100, Math.round((r.count / cap) * 100));
         return (
           '<li class="cap-item">' +
             '<a class="cap-item__link" href="sponsor.html?id=' + encodeURIComponent(r.id) + '">' +
               '<span class="cap-item__name">' + esc(r.name) + '</span>' +
-              '<span class="cap-item__meter"><span class="cap-item__bar' + (over ? ' cap-item__bar--over' : '') + '" style="width:' + pct + '%"></span></span>' +
-              '<span class="cap-item__count' + (over ? ' cap-item__count--over' : '') + '">' + r.count + ' / ' + cap + '</span>' +
+              '<span class="cap-item__meter"><span class="cap-item__bar cap-item__bar--over" style="width:100%"></span></span>' +
+              '<span class="cap-item__count cap-item__count--over">Ends ' + esc(window.Caps.formatDate(r.ends)) + '</span>' +
             '</a>' +
           '</li>'
         );
       }).join('');
     }
 
-    // The list is search-driven: nothing is shown until the admin narrows down
-    // by a search term, a status tab, or an industry. Keeps the page fast and
-    // uncluttered as the database grows.
+    // The list is search-driven: nothing is shown until the admin types a search
+    // term. Keeps the page fast and uncluttered as the database grows.
     function hasActiveQuery() {
-      return searchQuery.trim() !== '' || activeStatus !== 'all' || industryFilter !== 'all';
+      return searchQuery.trim() !== '';
     }
 
     function render() {
@@ -161,7 +131,7 @@
         empty.style.display = '';
         empty.classList.add('empty-card--search');
         emptyTitle.textContent = 'Search the sponsor list';
-        emptySub.textContent = 'Type a company name, or pick a status or industry, to see matching sponsors.';
+        emptySub.textContent = 'Type a company name to see matching sponsors.';
         return;
       }
       empty.classList.remove('empty-card--search');
@@ -174,7 +144,7 @@
         empty.style.display = '';
         pager.hidden = true;
         emptyTitle.textContent = 'No sponsors match';
-        emptySub.textContent = 'Try a different name or clear your filters.';
+        emptySub.textContent = 'Try a different name.';
         return;
       }
 
@@ -278,30 +248,13 @@
     }
 
     // ----------------- wire events -----------------
-    tabs.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        tabs.forEach(function (b) { b.classList.remove('is-active'); });
-        btn.classList.add('is-active');
-        activeStatus = btn.getAttribute('data-status');
-        currentPage = 1;
-        render();
-      });
-    });
-
     searchInput.addEventListener('input', function (e) {
       searchQuery = e.target.value || '';
       currentPage = 1;
       render();
     });
 
-    industrySel.addEventListener('change', function (e) {
-      industryFilter = e.target.value;
-      currentPage = 1;
-      render();
-    });
-
     // ----------------- boot -----------------
-    renderCounts();
     renderCapAlert();
     render();
   }

@@ -6,12 +6,13 @@
 
    STATUS DEFINITIONS (finalised v2):
      clear      : on the Master List, previously approved by BIZCOM,
-                  outreach count is comfortably below the cap.
-     caution    : on the Master List but approaching the 30-day
-                  outreach cap (8 or 9 of 10 contacts).
+                  running outreach count is comfortably below the cap.
+     caution    : on the Master List but approaching the outreach cap
+                  (within 2 of the cap, e.g. 8 or 9 of 10).
      alumni     : alumni-affiliated, needs OAR clearance.
      blocked    : on the banned list (Annex A or B) or closed.
-     cooldown   : 30-day outreach cap already hit, must wait.
+     cooldown   : outreach cap reached; company is in its cooldown window
+                  and must wait until it ends (count resets afterwards).
      unverified : not in any list. New company, BIZCOM has not
                   vetted this one yet.
      duplicate  : duplicate row within the same submission.
@@ -20,10 +21,15 @@
 (function () {
   'use strict';
 
+  // Legal-entity / boilerplate suffixes only. "Singapore" is deliberately NOT
+  // here: it's a place name that appears inside real company names (e.g.
+  // "Singapore Pools"), so stripping it would drop the identity and risk
+  // collisions. Parenthesised locales like "(Singapore)" are already removed by
+  // the paren pass in normalise().
   const SUFFIXES = [
     'pte ltd', 'pte. ltd.', 'private limited', 'pte ltd.', 'pl',
     'llp', 'l.l.p.', 'inc', 'corp', 'corporation', 'ltd', 'limited',
-    'co', 'co.', 'sg', '(singapore)', 'singapore'
+    'co', 'co.'
   ];
 
   function normalise(name) {
@@ -91,8 +97,6 @@
   function checkOne(inputName, providedIndustry) {
     const normalisedInput = normalise(inputName);
     const sponsors = window.MOCK_DATA.sponsors;
-    const settings = window.MOCK_DATA.settings;
-    const outreach = window.MOCK_DATA.outreachCounts;
 
     // 1. Exact match
     let matched = sponsors.find(function (s) { return s.normalised === normalisedInput; });
@@ -132,8 +136,8 @@
 
     // 4. Determine status
     const effectiveMatch = matched || fuzzy;
-    const outreachCount = effectiveMatch ? (outreach[effectiveMatch.id] || 0) : 0;
-    const cap = settings.outreach_cap_per_30d;
+    const capState = effectiveMatch ? window.Caps.state(effectiveMatch.id) : null;
+    const outreachCount = capState ? capState.count : 0;
 
     let status, reason;
     if (effectiveMatch) {
@@ -151,12 +155,13 @@
           reason = 'Alumni-affiliated, requires OAR clearance';
           break;
         case 'master':
-          if (outreachCount >= cap) {
+          if (capState.inCooldown) {
             status = 'cooldown';
-            reason = '30-day outreach cap reached (' + outreachCount + ' of ' + cap + '). Wait for next cycle.';
-          } else if (outreachCount >= cap - 2) {
+            reason = 'Outreach cap reached (' + capState.cap + ' of ' + capState.cap +
+                     '). In cooldown until ' + window.Caps.formatDate(capState.cooldownEndsAt) + '.';
+          } else if (capState.approaching) {
             status = 'caution';
-            reason = 'Approaching 30-day outreach cap.';
+            reason = 'Approaching the outreach cap (' + capState.count + ' of ' + capState.cap + ').';
           } else {
             status = 'clear';
             reason = 'Previously approved by BIZCOM.';
@@ -228,6 +233,17 @@
 
         resolve(results);
       }, delay);
+    });
+  }
+
+  // Derive each sponsor's `normalised` key from the same normalise() the
+  // matcher queries with, so a hand-authored key can never drift from the
+  // lookup and silently drop a match (e.g. a banned company reading as
+  // "unverified"). In production this key is written by the app on save; here
+  // we regenerate it once at load for the mock list.
+  if (window.MOCK_DATA && Array.isArray(window.MOCK_DATA.sponsors)) {
+    window.MOCK_DATA.sponsors.forEach(function (s) {
+      s.normalised = normalise(s.name);
     });
   }
 

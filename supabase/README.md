@@ -33,7 +33,7 @@ REPLACE`, and `0002` guards every insert so it won't create duplicates.
 
 **Views**
 
-- `sponsor_outreach_30d` — `(sponsor_id, contact_count)` over the last 30 days. Public-readable, but exposes only the aggregate (raw `outreach_log` rows stay admin-only).
+- `sponsor_outreach` — `(sponsor_id, contact_count, cooldown_started_at, in_cooldown)`. `contact_count` is the cumulative outreach total since the sponsor's `count_reset_at`; `in_cooldown` reflects the `cooldown_started_at` timer against `settings.cooldown_days`. Public-readable, but exposes only the aggregate (raw `outreach_log` rows stay admin-only).
 - `dashboard_stats` — live counts (total / master / banned / alumni / submissions this month / in cooldown) computed from real rows.
 
 ## Important notes
@@ -67,7 +67,7 @@ email on the auth account **must match exactly** the email in `admins`.
 | Data | Public (anon) | Signed-in admin |
 | ---- | ------------- | --------------- |
 | industries, sponsors, settings | read | read + write |
-| `sponsor_outreach_30d`, `dashboard_stats` | read | read |
+| `sponsor_outreach`, `dashboard_stats` | read | read |
 | submissions / submission_sponsors | **insert only** (lodge a list) | full read + manage |
 | outreach_log | none | full |
 | admins | none | read; **super-admin** writes |

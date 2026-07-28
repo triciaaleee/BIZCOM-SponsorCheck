@@ -50,7 +50,7 @@
   const NAV_ITEMS = [
     { href: 'home.html',        label: 'Home',        icon: 'bi-house-door-fill' },
     { href: 'sponsors.html',    label: 'Sponsors',    icon: 'bi-building'      },
-    { href: 'team.html',        label: 'Team',        icon: 'bi-people-fill',  superOnly: true }
+    { href: 'settings.html',    label: 'Settings',    icon: 'bi-gear-fill',    superOnly: true }
   ];
 
   function renderSidebar(currentPage, session) {

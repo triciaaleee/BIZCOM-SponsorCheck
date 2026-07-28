@@ -110,8 +110,12 @@
       // Populate side panel
       document.getElementById('meta-id').textContent = sponsor.id;
 
-      const oc = window.MOCK_DATA.outreachCounts[sponsor.id];
-      document.getElementById('meta-outreach').textContent = (oc != null ? oc : 0) + ' / ' + window.MOCK_DATA.settings.outreach_cap_per_30d;
+      const st = window.Caps.state(sponsor.id);
+      document.getElementById('meta-outreach').textContent = st.count + ' / ' + st.cap;
+      if (st.inCooldown) {
+        document.getElementById('meta-cooldown-row').hidden = false;
+        document.getElementById('meta-cooldown').textContent = 'Until ' + window.Caps.formatDate(st.cooldownEndsAt);
+      }
 
       // Show danger zone for super-admin
       if (session.role === 'super_admin') {

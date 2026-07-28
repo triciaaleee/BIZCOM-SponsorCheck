@@ -5,6 +5,24 @@
    ============================================================ */
 
 /* ============================================================
+   ADMIN TYPE SCALE (readability bump)
+   admin.css is loaded ONLY by the admin pages and loaded LAST,
+   so re-declaring the type-scale tokens here nudges every admin
+   element (shell, tables, forms, side panel, cards) up one notch
+   without affecting the public site. Public pages keep the base
+   scale from tokens.css. Adjust these values to taste.
+   ============================================================ */
+:root {
+  --font-size-xs:   13px;   /* was 12 */
+  --font-size-sm:   15px;   /* was 14 */
+  --font-size-base: 17px;   /* was 16 */
+  --font-size-lg:   19px;   /* was 18 */
+  --font-size-xl:   22px;   /* was 20 */
+  --font-size-2xl:  26px;   /* was 24 */
+  --font-size-3xl:  34px;   /* was 32 */
+}
+
+/* ============================================================
    MAPS LINK (sponsor name, opens Google Maps in a new tab)
    ============================================================ */
 
@@ -854,4 +872,98 @@
 
 .sponsor-detail__danger-link:hover {
   text-decoration: underline;
+}
+
+/* ============================================================
+   PAGE SECTIONS (e.g. Team page: "Team members" + "Settings")
+   Lets a single admin page stack a few titled sections.
+   ============================================================ */
+
+.admin-section {
+  margin-bottom: var(--space-7);
+}
+
+.admin-section:last-child {
+  margin-bottom: 0;
+}
+
+.admin-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.admin-section__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.admin-section__sub {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+/* ============================================================
+   SETTINGS CARD (Team page → Settings section)
+   ============================================================ */
+
+.settings-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  /* Full width, matching the team-members table above it. */
+}
+
+.settings-section + .settings-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.settings-section__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-1);
+}
+
+.settings-section__hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-4);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-6);
+}
+
+.settings-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Grid handles the spacing, so drop the stacked-form bottom margin. */
+.settings-grid .form-group {
+  margin-bottom: 0;
+}
+
+@media (max-width: 560px) {
+  .settings-grid,
+  .settings-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
 }

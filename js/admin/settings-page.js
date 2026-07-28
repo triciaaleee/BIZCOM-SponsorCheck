@@ -1,7 +1,10 @@
 /* ============================================================
-   js/admin/team-page.js
-   Super-admin-only page: list, invite, promote, demote, remove,
-   and transfer the super-admin role.
+   js/admin/settings-page.js
+   Super-admin-only Settings page. Two sections:
+     1. Team members — list, invite, promote, demote, remove, and
+        transfer the super-admin role.
+     2. Cooldown & event limits — outreach cap, cooldown days, and
+        per-event sponsor caps.
    ============================================================ */
 
 (function () {
@@ -14,8 +17,8 @@
     }
 
     const session = window.AdminShell.mount({
-      currentPage: 'team.html',
-      pageTitle: 'Team',
+      currentPage: 'settings.html',
+      pageTitle: 'Settings',
       requiresSuperAdmin: true
     });
     if (!session) return;
@@ -33,6 +36,14 @@
 
     const transferTargetEl = document.getElementById('transfer-target-email');
     const transferConfirm = document.getElementById('transfer-confirm');
+
+    // Settings section
+    const setCap = document.getElementById('set-cap');
+    const setCooldown = document.getElementById('set-cooldown');
+    const setEventSmall = document.getElementById('set-event-small');
+    const setEventMedium = document.getElementById('set-event-medium');
+    const setEventLarge = document.getElementById('set-event-large');
+    const settingsSave = document.getElementById('settings-save');
 
     // ---------- helpers ----------
     function formatDate(iso) {
@@ -297,12 +308,63 @@
       window.location.href = 'sponsors.html';
     }
 
+    // ---------- settings ----------
+    function num(v, fallback) {
+      return (v != null) ? v : fallback;
+    }
+
+    function loadSettings() {
+      const s = window.MOCK_DATA.settings || {};
+      setCap.value = num(s.outreach_cap, 10);
+      setCooldown.value = num(s.cooldown_days, 30);
+      setEventSmall.value = num(s.event_cap_small, 300);
+      setEventMedium.value = num(s.event_cap_medium, 600);
+      setEventLarge.value = num(s.event_cap_large, 1000);
+    }
+
+    function saveSettings() {
+      const fields = [
+        { el: setCap,         label: 'Outreach cap' },
+        { el: setCooldown,    label: 'Cooldown period' },
+        { el: setEventSmall,  label: 'Small event cap' },
+        { el: setEventMedium, label: 'Medium event cap' },
+        { el: setEventLarge,  label: 'Large event cap' }
+      ];
+      const vals = {};
+      for (let i = 0; i < fields.length; i++) {
+        const n = parseInt(fields[i].el.value, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          window.toast && window.toast({
+            type: 'error',
+            title: 'Invalid value',
+            message: fields[i].label + ' must be a whole number of at least 1.'
+          });
+          fields[i].el.focus();
+          return;
+        }
+        vals[i] = n;
+      }
+
+      const s = window.MOCK_DATA.settings;
+      s.outreach_cap = vals[0];
+      s.cooldown_days = vals[1];
+      s.event_cap_small = vals[2];
+      s.event_cap_medium = vals[3];
+      s.event_cap_large = vals[4];
+
+      window.AdminShell.logActivity('settings.updated', 'settings',
+        'Outreach cap ' + s.outreach_cap + ', cooldown ' + s.cooldown_days + 'd');
+      window.toast && window.toast({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
+    }
+
     // ---------- wire ----------
     inviteSubmit.addEventListener('click', submitInvite);
     transferConfirm.addEventListener('click', doTransfer);
+    settingsSave.addEventListener('click', saveSettings);
 
     // ---------- boot ----------
     render();
+    loadSettings();
   }
 
   if (document.readyState === 'loading') {

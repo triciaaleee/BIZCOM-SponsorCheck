@@ -18,7 +18,6 @@
   <link rel="stylesheet" href="../css/components/states.css">
   <link rel="stylesheet" href="../css/components/tables.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
-  <link rel="stylesheet" href="../css/components/admin-tabs.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
@@ -29,12 +28,12 @@
   <section class="cap-alert" id="cap-alert">
     <div class="cap-alert__head">
       <span class="cap-alert__title">
-        <i class="bi bi-exclamation-triangle-fill"></i> Reaching outreach cap this month
+        <i class="bi bi-clock-history"></i> Cooldowns ending this month
       </span>
-      <span class="cap-alert__sub" id="cap-alert-sub">At or near the 30-day cap</span>
+      <span class="cap-alert__sub" id="cap-alert-sub">Companies free to approach again this month</span>
     </div>
     <ul class="cap-alert__list" id="cap-list"></ul>
-    <div class="cap-alert__empty" id="cap-empty" hidden>No sponsors are near the cap right now.</div>
+    <div class="cap-alert__empty" id="cap-empty" hidden>No cooldowns end this month.</div>
   </section>
 
   <div class="page-toolbar">
@@ -49,32 +48,10 @@
   </div>
 
   <div class="page-filters">
-    <div class="admin-tabs" role="tablist" aria-label="Filter by status">
-      <button class="admin-tab is-active" data-status="all">
-        All <span class="admin-tab__count" id="tab-count-all">0</span>
-      </button>
-      <button class="admin-tab" data-status="master">
-        Approved <span class="admin-tab__count" id="tab-count-master">0</span>
-      </button>
-      <button class="admin-tab" data-status="banned">
-        Banned <span class="admin-tab__count" id="tab-count-banned">0</span>
-      </button>
-      <button class="admin-tab" data-status="closed">
-        Closed <span class="admin-tab__count" id="tab-count-closed">0</span>
-      </button>
-      <button class="admin-tab" data-status="alumni">
-        Alumni <span class="admin-tab__count" id="tab-count-alumni">0</span>
-      </button>
-    </div>
-
     <div class="search-field">
       <i class="bi bi-search search-field__icon"></i>
       <input type="search" class="form-input" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
     </div>
-
-    <select class="form-input" id="sponsors-industry-filter" aria-label="Filter by industry">
-      <option value="all">All industries</option>
-    </select>
   </div>
 
   <div class="admin-table-wrap">

@@ -48,12 +48,12 @@ window.MOCK_DATA = {
     { id: 's21', name: 'Asia Pacific Breweries', normalised: 'asia pacific breweries', industry: 'food_beverage', category: 'banned', ban_reason: 'Annex A, Alcoholic Products' },
     { id: 's22', name: 'Marlboro',           normalised: 'marlboro',         industry: 'retail_general',        category: 'banned',    ban_reason: 'Annex A, Tobacco Products' },
     { id: 's23', name: 'Durex',              normalised: 'durex',            industry: 'beauty_personal_care',  category: 'banned',    ban_reason: 'Annex A, Sexual Products' },
-    { id: 's24', name: 'AIA Insurance',      normalised: 'aia',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A, Insurance Companies' },
+    { id: 's24', name: 'AIA Insurance',      normalised: 'aia insurance',    industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A, Insurance Companies' },
     { id: 's25', name: 'Prudential',         normalised: 'prudential',       industry: 'professional_services', category: 'banned',    ban_reason: 'Annex A, Insurance Companies' },
     { id: 's26', name: 'Shaw Foundation',    normalised: 'shaw foundation',  industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A, Foundations' },
     { id: 's27', name: 'Lee Foundation',     normalised: 'lee foundation',   industry: 'non_profit_government', category: 'banned',    ban_reason: 'Annex A, Foundations' },
-    { id: 's28', name: 'DBS Bank',           normalised: 'dbs',              industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
-    { id: 's29', name: 'OCBC Bank',          normalised: 'ocbc',             industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
+    { id: 's28', name: 'DBS Bank',           normalised: 'dbs bank',         industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
+    { id: 's29', name: 'OCBC Bank',          normalised: 'ocbc bank',        industry: 'professional_services', category: 'banned',    ban_reason: 'Annex B, Banks & Financial' },
 
     // closed / defunct
     { id: 's40', name: 'Robinsons',          normalised: 'robinsons',        industry: 'retail_general',        category: 'closed',    notes: 'Ceased operations 2020' },
@@ -65,23 +65,29 @@ window.MOCK_DATA = {
     { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    alumni_owner: 'Kumar A, ISIT 2020' }
   ],
 
-  // Simulated outreach counts (last 30 days), keyed by sponsor id
-  outreachCounts: {
-    's1':  9,   // KOI, heavily contacted
-    's2':  10,  // LiHO, at cap
-    's3':  3,
-    's4':  1,
-    's5':  4,
-    's11': 11,  // Grab, over cap → cooldown
-    's15': 2
+  // Per-sponsor outreach state, keyed by sponsor id. This is a CUMULATIVE
+  // running count (not a rolling 30-day window): each admin-logged outreach
+  // adds 1. When count reaches settings.outreach_cap a cooldown starts
+  // (cooldown_started_at is stamped); once settings.cooldown_days elapse the
+  // count resets to 0 and the company is contactable again. Derivation lives
+  // in window.Caps below so the rule sits in one place.
+  //   count never exceeds the cap; a company at the cap has cooldown_started_at set.
+  outreach: {
+    's1':  { count: 9,  cooldown_started_at: null },  // KOI, one short of the cap
+    's2':  { count: 10, cooldown_started_at: null },  // LiHO, at cap (date seeded below)
+    's3':  { count: 3,  cooldown_started_at: null },
+    's4':  { count: 1,  cooldown_started_at: null },
+    's5':  { count: 4,  cooldown_started_at: null },
+    's11': { count: 10, cooldown_started_at: null },  // Grab, at cap (date seeded below)
+    's15': { count: 2,  cooldown_started_at: null }
   },
 
   settings: {
-    outreach_cap_per_30d: 10,
-    cooldown_days: 30,
-    event_cap_small: 300,
+    outreach_cap:     10,   // contacts allowed before a cooldown starts
+    cooldown_days:    30,   // cooldown length; count resets to 0 when it ends
+    event_cap_small:  300,
     event_cap_medium: 600,
-    event_cap_large: 1000
+    event_cap_large:  1000
   },
 
   // Public dashboard placeholders
@@ -246,3 +252,91 @@ window.MOCK_DATA = {
     }
   ]
 };
+
+// ============================================================
+// OUTREACH CAP + COOLDOWN — derivation helper (window.Caps)
+// Confirmed rule: each admin-logged outreach adds 1 to a company's running
+// count. At settings.outreach_cap a cooldown of settings.cooldown_days days
+// starts; once it elapses the count resets to 0 and the company reopens.
+//
+// Both the admin UI and the student matcher read cap state through here so
+// the rule lives in exactly one place. When Supabase lands this is replaced
+// by a view/RPC; the shape of state() stays the same.
+// ============================================================
+window.Caps = (function () {
+  'use strict';
+
+  var DAY_MS = 86400000;
+
+  function settings() {
+    return window.MOCK_DATA.settings || {};
+  }
+
+  function record(sponsorId) {
+    var o = window.MOCK_DATA.outreach || {};
+    return o[sponsorId] || null;
+  }
+
+  // Live cap state for a sponsor id:
+  //   { count, cap, cooldownDays, inCooldown, cooldownEndsAt, atCap, approaching }
+  // A cooldown that has already elapsed is reported as reset (count 0), which
+  // is what the backend will do on the next write.
+  function state(sponsorId) {
+    var s = settings();
+    var cap = (s.outreach_cap != null) ? s.outreach_cap : 10;
+    var cooldownDays = (s.cooldown_days != null) ? s.cooldown_days : 30;
+    var rec = record(sponsorId);
+
+    var count = rec ? (rec.count || 0) : 0;
+    var inCooldown = false;
+    var cooldownEndsAt = null;
+
+    if (rec && rec.cooldown_started_at) {
+      var end = new Date(rec.cooldown_started_at).getTime() + cooldownDays * DAY_MS;
+      if (Date.now() < end) {
+        inCooldown = true;
+        cooldownEndsAt = new Date(end);
+      } else {
+        count = 0; // cooldown elapsed → count has reset, company reopens
+      }
+    }
+
+    var atCap = count >= cap;
+    return {
+      count: count,
+      cap: cap,
+      cooldownDays: cooldownDays,
+      inCooldown: inCooldown,
+      cooldownEndsAt: cooldownEndsAt,
+      atCap: atCap,
+      approaching: !inCooldown && !atCap && count >= cap - 2
+    };
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  return { state: state, formatDate: formatDate };
+})();
+
+// Anchor the two seeded cooldowns relative to "now" so the demo stays realistic
+// whenever the mock is run: LiHO's cooldown ENDS this month (so it shows in the
+// "cooldowns ending this month" box) while Grab's ends next month (excluded, to
+// show the filter working). cooldown_started_at = end - cooldown_days.
+(function seedCooldowns() {
+  var day = 86400000;
+  var now = new Date();
+  var cd = window.MOCK_DATA.settings.cooldown_days || 30;
+
+  // Ends this month: ~6 days out, clamped to the last day of the month.
+  var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  var endThisMonth = new Date(now.getFullYear(), now.getMonth(), Math.min(now.getDate() + 6, lastDay), 23, 0, 0);
+  window.MOCK_DATA.outreach.s2.cooldown_started_at = new Date(endThisMonth.getTime() - cd * day).toISOString();
+
+  // Ends next month (10th): outside the current month, so it won't show.
+  var endNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 10, 12, 0, 0);
+  window.MOCK_DATA.outreach.s11.cooldown_started_at = new Date(endNextMonth.getTime() - cd * day).toISOString();
+})();

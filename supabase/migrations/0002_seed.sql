@@ -29,7 +29,7 @@ insert into public.industries (code, display_name, sort_order) values
 on conflict (code) do nothing;
 
 -- ---------- settings (single row) -------------------------------------------
-insert into public.settings (id, outreach_cap_per_30d, cooldown_days, event_cap_small, event_cap_medium, event_cap_large)
+insert into public.settings (id, outreach_cap, cooldown_days, event_cap_small, event_cap_medium, event_cap_large)
 values (true, 10, 30, 300, 600, 1000)
 on conflict (id) do nothing;
 
@@ -63,12 +63,12 @@ insert into public.sponsors (name, normalised, industry, category, notes, ban_re
   ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products',   null),
   ('Marlboro',               'marlboro',               'retail_general',         'banned', '', 'Annex A, Tobacco Products',     null),
   ('Durex',                  'durex',                  'beauty_personal_care',   'banned', '', 'Annex A, Sexual Products',      null),
-  ('AIA Insurance',          'aia',                    'professional_services',  'banned', '', 'Annex A, Insurance Companies',  null),
+  ('AIA Insurance',          'aia insurance',          'professional_services',  'banned', '', 'Annex A, Insurance Companies',  null),
   ('Prudential',             'prudential',             'professional_services',  'banned', '', 'Annex A, Insurance Companies',  null),
   ('Shaw Foundation',        'shaw foundation',        'non_profit_government',  'banned', '', 'Annex A, Foundations',          null),
   ('Lee Foundation',         'lee foundation',         'non_profit_government',  'banned', '', 'Annex A, Foundations',          null),
-  ('DBS Bank',               'dbs',                    'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
-  ('OCBC Bank',              'ocbc',                   'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
+  ('DBS Bank',               'dbs bank',               'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
+  ('OCBC Bank',              'ocbc bank',              'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
   -- closed / defunct
   ('Robinsons',            'robinsons',             'retail_general', 'closed', 'Ceased operations 2020',  null, null),
   ('Crystal Jade Express', 'crystal jade express',  'food_beverage',  'closed', 'Brand discontinued 2023', null, null),
@@ -79,9 +79,10 @@ insert into public.sponsors (name, normalised, industry, category, notes, ban_re
 on conflict (normalised) do nothing;
 
 -- ---------- outreach_log -----------------------------------------------------
--- One row per contact, spread across the last ~28 days so the 30-day view
--- reproduces the mock outreachCounts:
---   KOI 9, LiHO TEA 10, Starbucks 3, Subway 1, Uniqlo 4, Grab 11, Cathay Cineplexes 2
+-- One row per contact. Counts are cumulative (not windowed), so they map
+-- straight to sponsor_outreach.contact_count:
+--   KOI 9, LiHO TEA 10 (at cap), Starbucks 3, Subway 1, Uniqlo 4,
+--   Grab 10 (at cap), Cathay Cineplexes 2
 insert into public.outreach_log (sponsor_id, contacted_at)
 select s.id,
        now() - ((g.i % 28) || ' days')::interval - (g.i || ' hours')::interval
@@ -91,12 +92,17 @@ from (values
   ('starbucks',         3),
   ('subway',            1),
   ('uniqlo',            4),
-  ('grab',              11),
+  ('grab',              10),
   ('cathay cineplexes', 2)
 ) as c(normalised, n)
 join public.sponsors s on s.normalised = c.normalised
 cross join lateral generate_series(1, c.n) as g(i)
 where not exists (select 1 from public.outreach_log);
+
+-- Sponsors at the cap are in cooldown: stamp cooldown_started_at so the
+-- sponsor_outreach view reports them as in_cooldown (LiHO 8 days in, Grab 18).
+update public.sponsors set cooldown_started_at = now() - interval '8 days'  where normalised = 'liho tea';
+update public.sponsors set cooldown_started_at = now() - interval '18 days' where normalised = 'grab';
 
 -- ---------- submissions ------------------------------------------------------
 insert into public.submissions
