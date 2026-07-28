@@ -90,6 +90,47 @@ window.MOCK_DATA = {
     event_cap_large:  1000
   },
 
+  // ---- Sponsorship Standing Order, Annex A (prohibited) ----
+  // Companies/types that must NEVER be approached. Transcribed from the PDF.
+  annexA: {
+    trustees: {
+      label: 'SMU Board of Trustees & associated',
+      companies: [
+        'Banyan Tree Group', 'Global Business Integrators', 'Reed Exhibitions',
+        'Hup Soon Global Corporation', 'Singapore Telecommunications (Singtel)',
+        'Chinatrust Commercial Bank', 'Kuok (S)', 'Raffles Medical Corp',
+        'Phoenix Advisers', 'Infosys Technologies', 'WongPartnership LLP', 'SMRT',
+        'Bangkok Bank', 'Symphony Asia Holdings', 'Dane Court'
+      ]
+    },
+    // Categories the PDF illustrates with example companies.
+    examples: [
+      { label: 'Foundations',     companies: ['Lee Foundation', 'Shaw Foundation', 'Tanoto Foundation'] },
+      { label: 'Alcohol',         companies: ['Asia Pacific Breweries'] },
+      { label: 'Tobacco',         companies: ['Marlboro'] },
+      { label: 'Gaming & betting', companies: ['Singapore Pools'] },
+      { label: 'Sexual products', companies: ['Durex'] }
+    ],
+    // Categories banned outright with no company list in the PDF.
+    blanket: ['Insurance', 'Multi-level marketing', 'SMU Commencement sponsors']
+  },
+
+  // ---- Sponsorship Standing Order, Annex B (restricted) ----
+  // BIZCOM collaboration partners are off-limits to clubs while their contract
+  // is active; once contract_ends passes they can be removed. The partner list
+  // is supplied by BIZCOM — seed it here (name + ISO contract_ends).
+  annexB: {
+    partners: [
+      // { name: 'Example Partner Pte Ltd', contract_ends: '2026-12-31' }
+    ],
+    // Other restricted types from the PDF (no company enumeration needed).
+    other: [
+      { label: 'Government entities',            value: 'TOTE Board' },
+      { label: 'Banks & financial institutions', value: 'Route via BIZCOM' },
+      { label: 'SMU alumni',                     value: 'Seek OAR / OA approval' }
+    ]
+  },
+
   // Public dashboard placeholders
   dashboardStats: {
     total: 12403,

@@ -357,6 +357,131 @@
 }
 
 /* ============================================================
+   SPONSORS PAGE — Annex A / B reference panel
+   Two colour-coded cards (prohibited vs restricted). Each body is
+   height-capped and scrolls internally so the reference never pushes
+   the search box far down the page.
+   ============================================================ */
+
+.annex-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 720px) {
+  .annex-panel { grid-template-columns: 1fr; }
+}
+
+.annex-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 4px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.annex-card--prohibited { border-left-color: var(--color-orange); }
+.annex-card--restricted { border-left-color: var(--color-gold); }
+
+.annex-card__head { margin-bottom: var(--space-3); }
+
+.annex-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.annex-card--prohibited .annex-card__title i { color: var(--color-orange); }
+.annex-card--restricted .annex-card__title i { color: #8C7212; }
+
+.annex-card__sub {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.annex-card__body {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.annex-group__label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  font-weight: var(--font-weight-semibold);
+  color: #993C1D;
+  margin-bottom: var(--space-1);
+}
+
+.annex-card--restricted .annex-group__label { color: #8C7212; }
+
+.annex-group__companies {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  margin-bottom: var(--space-3);
+}
+
+.annex-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px var(--space-3);
+  margin: 0;
+}
+
+.annex-rows dt { color: var(--text-muted); font-size: var(--font-size-sm); }
+.annex-rows dd { color: var(--text-secondary); font-size: var(--font-size-sm); margin: 0; }
+
+.annex-rows--divided {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.annex-blanket {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.annex-empty {
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.annex-partners { list-style: none; margin: 0 0 var(--space-2); padding: 0; }
+
+.annex-partner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-sm);
+}
+
+.annex-partner__name { color: var(--text-primary); font-weight: var(--font-weight-medium); }
+.annex-partner__date { color: var(--text-secondary); font-size: var(--font-size-xs); white-space: nowrap; }
+
+/* Contract lapsed: dim + strike, ready to be removed from the database. */
+.annex-partner.is-expired .annex-partner__name { color: var(--text-muted); text-decoration: line-through; }
+.annex-partner.is-expired .annex-partner__date { color: var(--color-orange-dark); }
+
+/* ============================================================
    HOME PAGE — SUBMISSIONS CALENDAR
    12 months (3x4) for a year. Past months are greyed but stay
    fully editable; the current month is highlighted.

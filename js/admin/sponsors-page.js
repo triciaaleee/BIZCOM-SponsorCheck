@@ -117,6 +117,56 @@
       }).join('');
     }
 
+    // Annex A / B reference panel. Static policy (Annex A) + BIZCOM partner list
+    // (Annex B) read from MOCK_DATA. Partners whose contract has lapsed are
+    // dimmed/struck so the team knows they can be removed from the database.
+    function renderAnnexes() {
+      const esc = window.AdminShell.escapeHtml;
+      const a = window.MOCK_DATA.annexA;
+      const b = window.MOCK_DATA.annexB;
+      const aEl = document.getElementById('annex-a-body');
+      const bEl = document.getElementById('annex-b-body');
+
+      if (aEl && a) {
+        let html =
+          '<div class="annex-group__label">' + esc(a.trustees.label) + '</div>' +
+          '<div class="annex-group__companies">' + a.trustees.companies.map(esc).join(', ') + '</div>' +
+          '<dl class="annex-rows">' +
+            a.examples.map(function (c) {
+              return '<dt>' + esc(c.label) + '</dt><dd>' + c.companies.map(esc).join(', ') + '</dd>';
+            }).join('') +
+          '</dl>';
+        if (a.blanket && a.blanket.length) {
+          html += '<div class="annex-blanket">Blanket bans (no list): ' + a.blanket.map(esc).join(' · ') + '</div>';
+        }
+        aEl.innerHTML = html;
+      }
+
+      if (bEl && b) {
+        const partners = b.partners || [];
+        let html = '<div class="annex-group__label">BIZCOM collaboration companies</div>';
+        if (!partners.length) {
+          html += '<div class="annex-empty">Partner companies will appear here — each with its contract end date.</div>';
+        } else {
+          html += '<ul class="annex-partners">' + partners.map(function (p) {
+            const ends = p.contract_ends ? new Date(p.contract_ends) : null;
+            const expired = ends && ends.getTime() < Date.now();
+            const dateText = ends ? (expired ? 'Ended ' : 'Ends ') + window.Caps.formatDate(ends) : '—';
+            return '<li class="annex-partner' + (expired ? ' is-expired' : '') + '">' +
+              '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
+              '<span class="annex-partner__date">' + esc(dateText) + '</span>' +
+            '</li>';
+          }).join('') + '</ul>';
+        }
+        html += '<dl class="annex-rows annex-rows--divided">' +
+          (b.other || []).map(function (c) {
+            return '<dt>' + esc(c.label) + '</dt><dd>' + esc(c.value) + '</dd>';
+          }).join('') +
+        '</dl>';
+        bEl.innerHTML = html;
+      }
+    }
+
     // The list is search-driven: nothing is shown until the admin types a search
     // term. Keeps the page fast and uncluttered as the database grows.
     function hasActiveQuery() {
@@ -256,6 +306,7 @@
 
     // ----------------- boot -----------------
     renderCapAlert();
+    renderAnnexes();
     render();
   }
 
