@@ -100,6 +100,8 @@ window.MOCK_DATA = {
 
   // ---- Sponsorship Standing Order, Annex A (prohibited) ----
   // Companies/types that must NEVER be approached. Transcribed from the PDF.
+  // Only the Board of Trustees list enumerates companies; the rest are shown as
+  // category names (their example companies live in the sponsors table, not here).
   annexA: {
     trustees: {
       label: 'SMU Board of Trustees & associated',
@@ -111,16 +113,11 @@ window.MOCK_DATA = {
         'Bangkok Bank', 'Symphony Asia Holdings', 'Dane Court'
       ]
     },
-    // Categories the PDF illustrates with example companies.
-    examples: [
-      { label: 'Foundations',     companies: ['Lee Foundation', 'Shaw Foundation', 'Tanoto Foundation'] },
-      { label: 'Alcohol',         companies: ['Asia Pacific Breweries'] },
-      { label: 'Tobacco',         companies: ['Marlboro'] },
-      { label: 'Gaming & betting', companies: ['Singapore Pools'] },
-      { label: 'Sexual products', companies: ['Durex'] }
-    ],
-    // Categories banned outright with no company list in the PDF.
-    blanket: ['Insurance', 'Multi-level marketing', 'SMU Commencement sponsors']
+    // All prohibited categories, listed together as names (no example companies).
+    categories: [
+      'Foundations', 'Alcohol', 'Tobacco', 'Gaming & betting', 'Sexual products',
+      'Insurance', 'Multi-level marketing', 'SMU Commencement sponsors'
+    ]
   },
   // Annex B partners now live in the sponsors array (category 'banned' +
   // contract_ends); its static category notes are in sponsors.html.

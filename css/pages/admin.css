@@ -93,7 +93,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-5);
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
@@ -111,6 +111,9 @@
 
 .welcome-card__greeting {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .welcome-card__hello {
@@ -129,14 +132,19 @@
   margin: 0;
 }
 
-/* Pending-submissions panel in the home banner (right side of welcome card). */
+/* Pending-submissions panel in the home banner (right side of welcome card).
+   Sized to hold its own weight next to the wide page: a fuller-width column
+   with a comfortable min-height so it reads as a real panel, not a small box. */
 .pending {
-  flex: 1 1 380px;
-  min-width: 280px;
-  max-width: 460px;
+  flex: 1 1 460px;
+  min-width: 300px;
+  max-width: 640px;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
   background-color: var(--surface-muted);
   border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
 .pending__head {
@@ -167,14 +175,25 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 176px;
+  flex: 1 1 auto;
+  max-height: 360px;
   overflow: auto;
 }
 
 .pending__empty {
+  flex: 1 1 auto;
+  text-align: center;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   padding: var(--space-2);
+}
+
+/* Only lay it out when visible — a plain `display` rule would override the
+   [hidden] attribute and show the message even when there are pending tasks. */
+.pending__empty:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pending-item {
@@ -207,7 +226,7 @@
 }
 
 .pending-item__event {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
   overflow: hidden;
@@ -215,7 +234,7 @@
 }
 
 .pending-item__club {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -439,35 +458,91 @@
 
 .annex-card--restricted .annex-group__label { color: #8C7212; }
 
-.annex-group__companies {
+/* Small "companies" / "types" tag on a group label, so it's obvious at a glance
+   whether the items below are named companies or category types. */
+.annex-group__kind {
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-full);
+  padding: 1px 7px;
+  margin-left: var(--space-1);
+}
+
+/* Companies → point-form bulleted list (two columns to stay compact). */
+.annex-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px var(--space-4);
+}
+
+.annex-list li {
+  position: relative;
+  padding-left: var(--space-4);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  line-height: var(--line-height-normal);
-  margin-bottom: var(--space-3);
+  line-height: var(--line-height-snug);
 }
 
-.annex-rows {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px var(--space-3);
-  margin: 0;
+.annex-list li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--color-orange);
 }
 
-.annex-rows dt { color: var(--text-muted); font-size: var(--font-size-sm); }
-.annex-rows dd { color: var(--text-secondary); font-size: var(--font-size-sm); margin: 0; }
+.annex-card--restricted .annex-list li::before { background-color: var(--color-gold); }
 
-.annex-rows--divided {
+/* Categories/types → chips, visually distinct from the company bullets. */
+.annex-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.annex-tag {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.annex-card--prohibited .annex-tag {
+  background-color: var(--status-blocked-bg);
+  border-color: rgba(202, 88, 28, 0.25);
+  color: var(--color-orange-dark);
+}
+
+.annex-card--restricted .annex-tag {
+  background-color: var(--status-caution-bg);
+  border-color: rgba(214, 178, 56, 0.40);
+  color: #8C7212;
+}
+
+.annex-note {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* Divider above the "other restricted types" line in the Annex B card. */
+.annex-restricted-types {
   border-top: 1px solid var(--border-subtle);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-}
-
-.annex-blanket {
-  border-top: 1px solid var(--border-subtle);
-  margin-top: var(--space-3);
-  padding-top: var(--space-2);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
 }
 
 .annex-empty {
@@ -647,7 +722,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
-  min-height: 116px;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -679,14 +754,14 @@
 
 .cal-cell__month {
   font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
 .cal-cell__badge {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-wide);
   background-color: var(--color-navy);
@@ -715,12 +790,12 @@
 }
 
 .cal-cell__count {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
 
 .cal-cell__empty {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   font-style: italic;
 }
@@ -733,14 +808,14 @@
   flex-direction: column;
   gap: 4px;
   overflow: auto;
-  max-height: 148px;
+  max-height: 200px;
 }
 
 .cal-sub {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   padding: 4px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -755,7 +830,7 @@
 }
 
 .cal-sub__club {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;

@@ -120,24 +120,22 @@
       }).join('');
     }
 
-    // Annex A reference (static policy from MOCK_DATA.annexA).
+    // Annex A reference (static policy from MOCK_DATA.annexA). Only the Board of
+    // Trustees enumerates companies; everything else is a list of category names.
     function renderAnnexA() {
       const esc = window.AdminShell.escapeHtml;
       const a = window.MOCK_DATA.annexA;
       const aEl = document.getElementById('annex-a-body');
       if (!aEl || !a) return;
-      let html =
-        '<div class="annex-group__label">' + esc(a.trustees.label) + '</div>' +
-        '<div class="annex-group__companies">' + a.trustees.companies.map(esc).join(', ') + '</div>' +
-        '<dl class="annex-rows">' +
-          a.examples.map(function (c) {
-            return '<dt>' + esc(c.label) + '</dt><dd>' + c.companies.map(esc).join(', ') + '</dd>';
-          }).join('') +
-        '</dl>';
-      if (a.blanket && a.blanket.length) {
-        html += '<div class="annex-blanket">Blanket bans (no list): ' + a.blanket.map(esc).join(' · ') + '</div>';
-      }
-      aEl.innerHTML = html;
+      aEl.innerHTML =
+        '<div class="annex-group__label">' + esc(a.trustees.label) + ' <span class="annex-group__kind">companies</span></div>' +
+        '<ul class="annex-list">' +
+          a.trustees.companies.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') +
+        '</ul>' +
+        '<div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>' +
+        '<div class="annex-tags">' +
+          a.categories.map(function (c) { return '<span class="annex-tag">' + esc(c) + '</span>'; }).join('') +
+        '</div>';
     }
 
     // Annex B partner list — BIZCOM partners are banned sponsors carrying a
