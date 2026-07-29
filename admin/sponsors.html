@@ -23,7 +23,7 @@
 </head>
 <body>
 
-<main class="admin-main">
+<main class="admin-main admin-main--wide">
 
   <section class="cap-alert" id="cap-alert">
     <div class="cap-alert__head">
@@ -45,10 +45,34 @@
     </div>
     <div class="annex-card annex-card--restricted">
       <div class="annex-card__head">
-        <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
-        <span class="annex-card__sub">BIZCOM partners — route through BIZCOM</span>
+        <div class="annex-card__headings">
+          <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
+          <span class="annex-card__sub">BIZCOM partners — route through BIZCOM</span>
+        </div>
+        <button type="button" class="btn btn--secondary btn--sm" id="annex-b-add-btn">
+          <i class="bi bi-plus-lg"></i> Add
+        </button>
       </div>
-      <div class="annex-card__body" id="annex-b-body"></div>
+      <div class="annex-card__body">
+        <div class="annex-group__label">BIZCOM collaboration companies</div>
+
+        <form class="annex-b-form" id="annex-b-form" hidden>
+          <input type="text" class="form-input" id="annex-b-name" placeholder="Company name" autocomplete="off">
+          <input type="date" class="form-input" id="annex-b-date" aria-label="Contract end date">
+          <div class="annex-b-form__actions">
+            <button type="button" class="btn btn--tertiary btn--sm" id="annex-b-cancel">Cancel</button>
+            <button type="submit" class="btn btn--primary btn--sm">Add company</button>
+          </div>
+        </form>
+
+        <div id="annex-b-list"></div>
+
+        <dl class="annex-rows annex-rows--divided">
+          <dt>Government entities</dt><dd>TOTE Board</dd>
+          <dt>Banks &amp; financial institutions</dt><dd>Route via BIZCOM</dd>
+          <dt>SMU alumni</dt><dd>Seek OAR / OA approval</dd>
+        </dl>
+      </div>
     </div>
   </section>
 

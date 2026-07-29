@@ -159,8 +159,14 @@
     if (effectiveMatch) {
       switch (effectiveMatch.category) {
         case 'banned':
-          status = 'blocked';
-          reason = effectiveMatch.ban_reason || 'On the banned list';
+          if (window.Bans && !window.Bans.isActiveBan(effectiveMatch)) {
+            // Annex B partner whose contract has ended — no longer restricted.
+            status = 'unverified';
+            reason = 'BIZCOM contract has ended — no longer restricted. Vet before approaching.';
+          } else {
+            status = 'blocked';
+            reason = effectiveMatch.ban_reason || 'On the banned list';
+          }
           break;
         case 'closed':
           status = 'blocked';

@@ -62,6 +62,9 @@
       const q = searchQuery.trim().toLowerCase();
       if (!q) return [];
       return all.filter(function (s) {
+        // Lapsed Annex B partners are dormant history — they live only in the
+        // Annex B panel (for removal), not the active sponsor list.
+        if (window.Bans.isExpired(s)) return false;
         return s.name.toLowerCase().indexOf(q) !== -1;
       });
     }
@@ -81,7 +84,7 @@
       const now = new Date();
       const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-      capSub.textContent = 'Free to approach again in ' + MONTHS[now.getMonth()];
+      if (capSub) capSub.textContent = 'Free to approach again in ' + MONTHS[now.getMonth()];
 
       const rows = Object.keys(outreach)
         .map(function (id) {
@@ -117,54 +120,105 @@
       }).join('');
     }
 
-    // Annex A / B reference panel. Static policy (Annex A) + BIZCOM partner list
-    // (Annex B) read from MOCK_DATA. Partners whose contract has lapsed are
-    // dimmed/struck so the team knows they can be removed from the database.
-    function renderAnnexes() {
+    // Annex A reference (static policy from MOCK_DATA.annexA).
+    function renderAnnexA() {
       const esc = window.AdminShell.escapeHtml;
       const a = window.MOCK_DATA.annexA;
-      const b = window.MOCK_DATA.annexB;
       const aEl = document.getElementById('annex-a-body');
-      const bEl = document.getElementById('annex-b-body');
-
-      if (aEl && a) {
-        let html =
-          '<div class="annex-group__label">' + esc(a.trustees.label) + '</div>' +
-          '<div class="annex-group__companies">' + a.trustees.companies.map(esc).join(', ') + '</div>' +
-          '<dl class="annex-rows">' +
-            a.examples.map(function (c) {
-              return '<dt>' + esc(c.label) + '</dt><dd>' + c.companies.map(esc).join(', ') + '</dd>';
-            }).join('') +
-          '</dl>';
-        if (a.blanket && a.blanket.length) {
-          html += '<div class="annex-blanket">Blanket bans (no list): ' + a.blanket.map(esc).join(' · ') + '</div>';
-        }
-        aEl.innerHTML = html;
-      }
-
-      if (bEl && b) {
-        const partners = b.partners || [];
-        let html = '<div class="annex-group__label">BIZCOM collaboration companies</div>';
-        if (!partners.length) {
-          html += '<div class="annex-empty">Partner companies will appear here — each with its contract end date.</div>';
-        } else {
-          html += '<ul class="annex-partners">' + partners.map(function (p) {
-            const ends = p.contract_ends ? new Date(p.contract_ends) : null;
-            const expired = ends && ends.getTime() < Date.now();
-            const dateText = ends ? (expired ? 'Ended ' : 'Ends ') + window.Caps.formatDate(ends) : '—';
-            return '<li class="annex-partner' + (expired ? ' is-expired' : '') + '">' +
-              '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
-              '<span class="annex-partner__date">' + esc(dateText) + '</span>' +
-            '</li>';
-          }).join('') + '</ul>';
-        }
-        html += '<dl class="annex-rows annex-rows--divided">' +
-          (b.other || []).map(function (c) {
-            return '<dt>' + esc(c.label) + '</dt><dd>' + esc(c.value) + '</dd>';
+      if (!aEl || !a) return;
+      let html =
+        '<div class="annex-group__label">' + esc(a.trustees.label) + '</div>' +
+        '<div class="annex-group__companies">' + a.trustees.companies.map(esc).join(', ') + '</div>' +
+        '<dl class="annex-rows">' +
+          a.examples.map(function (c) {
+            return '<dt>' + esc(c.label) + '</dt><dd>' + c.companies.map(esc).join(', ') + '</dd>';
           }).join('') +
         '</dl>';
-        bEl.innerHTML = html;
+      if (a.blanket && a.blanket.length) {
+        html += '<div class="annex-blanket">Blanket bans (no list): ' + a.blanket.map(esc).join(' · ') + '</div>';
       }
+      aEl.innerHTML = html;
+    }
+
+    // Annex B partner list — BIZCOM partners are banned sponsors carrying a
+    // contract_ends date. Active partners show normally; lapsed ones are muted
+    // with a Remove button so the team can clear them from the database.
+    function renderAnnexBList() {
+      const esc = window.AdminShell.escapeHtml;
+      const listEl = document.getElementById('annex-b-list');
+      if (!listEl) return;
+
+      const partners = window.MOCK_DATA.sponsors.filter(function (s) {
+        return window.Bans.isContractPartner(s);
+      }).sort(function (x, y) {
+        const ex = window.Bans.isExpired(x), ey = window.Bans.isExpired(y);
+        if (ex !== ey) return ex ? 1 : -1;                       // active first
+        return new Date(x.contract_ends) - new Date(y.contract_ends); // soonest to end first
+      });
+
+      if (!partners.length) {
+        listEl.innerHTML = '<div class="annex-empty">No partner companies yet. Use “Add” to add one with its contract end date.</div>';
+        return;
+      }
+
+      listEl.innerHTML = '<ul class="annex-partners">' + partners.map(function (p) {
+        const expired = window.Bans.isExpired(p);
+        const ends = new Date(p.contract_ends);
+        const dateText = (expired ? 'Ended ' : 'Ends ') + window.Caps.formatDate(ends);
+        return '<li class="annex-partner' + (expired ? ' is-expired' : '') + '">' +
+          '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
+          '<span class="annex-partner__meta">' +
+            '<span class="annex-partner__date">' + esc(dateText) + '</span>' +
+            '<button type="button" class="annex-partner__remove" data-remove-id="' + esc(p.id) + '" title="Remove from database" aria-label="Remove ' + esc(p.name) + '">' +
+              '<i class="bi bi-trash"></i>' + (expired ? ' Remove' : '') +
+            '</button>' +
+          '</span>' +
+        '</li>';
+      }).join('') + '</ul>';
+
+      listEl.querySelectorAll('[data-remove-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () { removeAnnexBPartner(btn.getAttribute('data-remove-id')); });
+      });
+    }
+
+    function renderAnnexes() {
+      renderAnnexA();
+      renderAnnexBList();
+    }
+
+    // ---- Annex B add / remove ----
+    function normaliseName(name) {
+      return String(name).toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function addAnnexBPartner(name, dateStr) {
+      const sponsor = {
+        id: 'b-' + Date.now().toString(36),
+        name: name,
+        normalised: normaliseName(name),
+        industry: 'other',
+        category: 'banned',
+        ban_reason: 'Annex B, BIZCOM partner',
+        notes: '',
+        contract_ends: dateStr
+      };
+      window.MOCK_DATA.sponsors.push(sponsor);
+      window.AdminShell.logActivity('sponsor.created', name, 'Added to Annex B, contract ends ' + dateStr);
+      window.toast && window.toast({ type: 'success', title: 'Partner added', message: name });
+      renderAnnexBList();
+      render();
+    }
+
+    function removeAnnexBPartner(id) {
+      const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === id; });
+      if (idx === -1) return;
+      const name = window.MOCK_DATA.sponsors[idx].name;
+      if (!confirm('Remove ' + name + ' from the database? This cannot be undone.')) return;
+      window.MOCK_DATA.sponsors.splice(idx, 1);
+      window.AdminShell.logActivity('sponsor.deleted', name, 'Removed from Annex B');
+      window.toast && window.toast({ type: 'success', title: 'Removed', message: name });
+      renderAnnexBList();
+      render();
     }
 
     // The list is search-driven: nothing is shown until the admin types a search
@@ -303,6 +357,40 @@
       currentPage = 1;
       render();
     });
+
+    // Annex B add-partner form (name + contract end date).
+    const annexAddBtn = document.getElementById('annex-b-add-btn');
+    const annexForm = document.getElementById('annex-b-form');
+    const annexName = document.getElementById('annex-b-name');
+    const annexDate = document.getElementById('annex-b-date');
+    const annexCancel = document.getElementById('annex-b-cancel');
+
+    function toggleAnnexForm(show) {
+      annexForm.hidden = !show;
+      if (show) { annexName.value = ''; annexDate.value = ''; annexName.focus(); }
+    }
+
+    if (annexAddBtn && annexForm) {
+      annexAddBtn.addEventListener('click', function () { toggleAnnexForm(annexForm.hidden); });
+      annexCancel.addEventListener('click', function () { toggleAnnexForm(false); });
+      annexForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const name = annexName.value.trim();
+        const date = annexDate.value;
+        if (!name) {
+          window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter the company name.' });
+          annexName.focus();
+          return;
+        }
+        if (!date) {
+          window.toast && window.toast({ type: 'error', title: 'Contract end date required', message: 'Pick when the contract ends.' });
+          annexDate.focus();
+          return;
+        }
+        addAnnexBPartner(name, date);
+        toggleAnnexForm(false);
+      });
+    }
 
     // ----------------- boot -----------------
     renderCapAlert();

@@ -62,7 +62,15 @@ window.MOCK_DATA = {
     // alumni
     { id: 's50', name: 'Tea Tribe',          normalised: 'tea tribe',        industry: 'food_beverage',         category: 'alumni',    alumni_owner: 'Wong YJ, BBM 2019' },
     { id: 's51', name: 'Crave Bakery',       normalised: 'crave bakery',     industry: 'food_beverage',         category: 'alumni',    alumni_owner: 'Tan ML, ACCT 2017' },
-    { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    alumni_owner: 'Kumar A, ISIT 2020' }
+    { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    alumni_owner: 'Kumar A, ISIT 2020' },
+
+    // Annex B — BIZCOM collaboration partners. Modelled as banned sponsors with a
+    // contract_ends date (permanent bans have contract_ends = null). Blocked while
+    // the contract is active; once it lapses they drop out of the banned set.
+    // These two are demo placeholders (one active, one lapsed) — dates seeded at
+    // the bottom of this file. Replace with the real partner list.
+    { id: 'b1', name: 'Aurora Events Co',     normalised: 'aurora events co', industry: 'entertainment_leisure', category: 'banned', ban_reason: 'Annex B, BIZCOM partner', contract_ends: null },
+    { id: 'b2', name: 'Legacy Media Pte Ltd', normalised: 'legacy media',     industry: 'media_publishing',      category: 'banned', ban_reason: 'Annex B, BIZCOM partner', contract_ends: null }
   ],
 
   // Per-sponsor outreach state, keyed by sponsor id. This is a CUMULATIVE
@@ -114,22 +122,8 @@ window.MOCK_DATA = {
     // Categories banned outright with no company list in the PDF.
     blanket: ['Insurance', 'Multi-level marketing', 'SMU Commencement sponsors']
   },
-
-  // ---- Sponsorship Standing Order, Annex B (restricted) ----
-  // BIZCOM collaboration partners are off-limits to clubs while their contract
-  // is active; once contract_ends passes they can be removed. The partner list
-  // is supplied by BIZCOM — seed it here (name + ISO contract_ends).
-  annexB: {
-    partners: [
-      // { name: 'Example Partner Pte Ltd', contract_ends: '2026-12-31' }
-    ],
-    // Other restricted types from the PDF (no company enumeration needed).
-    other: [
-      { label: 'Government entities',            value: 'TOTE Board' },
-      { label: 'Banks & financial institutions', value: 'Route via BIZCOM' },
-      { label: 'SMU alumni',                     value: 'Seek OAR / OA approval' }
-    ]
-  },
+  // Annex B partners now live in the sponsors array (category 'banned' +
+  // contract_ends); its static category notes are in sponsors.html.
 
   // Public dashboard placeholders
   dashboardStats: {
@@ -363,6 +357,38 @@ window.Caps = (function () {
   return { state: state, formatDate: formatDate };
 })();
 
+// ============================================================
+// BANNED / ANNEX helper (window.Bans) — the single definition of
+// "is this company currently banned?". Annex A = permanent ban
+// (contract_ends null). Annex B = BIZCOM partner banned only while
+// its contract runs (contract_ends set); once it lapses the ban is
+// no longer active. Every read site (matcher, sponsor list, Annex B
+// panel) uses these so the rule never drifts.
+// ============================================================
+window.Bans = (function () {
+  'use strict';
+
+  // Annex B partner = a banned sponsor that carries a contract end date.
+  function isContractPartner(s) {
+    return !!(s && s.category === 'banned' && s.contract_ends);
+  }
+
+  // Contract has lapsed (date-only comparison, so it flips at midnight).
+  function isExpired(s) {
+    if (!isContractPartner(s)) return false;
+    var end = new Date(s.contract_ends); end.setHours(0, 0, 0, 0);
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    return end < today;
+  }
+
+  // Currently enforced: any permanent ban, or a partner still under contract.
+  function isActiveBan(s) {
+    return !!(s && s.category === 'banned' && (!s.contract_ends || !isExpired(s)));
+  }
+
+  return { isContractPartner: isContractPartner, isExpired: isExpired, isActiveBan: isActiveBan };
+})();
+
 // Anchor the two seeded cooldowns relative to "now" so the demo stays realistic
 // whenever the mock is run: LiHO's cooldown ENDS this month (so it shows in the
 // "cooldowns ending this month" box) while Grab's ends next month (excluded, to
@@ -380,4 +406,17 @@ window.Caps = (function () {
   // Ends next month (10th): outside the current month, so it won't show.
   var endNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 10, 12, 0, 0);
   window.MOCK_DATA.outreach.s11.cooldown_started_at = new Date(endNextMonth.getTime() - cd * day).toISOString();
+})();
+
+// Seed the two demo Annex B partners: one active contract, one lapsed — so the
+// Annex B panel shows both the normal and the muted/removable states.
+(function seedAnnexBPartners() {
+  function iso(d) { return d.toISOString().slice(0, 10); }
+  var now = new Date();
+  var active = new Date(now.getFullYear(), now.getMonth() + 2, 15);  // ~2 months out
+  var lapsed = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 20); // 20 days ago
+  var byId = {};
+  window.MOCK_DATA.sponsors.forEach(function (s) { byId[s.id] = s; });
+  if (byId.b1) byId.b1.contract_ends = iso(active);
+  if (byId.b2) byId.b2.contract_ends = iso(lapsed);
 })();

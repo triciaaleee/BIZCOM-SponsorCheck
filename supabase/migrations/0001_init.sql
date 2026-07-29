@@ -35,6 +35,11 @@ create table if not exists public.sponsors (
   notes        text not null default '',
   ban_reason   text,            -- populated when category = 'banned'
   alumni_owner text,            -- populated when category = 'alumni'
+  -- Annex B (BIZCOM partner) support: a banned sponsor with contract_ends set is
+  -- restricted only while the contract runs. NULL = permanent ban (Annex A). The
+  -- "currently banned" rule everywhere is:
+  --   category = 'banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+  contract_ends date,
   -- Outreach cap/cooldown state (see settings.outreach_cap). The running count
   -- is derived in the sponsor_outreach view from outreach_log rows since
   -- count_reset_at. When the count hits the cap, cooldown_started_at is stamped;
@@ -215,7 +220,9 @@ create or replace view public.dashboard_stats as
   select
     (select count(*) from public.sponsors)                              as total,
     (select count(*) from public.sponsors where category = 'master')    as master,
-    (select count(*) from public.sponsors where category = 'banned')    as banned,
+    (select count(*) from public.sponsors
+       where category = 'banned'
+         and (contract_ends is null or contract_ends >= current_date))   as banned,
     (select count(*) from public.sponsors where category = 'alumni')    as alumni,
     (select count(*) from public.submissions
        where submitted_at >= date_trunc('month', now()))                as submissions_this_month,

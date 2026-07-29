@@ -139,6 +139,7 @@
 
   /* ---------- Layout ---------- */
   --layout-max-width:      1280px;
+  --layout-wide-width:     1600px;   /* roomier admin pages (vet-upload, sponsors, home) */
   --layout-narrow-width:   768px;
   --layout-gutter-mobile:  16px;
   --layout-gutter-desktop: 32px;

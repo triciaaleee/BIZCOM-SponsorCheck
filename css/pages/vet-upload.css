@@ -9,9 +9,10 @@
    ============================================================ */
 
 /* This page's tables are wide (matched panel has 8 columns), so give the
-   whole content area more room than the default 1280px admin cap. Scoped to
-   this page because vet-upload.css only loads here. */
-.admin-main { max-width: 1600px; }
+   whole content area more room than the default 1280px admin cap. Uses the
+   shared wide-width token so sponsors/home (which opt in via .admin-main--wide)
+   stay matched to this page. */
+.admin-main { max-width: var(--layout-wide-width); }
 
 /* Numbered step badge in each section heading. */
 .bulk-step {

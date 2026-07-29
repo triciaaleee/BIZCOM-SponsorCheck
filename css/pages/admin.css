@@ -23,6 +23,17 @@
 }
 
 /* ============================================================
+   WIDE CONTENT AREA (opt-in)
+   Pages that carry wide tables/panels add `admin-main--wide` to their
+   <main> to widen the content cap beyond the default 1280px, matching
+   vet-upload. Compound selector so it beats the base .admin-main rule
+   regardless of stylesheet order.
+   ============================================================ */
+.admin-main.admin-main--wide {
+  max-width: var(--layout-wide-width);
+}
+
+/* ============================================================
    MAPS LINK (sponsor name, opens Google Maps in a new tab)
    ============================================================ */
 
@@ -385,7 +396,13 @@
 .annex-card--prohibited { border-left-color: var(--color-orange); }
 .annex-card--restricted { border-left-color: var(--color-gold); }
 
-.annex-card__head { margin-bottom: var(--space-3); }
+.annex-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
 
 .annex-card__title {
   display: inline-flex;
@@ -475,11 +492,60 @@
 }
 
 .annex-partner__name { color: var(--text-primary); font-weight: var(--font-weight-medium); }
-.annex-partner__date { color: var(--text-secondary); font-size: var(--font-size-xs); white-space: nowrap; }
 
-/* Contract lapsed: dim + strike, ready to be removed from the database. */
-.annex-partner.is-expired .annex-partner__name { color: var(--text-muted); text-decoration: line-through; }
-.annex-partner.is-expired .annex-partner__date { color: var(--color-orange-dark); }
+.annex-partner__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.annex-partner__date { color: var(--text-secondary); font-size: var(--font-size-xs); }
+
+.annex-partner__remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+.annex-partner__remove:hover {
+  color: var(--color-orange-dark);
+  background-color: var(--surface-muted);
+}
+
+/* Contract lapsed: mute the whole row, and surface the Remove action. */
+.annex-partner.is-expired { opacity: 0.6; }
+.annex-partner.is-expired .annex-partner__name { text-decoration: line-through; }
+.annex-partner.is-expired .annex-partner__remove { color: var(--color-orange-dark); }
+
+/* Add-partner form */
+.annex-b-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.annex-b-form .form-input { flex: 1 1 160px; height: 34px; }
+
+.annex-b-form__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
 
 /* ============================================================
    HOME PAGE — SUBMISSIONS CALENDAR

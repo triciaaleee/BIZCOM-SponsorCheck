@@ -78,6 +78,14 @@ insert into public.sponsors (name, normalised, industry, category, notes, ban_re
   ('Loop Studio',  'loop studio',  'activities_experiences', 'alumni', '', null, 'Kumar A, ISIT 2020')
 on conflict (normalised) do nothing;
 
+-- Annex B (BIZCOM partners): banned sponsors with a contract end date. One active,
+-- one lapsed — demo placeholders; replace with the real partner list. The lapsed
+-- one drops out of the banned set automatically (contract_ends < current_date).
+insert into public.sponsors (name, normalised, industry, category, ban_reason, contract_ends) values
+  ('Aurora Events Co',     'aurora events co', 'entertainment_leisure', 'banned', 'Annex B, BIZCOM partner', (current_date + interval '2 months')::date),
+  ('Legacy Media Pte Ltd', 'legacy media',     'media_publishing',      'banned', 'Annex B, BIZCOM partner', (current_date - interval '20 days')::date)
+on conflict (normalised) do nothing;
+
 -- ---------- outreach_log -----------------------------------------------------
 -- One row per contact. Counts are cumulative (not windowed), so they map
 -- straight to sponsor_outreach.contact_count:
