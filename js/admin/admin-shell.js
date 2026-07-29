@@ -48,10 +48,10 @@
   // ---------- Sidebar ----------
 
   const NAV_ITEMS = [
-    { href: 'home.html',        label: 'Home',        icon: 'bi-house-door-fill' },
-    { href: 'sponsors.html',    label: 'Sponsors',    icon: 'bi-building'      },
-    { href: 'bulk.html',        label: 'Bulk tools',  icon: 'bi-cloud-arrow-up-fill' },
-    { href: 'settings.html',    label: 'Settings',    icon: 'bi-gear-fill',    superOnly: true }
+    { href: 'home.html',        label: 'Home',          icon: 'bi-house-door-fill' },
+    { href: 'vet-upload.html',  label: 'Vet & upload',  icon: 'bi-clipboard-check-fill' },
+    { href: 'sponsors.html',    label: 'Sponsors',      icon: 'bi-building'      },
+    { href: 'settings.html',    label: 'Settings',      icon: 'bi-gear-fill',    superOnly: true }
   ];
 
   function renderSidebar(currentPage, session) {

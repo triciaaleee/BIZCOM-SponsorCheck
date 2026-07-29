@@ -23,34 +23,23 @@
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
-  <link rel="stylesheet" href="../css/pages/bulk.css">
+  <link rel="stylesheet" href="../css/pages/vet-upload.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
 <body>
 
 <main class="admin-main">
 
-  <div class="banner banner--info bulk-intro">
-    <i class="bi bi-info-circle-fill banner__icon"></i>
-    <div class="banner__body">
-      <div class="banner__title">Two steps, one workflow</div>
-      <div class="banner__message">
-        Upload a list to flag banned or closed companies automatically, then review and add the new
-        ones to the master database in one go. You can also skip straight to step 2 to add sponsors manually.
-      </div>
-    </div>
-  </div>
-
   <!-- ============================================================
-       STEP 1 — Check a list
+       STEP 1 - Vet a list
        ============================================================ -->
   <section class="admin-section" id="section-check">
     <div class="admin-section__head">
       <div>
-        <h2 class="admin-section__title"><span class="bulk-step">1</span>Check a list</h2>
+        <h2 class="admin-section__title"><span class="bulk-step">1</span>Vet a list</h2>
         <p class="admin-section__sub">
-          Upload a club's sponsor list. Banned and closed companies are flagged automatically;
-          the rest are left for you to review.
+          Upload a club's CSV. Every company is checked against the database. Banned and approved
+          companies are flagged. Any we cannot find are listed separately for individual review.
         </p>
       </div>
     </div>
@@ -60,18 +49,19 @@
       <!-- Upload state -->
       <div id="check-upload">
         <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept=".txt,.csv" aria-label="Upload sponsor list">
+          <input type="file" id="file-input" accept=".csv" aria-label="Upload sponsor list">
           <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
-          <div class="drop-zone__title">Drop a .txt or .csv list here</div>
+          <div class="drop-zone__title">Drop a .csv list here</div>
           <div class="drop-zone__hint">or click to browse</div>
           <div class="drop-zone__divider">
-            <span>.txt or .csv, up to 5 MB</span>
+            <span>CSV only, up to 5 MB</span>
           </div>
         </div>
         <div class="bulk-format-hint">
-          One company per line. Optionally add an <code>industry_code</code> after a comma
-          (e.g. <code>Razer,tech_electronics</code>) &mdash; the same file the
-          <a href="../sponsor-check.html">public checker</a> accepts. A header row is optional.
+          Two columns: <code>company_name</code> and an optional <code>industry_code</code>
+          (e.g. <code>Razer,tech_electronics</code>). This is the same template the
+          <a href="../sponsor-check.html">public checker</a> uses. A header row is optional.
+          Excel files are not accepted, so save as CSV first.
           &nbsp;&middot;&nbsp; <a href="#" id="load-sample-link">Load a sample list</a>
         </div>
         <div id="upload-status" class="mt-3"></div>
@@ -87,57 +77,91 @@
 
       <!-- Results state -->
       <div id="check-results" class="d-none">
-        <div class="bulk-summary" id="bulk-summary"></div>
 
-        <div class="bulk-results-head">
-          <div class="bulk-filter" id="bulk-filter" role="tablist" aria-label="Filter results">
-            <button class="bulk-chip is-active" data-filter="all">All</button>
-            <button class="bulk-chip" data-filter="blocked">Banned / closed</button>
-            <button class="bulk-chip" data-filter="known">In database</button>
-            <button class="bulk-chip" data-filter="unverified">New</button>
-            <button class="bulk-chip" data-filter="duplicate">Duplicates</button>
-          </div>
+        <div class="bulk-results-bar">
+          <div class="bulk-results-bar__text" id="results-headline"></div>
           <button type="button" class="btn btn--secondary btn--sm" id="reupload">
             <i class="bi bi-arrow-counterclockwise"></i> Upload another
           </button>
         </div>
 
-        <div class="table-wrapper table-wrapper--responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="width: 44px">#</th>
-                <th>Company</th>
-                <th>Status</th>
-                <th>Industry</th>
-                <th>Reason</th>
-              </tr>
-            </thead>
-            <tbody id="results-tbody"></tbody>
-          </table>
+        <div class="bulk-summary" id="bulk-summary"></div>
+
+        <div class="banner banner--info" id="dup-banner" hidden>
+          <i class="bi bi-info-circle-fill banner__icon"></i>
+          <div class="banner__body">
+            <div class="banner__title"><span id="dup-count">0</span> duplicate rows in the file</div>
+            <div class="banner__message">The same company appeared more than once. Extra rows were ignored. Each company is checked once.</div>
+          </div>
         </div>
 
-        <div class="bulk-results-foot">
-          <div class="bulk-results-foot__text" id="review-cta-text"></div>
-          <button type="button" class="btn btn--primary btn--sm" id="send-to-staging">
-            <i class="bi bi-arrow-down-circle"></i> Stage new companies below
-          </button>
+        <!-- Panel A: matched against the database (banned + approved flagged) -->
+        <div class="vet-panel">
+          <div class="vet-panel__head">
+            <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
+            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Banned and approved are flagged. Please verify any marked <em>approx.</em></span>
+          </div>
+          <div class="table-wrapper table-wrapper--responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 44px">#</th>
+                  <th>Company (from list)</th>
+                  <th>Matched in database</th>
+                  <th>Status</th>
+                  <th>Industry</th>
+                  <th>Outreach</th>
+                </tr>
+              </thead>
+              <tbody id="matched-tbody"></tbody>
+            </table>
+          </div>
+          <div class="vet-panel__empty" id="matched-empty" hidden>None of the uploaded companies were found in the database.</div>
         </div>
+
+        <!-- Panel B: the separate review window for companies not on record -->
+        <div class="vet-panel vet-panel--review">
+          <div class="vet-panel__head">
+            <h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>
+            <span class="vet-panel__sub" id="review-sub">No confident match was found. Where a close record exists it is shown as a possible match. Check it before staging, so you do not add a duplicate.</span>
+          </div>
+          <div class="table-wrapper table-wrapper--responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 44px">#</th>
+                  <th>Company (from list)</th>
+                  <th>Suggested industry</th>
+                  <th>Possible match in database</th>
+                </tr>
+              </thead>
+              <tbody id="review-tbody"></tbody>
+            </table>
+          </div>
+          <div class="vet-panel__empty" id="review-empty" hidden>Every company on the list was found in the database.</div>
+          <div class="vet-panel__foot" id="review-foot">
+            <span class="vet-panel__foot-text" id="review-count-text"></span>
+            <button type="button" class="btn btn--primary btn--sm" id="send-to-staging">
+              <i class="bi bi-arrow-down-circle"></i> Stage these for adding
+            </button>
+          </div>
+        </div>
+
       </div>
 
     </div>
   </section>
 
   <!-- ============================================================
-       STEP 2 — Add sponsors to the database
+       STEP 2 - Add sponsors to the database
        ============================================================ -->
   <section class="admin-section" id="section-add">
     <div class="admin-section__head">
       <div>
         <h2 class="admin-section__title"><span class="bulk-step">2</span>Add sponsors to the database</h2>
         <p class="admin-section__sub">
-          Set each company's status and industry, untick any you don't want, then add them all at once.
-          Works standalone too &mdash; click &ldquo;Add row&rdquo; to enter sponsors without uploading.
+          Set each company's status and industry, untick any you do not want, then add them all at once.
+          You can also click &ldquo;Add row&rdquo; to enter sponsors without uploading a list.
         </p>
       </div>
       <button type="button" class="btn btn--secondary btn--sm" id="add-row">
@@ -183,6 +207,6 @@
 <script src="../js/lib/matcher.js" defer></script>
 <script src="../js/components/toast.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>
-<script src="../js/admin/bulk-page.js" defer></script>
+<script src="../js/admin/vet-upload-page.js" defer></script>
 </body>
 </html>

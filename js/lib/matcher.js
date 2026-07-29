@@ -101,10 +101,12 @@
     // 1. Exact match
     let matched = sponsors.find(function (s) { return s.normalised === normalisedInput; });
 
-    // 2. Fuzzy fallback
+    // 2. Fuzzy fallback. Keep the best candidate + score even when it falls
+    //    short of the accept threshold, so callers can surface it as a
+    //    "possible match" for a human to confirm (see `suggestion` below).
     let fuzzy = null;
+    let best = { score: 0, sponsor: null };
     if (!matched && normalisedInput.length >= 3) {
-      let best = { score: 0, sponsor: null };
       sponsors.forEach(function (s) {
         const score = similarity(normalisedInput, s.normalised);
         if (score > best.score) best = { score: score, sponsor: s };
@@ -136,8 +138,22 @@
 
     // 4. Determine status
     const effectiveMatch = matched || fuzzy;
+    const matchType = matched ? 'exact' : (fuzzy ? 'fuzzy' : null);
     const capState = effectiveMatch ? window.Caps.state(effectiveMatch.id) : null;
     const outreachCount = capState ? capState.count : 0;
+
+    // Near-miss: the closest record that did NOT clear the accept threshold.
+    // Surfaced so a company that's really on record (under a different name)
+    // isn't mistaken for new. null when nothing is close enough to bother.
+    let suggestion = null;
+    if (!effectiveMatch && best.sponsor && best.score >= 0.4) {
+      suggestion = {
+        id: best.sponsor.id,
+        name: best.sponsor.name,
+        category: best.sponsor.category,
+        score: Math.round(best.score * 100)
+      };
+    }
 
     let status, reason;
     if (effectiveMatch) {
@@ -180,6 +196,16 @@
       input: inputName,
       status: status,
       matched: matched ? matched.name : (fuzzy ? fuzzy.name + ' (similar)' : null),
+      // Underlying DB record of the match, if any. Lets callers bucket by the
+      // real category (master/banned/closed/alumni) instead of inferring it
+      // from `status` (which collapses banned + closed into 'blocked').
+      // null when nothing matched. Extra fields; safe for existing callers.
+      matchedId: effectiveMatch ? effectiveMatch.id : null,
+      matchedName: effectiveMatch ? effectiveMatch.name : null,
+      matchedCategory: effectiveMatch ? effectiveMatch.category : null,
+      matchType: matchType,                                   // 'exact' | 'fuzzy' | null
+      matchScore: matched ? 100 : (fuzzy ? Math.round(best.score * 100) : null),
+      suggestion: suggestion,                                 // near-miss for unverified rows
       industry: industry,
       classificationSource: classificationSource,
       reason: reason,

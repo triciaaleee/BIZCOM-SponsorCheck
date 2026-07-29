@@ -1,10 +1,11 @@
 /* ============================================================
-   pages/bulk.css
-   Bulk tools page (admin/bulk.html): upload-and-flag a list, then
-   bulk-add the new companies to the database. Loaded AFTER
+   pages/vet-upload.css
+   Vet & upload page (admin/vet-upload.html): vet an uploaded list
+   against the database, then bulk-add new companies. Loaded AFTER
    pages/admin.css so it can lean on the admin type scale.
    Reusable bits (drop-zone, table, pills, forms, banner) come from
    css/components/*; only the page-specific layout lives here.
+   (Internal class names keep the `bulk-` prefix.)
    ============================================================ */
 
 /* Numbered step badge in each section heading. */
@@ -29,10 +30,6 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-}
-
-.bulk-intro {
-  margin-bottom: var(--space-5);
 }
 
 /* Format helper under the drop zone. */
@@ -71,13 +68,9 @@
 
 .bulk-summary {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: var(--space-3);
   margin-bottom: var(--space-4);
-}
-
-@media (min-width: 720px) {
-  .bulk-summary { grid-template-columns: repeat(4, 1fr); }
 }
 
 .bulk-stat {
@@ -90,10 +83,12 @@
   border-left: 3px solid var(--text-muted);
 }
 
-.bulk-stat--flagged { border-left-color: var(--color-orange); }
-.bulk-stat--known   { border-left-color: var(--color-green); }
-.bulk-stat--new     { border-left-color: var(--color-navy); }
-.bulk-stat--dup     { border-left-color: var(--border-default); }
+.bulk-stat--approved { border-left-color: var(--color-green); }
+.bulk-stat--cooldown { border-left-color: var(--color-orange-dark); }
+.bulk-stat--banned   { border-left-color: var(--color-orange); }
+.bulk-stat--closed   { border-left-color: var(--text-muted); }
+.bulk-stat--alumni   { border-left-color: var(--color-navy); }
+.bulk-stat--review   { border-left-color: var(--color-gold); }
 
 .bulk-stat__value {
   font-size: var(--font-size-2xl);
@@ -110,60 +105,137 @@
   color: var(--text-muted);
 }
 
-/* ---------- Results filter + table framing ---------- */
+/* ---------- Results header bar ---------- */
 
-.bulk-results-head {
+.bulk-results-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.bulk-filter {
-  display: flex;
-  gap: var(--space-1);
-  flex-wrap: wrap;
+.bulk-results-bar__text {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
-/* Filter chip (mirrors the public checker's, kept local to admin). */
-.bulk-chip {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
+/* ---------- Result panels (matched vs. review) ---------- */
+
+.vet-panel {
   background-color: var(--surface-card);
-  border: 1px solid var(--border-default);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+/* Panel B is the "needs attention" window: tinted + gold-edged so it reads
+   as distinct from the matched-results panel above it. */
+.vet-panel--review {
+  border-left: 4px solid var(--color-gold);
+  background-color: rgba(214, 178, 56, 0.04);
+}
+
+.vet-panel__head {
+  margin-bottom: var(--space-4);
+}
+
+.vet-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.vet-panel--review .vet-panel__title i { color: #8C7212; }
+.vet-panel__title i { color: var(--color-navy); }
+
+.vet-panel__sub {
+  display: block;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
+  margin-top: var(--space-1);
 }
 
-.bulk-chip:hover { border-color: var(--color-navy); color: var(--color-navy); }
-
-.bulk-chip.is-active {
-  background-color: var(--color-navy);
-  border-color: var(--color-navy);
-  color: var(--text-inverse);
+.vet-panel__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
-.bulk-results-foot {
+.vet-panel__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
 }
 
-.bulk-results-foot__text {
+.vet-panel__foot-text {
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #8C7212;
+}
+
+/* ---------- Matched-record cell (Panel A) ---------- */
+
+/* "approx." badge on fuzzy matches: a nudge to eyeball the pairing. */
+.vet-approx {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: #8C7212;
+  background-color: rgba(214, 178, 56, 0.16);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* ---------- Outreach-cap cell (Panel A) ---------- */
+
+.vet-cap {
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.vet-cap--near { color: #8C7212; }               /* approaching the cap */
+.vet-cap--over { color: var(--color-orange-dark); } /* at cap / in cooldown */
+
+.vet-cap__note {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- Possible-match cell (Panel B) ---------- */
+
+/* Review rows that carry a near-miss suggestion: subtle gold tint so they
+   stand out from genuinely-unknown companies. */
+.vet-suggest-row { background-color: rgba(214, 178, 56, 0.05); }
+.vet-suggest-row:hover { background-color: rgba(214, 178, 56, 0.09); }
+
+.vet-suggest {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.vet-suggest__icon { color: var(--color-gold); }
+
+.vet-suggest__score {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ---------- Staging table (bulk add) ---------- */

@@ -1,16 +1,19 @@
 /* ============================================================
-   js/admin/bulk-page.js
-   Admin "Bulk tools" page. Two connected steps:
+   js/admin/vet-upload-page.js
+   Admin "Vet & upload" page. Two connected steps:
 
-     1. Check a list — upload a .txt/.csv of company names, run it
-        through the shared Matcher (same engine as the public
-        checker) and flag which are banned/closed vs. already known
-        vs. new. The "new" ones are the admin's to review.
+     1. Vet a list — upload a CSV of company names (company_name +
+        optional industry_code, the same template the public checker
+        uses) and run it through the shared Matcher. Matched companies
+        are flagged by their database status (banned / approved /
+        closed / alumni); companies not on record are listed in a
+        separate panel for the admin to review one by one.
 
-     2. Add to database — an editable staging table. New companies
-        from step 1 flow in pre-filled; the admin sets status +
-        industry and adds them all at once. Also works standalone
-        (Add row) for manual bulk entry, on top of sponsor.html.
+     2. Add to database — an editable staging table. The
+        not-on-record companies flow in from step 1; the admin sets
+        each one's status (banned or approved, etc.) and industry and
+        adds them all at once. Also works standalone (Add row) for
+        manual bulk entry, on top of sponsor.html.
 
    MOCK MODE (today): writes push to window.MOCK_DATA.sponsors, so
    additions are visible across admin pages within the session but
@@ -38,7 +41,7 @@
   // alumni_owner (alumni) when the row is committed.
   const DETAIL_META = {
     master: { placeholder: 'Notes (optional)',              required: false },
-    banned: { placeholder: 'Ban reason, e.g. Annex A — Gaming', required: true },
+    banned: { placeholder: 'Ban reason, e.g. Annex A, Gaming', required: true },
     closed: { placeholder: 'Closed notes (optional)',       required: false },
     alumni: { placeholder: 'Alumni owner, e.g. Wong YJ, BBM 2019', required: true }
   };
@@ -60,8 +63,8 @@
     }
 
     const session = window.AdminShell.mount({
-      currentPage: 'bulk.html',
-      pageTitle: 'Bulk tools'
+      currentPage: 'vet-upload.html',
+      pageTitle: 'Vetting & bulk upload'
     });
     if (!session) return; // redirected away by the auth guard
 
@@ -77,11 +80,18 @@
     const checkLoading  = document.getElementById('check-loading');
     const checkResults  = document.getElementById('check-results');
 
+    const resultsHead   = document.getElementById('results-headline');
     const summaryEl     = document.getElementById('bulk-summary');
-    const resultsTbody  = document.getElementById('results-tbody');
-    const filterEl      = document.getElementById('bulk-filter');
+    const dupBanner     = document.getElementById('dup-banner');
+    const dupCountEl    = document.getElementById('dup-count');
     const reuploadBtn   = document.getElementById('reupload');
-    const reviewCtaText = document.getElementById('review-cta-text');
+
+    const matchedTbody  = document.getElementById('matched-tbody');
+    const matchedEmpty  = document.getElementById('matched-empty');
+    const reviewTbody   = document.getElementById('review-tbody');
+    const reviewEmpty   = document.getElementById('review-empty');
+    const reviewFoot    = document.getElementById('review-foot');
+    const reviewCountEl = document.getElementById('review-count-text');
     const sendToStaging = document.getElementById('send-to-staging');
 
     const stagingTbody  = document.getElementById('staging-tbody');
@@ -95,22 +105,27 @@
 
     // ---------- state ----------
     let results = [];          // Matcher output for the uploaded list
-    let activeFilter = 'all';
     let stagingRows = [];       // [{ uid, name, category, industry, detail, include }]
     let uidSeq = 0;
 
-    // Group Matcher statuses into the admin's three buckets + duplicates.
-    const KNOWN = ['clear', 'caution', 'cooldown', 'alumni'];
-    function bucketOf(status) {
-      if (status === 'blocked') return 'blocked';
-      if (status === 'duplicate') return 'duplicate';
-      if (status === 'unverified') return 'unverified';
-      if (KNOWN.indexOf(status) !== -1) return 'known';
-      return 'known';
+    // Bucket a Matcher result by the matched company's real DB category, so
+    // banned / approved / closed / alumni are distinguished (status alone
+    // collapses banned + closed into 'blocked'). 'review' = not on record.
+    function classify(r) {
+      if (r.status === 'duplicate') return 'duplicate';
+      switch (r.matchedCategory) {
+        case 'banned': return 'banned';
+        case 'closed': return 'closed';
+        case 'alumni': return 'alumni';
+        // A capped, in-cooldown company is off-limits right now, so it is
+        // flagged as 'cooldown' rather than shown as plain 'approved'.
+        case 'master': return r.status === 'cooldown' ? 'cooldown' : 'approved';
+        default:       return 'review';
+      }
     }
 
     // ============================================================
-    // STEP 1 — upload, parse, check
+    // STEP 1 — upload, parse, vet
     // ============================================================
 
     function setCheckState(which) {
@@ -150,16 +165,16 @@
     if (sampleLink) {
       sampleLink.addEventListener('click', function (e) {
         e.preventDefault();
-        parseAndCheck(SAMPLE_TEXT, 'sample-list.txt');
+        parseAndCheck(SAMPLE_TEXT);
       });
     }
 
     function handleFile(file) {
-      if (!/\.(csv|txt)$/i.test(file.name)) {
+      if (!/\.csv$/i.test(file.name)) {
         window.toast && window.toast({
           type: 'error',
           title: 'Wrong file type',
-          message: 'Upload a .txt or .csv file.'
+          message: 'Only .csv is accepted. Save your Excel file as CSV first.'
         });
         return;
       }
@@ -174,7 +189,7 @@
 
       uploadStatus.innerHTML =
         '<div class="upload-status">' +
-          '<div class="upload-status__icon"><i class="bi bi-file-earmark-text"></i></div>' +
+          '<div class="upload-status__icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>' +
           '<div class="upload-status__body">' +
             '<div class="upload-status__name">' + esc(file.name) + '</div>' +
             '<div class="upload-status__meta">' + (file.size / 1024).toFixed(1) + ' KB, parsing…</div>' +
@@ -185,7 +200,7 @@
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          parseAndCheck(e.target.result, file.name);
+          parseAndCheck(e.target.result);
         } catch (err) {
           window.toast && window.toast({
             type: 'error',
@@ -239,16 +254,12 @@
       return rows;
     }
 
-    function parseAndCheck(text, filename) {
+    function parseAndCheck(text) {
       const rows = parseRows(text);
       setCheckState('loading');
       window.Matcher.checkBatch(rows).then(function (data) {
         results = data;
-        activeFilter = 'all';
-        filterEl.querySelectorAll('.bulk-chip').forEach(function (c) {
-          c.classList.toggle('is-active', c.getAttribute('data-filter') === 'all');
-        });
-        renderResults();
+        renderCheck();
         setCheckState('results');
         checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -264,32 +275,34 @@
     }
 
     // ---- render step-1 results ----
-    function newCompanies() {
-      return results.filter(function (r) { return r.status === 'unverified'; });
+    function reviewCompanies() {
+      return results.filter(function (r) { return classify(r) === 'review'; });
     }
 
-    function renderResults() {
-      const counts = { blocked: 0, known: 0, unverified: 0, duplicate: 0 };
-      results.forEach(function (r) { counts[bucketOf(r.status)]++; });
+    function renderCheck() {
+      const counts = { approved: 0, cooldown: 0, banned: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
+      results.forEach(function (r) { counts[classify(r)]++; });
+
+      const total = results.length;
+      resultsHead.textContent = 'Checked ' + total + (total === 1 ? ' company' : ' companies') + ' against the database.';
 
       summaryEl.innerHTML =
-        statTile('flagged', counts.blocked,    'Banned / closed') +
-        statTile('known',   counts.known,      'In database') +
-        statTile('new',     counts.unverified, 'New') +
-        statTile('dup',     counts.duplicate,  'Duplicates');
+        statTile('approved', counts.approved, 'Approved') +
+        statTile('cooldown', counts.cooldown, 'Cooldown') +
+        statTile('banned',   counts.banned,   'Banned') +
+        statTile('closed',   counts.closed,   'Closed') +
+        statTile('alumni',   counts.alumni,   'Alumni') +
+        statTile('review',   counts.review,   'Not in database');
 
-      const n = counts.unverified;
-      if (n > 0) {
-        reviewCtaText.textContent = n + (n === 1 ? ' new company is' : ' new companies are') +
-          " not in the database yet — stage them below to review and add.";
-        sendToStaging.disabled = false;
-        sendToStaging.style.display = '';
+      if (counts.duplicate > 0) {
+        dupCountEl.textContent = String(counts.duplicate);
+        dupBanner.hidden = false;
       } else {
-        reviewCtaText.textContent = 'Nothing new to add — every company was already on the list.';
-        sendToStaging.style.display = 'none';
+        dupBanner.hidden = true;
       }
 
-      renderResultsTable();
+      renderMatched();
+      renderReview();
     }
 
     function statTile(mod, value, label) {
@@ -299,69 +312,137 @@
       '</div>';
     }
 
-    function renderResultsTable() {
-      const filtered = results.filter(function (r) {
-        if (activeFilter === 'all') return true;
-        return bucketOf(r.status) === activeFilter;
+    // Panel A — companies found in the database, most-severe first.
+    const SEVERITY = { banned: 0, cooldown: 1, closed: 2, alumni: 3, approved: 4 };
+    function renderMatched() {
+      const rows = results.filter(function (r) {
+        return SEVERITY[classify(r)] !== undefined;
+      }).sort(function (a, b) {
+        return SEVERITY[classify(a)] - SEVERITY[classify(b)];
       });
 
-      if (filtered.length === 0) {
-        resultsTbody.innerHTML =
-          '<tr><td colspan="5">' +
-            '<div class="empty-state"><i class="bi bi-search empty-state__icon"></i>' +
-            '<div class="empty-state__title">Nothing in this filter</div></div>' +
-          '</td></tr>';
+      if (rows.length === 0) {
+        matchedTbody.innerHTML = '';
+        matchedEmpty.hidden = false;
         return;
       }
+      matchedEmpty.hidden = true;
 
-      resultsTbody.innerHTML = filtered.map(function (r) {
-        // Keep the original row number so the admin can find it in their file.
-        const idx = results.indexOf(r) + 1;
-        const flagged = r.status === 'blocked' || r.status === 'cooldown';
+      matchedTbody.innerHTML = rows.map(function (r) {
+        const bucket = classify(r);
+        const idx = results.indexOf(r) + 1;         // original row number in the file
+        const flaggedCls = (bucket === 'banned' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
         return (
-          '<tr class="' + (flagged ? 'is-flagged' : '') + '">' +
+          '<tr class="' + flaggedCls + '">' +
             '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
-            '<td data-label="Company"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
-            '<td data-label="Status">' + pillFor(r.status) + '</td>' +
+            '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
+            '<td data-label="Matched in database">' + matchCell(r) + '</td>' +
+            '<td data-label="Status">' + pillFor(bucket) + '</td>' +
             '<td data-label="Industry">' +
               (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
             '</td>' +
-            '<td data-label="Reason" class="text-secondary text-xs">' + esc(r.reason || '') + '</td>' +
+            '<td data-label="Outreach">' + outreachCell(r) + '</td>' +
           '</tr>'
         );
       }).join('');
     }
 
-    filterEl.querySelectorAll('.bulk-chip').forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        filterEl.querySelectorAll('.bulk-chip').forEach(function (c) { c.classList.remove('is-active'); });
-        chip.classList.add('is-active');
-        activeFilter = chip.getAttribute('data-filter');
-        renderResultsTable();
-      });
-    });
+    // Panel B — the separate review window for companies not on record.
+    function renderReview() {
+      const rows = reviewCompanies();
+      if (rows.length === 0) {
+        reviewTbody.innerHTML = '';
+        reviewEmpty.hidden = false;
+        reviewFoot.style.display = 'none';
+        return;
+      }
+      reviewEmpty.hidden = true;
+      reviewFoot.style.display = '';
+      reviewCountEl.textContent = rows.length + (rows.length === 1 ? ' company' : ' companies') + ' to review.';
 
-    function pillFor(status) {
+      reviewTbody.innerHTML = rows.map(function (r) {
+        const idx = results.indexOf(r) + 1;
+        const industryLabel = r.industry ? industryDisplay(r.industry) : '';
+        const rowCls = r.suggestion ? 'vet-suggest-row' : '';
+        return (
+          '<tr class="' + rowCls + '">' +
+            '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
+            '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
+            '<td data-label="Suggested industry">' +
+              (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
+            '</td>' +
+            '<td data-label="Possible match in database">' + suggestionCell(r) + '</td>' +
+          '</tr>'
+        );
+      }).join('');
+    }
+
+    function pillFor(bucket) {
       const map = {
-        clear:      { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
-        caution:    { cls: 'pill--caution',  icon: 'bi-exclamation-circle-fill', label: 'Caution' },
-        alumni:     { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
-        blocked:    { cls: 'pill--blocked',  icon: 'bi-x-circle-fill',           label: 'Banned / closed' },
-        cooldown:   { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },
-        unverified: { cls: 'pill--neutral',  icon: 'bi-question-circle-fill',    label: 'New' },
-        duplicate:  { cls: 'pill--neutral',  icon: 'bi-files',                   label: 'Duplicate' }
+        approved: { cls: 'pill--clear',    icon: 'bi-check-circle-fill',  label: 'Approved' },
+        cooldown: { cls: 'pill--cooldown', icon: 'bi-clock-fill',         label: 'Cooldown' },
+        banned:   { cls: 'pill--blocked',  icon: 'bi-x-octagon-fill',     label: 'Banned' },
+        closed:   { cls: 'pill--neutral',  icon: 'bi-slash-circle-fill',  label: 'Closed' },
+        alumni:   { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',   label: 'Alumni' }
       };
-      const m = map[status] || map.duplicate;
+      const m = map[bucket] || map.approved;
       return '<span class="pill ' + m.cls + '"><i class="bi ' + m.icon + ' pill__icon"></i>' + m.label + '</span>';
     }
 
-    // ---- send new companies to the staging table ----
+    // The database record a row matched to. For fuzzy matches, append an
+    // "approx." badge with the score so the admin knows to eyeball it.
+    function matchCell(r) {
+      const name = r.matchedName || r.matched || '';
+      if (!name) return '<span class="text-muted text-xs">-</span>';
+      const approx = (r.matchType === 'fuzzy')
+        ? ' <span class="vet-approx" title="Approximate match, please verify">approx. ' + (r.matchScore || '') + '%</span>'
+        : '';
+      return '<span class="table__cell-primary">' + esc(name) + '</span>' + approx;
+    }
+
+    // Outreach usage for a matched approved company (running count / cap).
+    // Not applicable to banned/closed/alumni, since those are not approached.
+    // A company in cooldown shows its full count and the date it frees up.
+    function outreachCell(r) {
+      if (r.matchedCategory !== 'master' || !r.matchedId || !window.Caps) {
+        return '<span class="text-muted text-xs">n/a</span>';
+      }
+      const st = window.Caps.state(r.matchedId);
+      let cls = 'vet-cap';
+      if (st.inCooldown) cls += ' vet-cap--over';
+      else if (st.approaching) cls += ' vet-cap--near';
+      let html = '<span class="' + cls + '">' + st.count + ' / ' + st.cap + '</span>';
+      if (st.inCooldown && st.cooldownEndsAt) {
+        html += '<span class="vet-cap__note">until ' + esc(window.Caps.formatDate(st.cooldownEndsAt)) + '</span>';
+      }
+      return html;
+    }
+
+    // Closest near-miss record for a not-on-record company, so a real (but
+    // differently-named) sponsor isn't re-added as a duplicate.
+    function suggestionCell(r) {
+      if (!r.suggestion) return '<span class="text-muted text-xs">None found</span>';
+      const s = r.suggestion;
+      return '<span class="vet-suggest">' +
+        '<i class="bi bi-exclamation-triangle-fill vet-suggest__icon"></i>' +
+        '<span class="table__cell-primary">' + esc(s.name) + '</span>' +
+        catPill(s.category) +
+        '<span class="vet-suggest__score">' + s.score + '% similar</span>' +
+      '</span>';
+    }
+
+    function catPill(cat) {
+      const labels = { master: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
+      return '<span class="status-pill status-pill--' + cat + '">' + (labels[cat] || cat) + '</span>';
+    }
+
+    // ---- send not-on-record companies to the staging table ----
     if (sendToStaging) {
       sendToStaging.addEventListener('click', function () {
         const staged = new Set(stagingRows.map(function (r) { return window.Matcher.normalise(r.name); }));
         let added = 0;
-        newCompanies().forEach(function (r) {
+        reviewCompanies().forEach(function (r) {
           const norm = window.Matcher.normalise(r.input);
           if (staged.has(norm)) return; // already staged, skip
           staged.add(norm);
