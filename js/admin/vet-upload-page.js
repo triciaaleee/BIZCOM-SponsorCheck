@@ -88,10 +88,15 @@
 
     const matchedTbody  = document.getElementById('matched-tbody');
     const matchedEmpty  = document.getElementById('matched-empty');
+    const matchedFoot   = document.getElementById('matched-foot');
+    const logAll        = document.getElementById('log-all');
+    const logBtn        = document.getElementById('log-outreach-btn');
+    const logCountEl    = document.getElementById('log-count');
     const reviewTbody   = document.getElementById('review-tbody');
     const reviewEmpty   = document.getElementById('review-empty');
     const reviewFoot    = document.getElementById('review-foot');
-    const reviewCountEl = document.getElementById('review-count-text');
+    const reviewAll     = document.getElementById('review-all');
+    const reviewSelText = document.getElementById('review-sel-text');
     const sendToStaging = document.getElementById('send-to-staging');
 
     const stagingTbody  = document.getElementById('staging-tbody');
@@ -105,6 +110,7 @@
 
     // ---------- state ----------
     let results = [];          // Matcher output for the uploaded list
+    let parsedRows = [];        // the parsed CSV rows, kept so we can re-vet in place
     let stagingRows = [];       // [{ uid, name, category, industry, detail, include }]
     let uidSeq = 0;
 
@@ -118,9 +124,14 @@
         case 'closed': return 'closed';
         case 'alumni': return 'alumni';
         // A capped, in-cooldown company is off-limits right now, so it is
-        // flagged as 'cooldown' rather than shown as plain 'approved'.
-        case 'master': return r.status === 'cooldown' ? 'cooldown' : 'approved';
-        default:       return 'review';
+        // flagged as 'cooldown' rather than shown as plain 'approved'. Read the
+        // cap state live (not the snapshot in r.status) so the bucket updates
+        // the moment outreach is logged below.
+        case 'master': {
+          const st = (r.matchedId && window.Caps) ? window.Caps.state(r.matchedId) : null;
+          return (st && st.inCooldown) ? 'cooldown' : 'approved';
+        }
+        default: return 'review';
       }
     }
 
@@ -256,6 +267,7 @@
 
     function parseAndCheck(text) {
       const rows = parseRows(text);
+      parsedRows = rows;
       setCheckState('loading');
       window.Matcher.checkBatch(rows).then(function (data) {
         results = data;
@@ -265,9 +277,21 @@
       });
     }
 
+    // Re-run the vet on the same rows against the (now-mutated) database and
+    // re-render, so status, remarks, outreach and which panel a row sits in
+    // all stay consistent after outreach is logged. delay:0 makes it instant.
+    function revet() {
+      if (!parsedRows.length) return;   // nothing uploaded, so no panels to refresh
+      window.Matcher.checkBatch(parsedRows, { delay: 0 }).then(function (data) {
+        results = data;
+        renderCheck();
+      });
+    }
+
     if (reuploadBtn) {
       reuploadBtn.addEventListener('click', function () {
         results = [];
+        parsedRows = [];
         if (fileInput) fileInput.value = '';
         uploadStatus.innerHTML = '';
         setCheckState('upload');
@@ -275,13 +299,24 @@
     }
 
     // ---- render step-1 results ----
+    // Companies not on record AND not already queued in the staging table.
+    // Staging a company removes it from here; removing it from staging (or
+    // clearing) brings it back — the two lists behave as one moving queue.
     function reviewCompanies() {
-      return results.filter(function (r) { return classify(r) === 'review'; });
+      const staged = new Set(stagingRows.map(function (r) {
+        return window.Matcher.normalise(r.name);
+      }).filter(Boolean));
+      return results.filter(function (r) {
+        return classify(r) === 'review' && !staged.has(window.Matcher.normalise(r.input));
+      });
     }
 
     function renderCheck() {
       const counts = { approved: 0, cooldown: 0, banned: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
       results.forEach(function (r) { counts[classify(r)]++; });
+      // The "Not in database" tile counts only companies still shown in Panel B
+      // (staged ones are excluded, since they've moved to step 2).
+      counts.review = reviewCompanies().length;
 
       const total = results.length;
       resultsHead.textContent = 'Checked ' + total + (total === 1 ? ' company' : ' companies') + ' against the database.';
@@ -324,17 +359,27 @@
       if (rows.length === 0) {
         matchedTbody.innerHTML = '';
         matchedEmpty.hidden = false;
+        matchedFoot.style.display = 'none';
         return;
       }
       matchedEmpty.hidden = true;
 
+      let eligible = 0;
       matchedTbody.innerHTML = rows.map(function (r) {
         const bucket = classify(r);
         const idx = results.indexOf(r) + 1;         // original row number in the file
         const flaggedCls = (bucket === 'banned' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
+        // Only approved companies can receive outreach; everything else (banned,
+        // closed, alumni, already-in-cooldown) gets no tick-box.
+        const canLog = bucket === 'approved' && r.matchedId;
+        if (canLog) eligible++;
+        const checkCell = canLog
+          ? '<input type="checkbox" class="vet-log-check bulk-staging__check" data-id="' + esc(r.matchedId) + '" aria-label="Select for outreach">'
+          : '';
         return (
           '<tr class="' + flaggedCls + '">' +
+            '<td data-label="Log">' + checkCell + '</td>' +
             '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
             '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
             '<td data-label="Matched in database">' + matchCell(r) + '</td>' +
@@ -343,31 +388,51 @@
               (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
             '</td>' +
             '<td data-label="Outreach">' + outreachCell(r) + '</td>' +
+            '<td data-label="Remarks" class="text-secondary text-xs">' + esc(r.reason || '') + '</td>' +
           '</tr>'
         );
       }).join('');
+
+      matchedFoot.style.display = eligible ? '' : 'none';
+      if (logAll) logAll.checked = false;
+      updateLogCount();
+    }
+
+    // Keep the summary "Not in database" tile in step with what Panel B shows.
+    function updateReviewTile(n) {
+      const el = summaryEl.querySelector('.bulk-stat--review .bulk-stat__value');
+      if (el) el.textContent = n;
     }
 
     // Panel B — the separate review window for companies not on record.
     function renderReview() {
       const rows = reviewCompanies();
+      updateReviewTile(rows.length);
+
       if (rows.length === 0) {
         reviewTbody.innerHTML = '';
-        reviewEmpty.hidden = false;
         reviewFoot.style.display = 'none';
+        reviewEmpty.hidden = false;
+        // Distinguish "all handled" from "some queued in step 2".
+        const totalReview = results.filter(function (r) { return classify(r) === 'review'; }).length;
+        reviewEmpty.textContent = totalReview > 0
+          ? 'All new companies are staged for adding in step 2.'
+          : 'Every company on the list was found in the database.';
+        if (reviewAll) reviewAll.checked = false;
+        updateReviewCount();
         return;
       }
       reviewEmpty.hidden = true;
       reviewFoot.style.display = '';
-      reviewCountEl.textContent = rows.length + (rows.length === 1 ? ' company' : ' companies') + ' to review.';
 
       reviewTbody.innerHTML = rows.map(function (r) {
-        const idx = results.indexOf(r) + 1;
+        const ri = results.indexOf(r);
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
         const rowCls = r.suggestion ? 'vet-suggest-row' : '';
         return (
           '<tr class="' + rowCls + '">' +
-            '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
+            '<td data-label="Log"><input type="checkbox" class="vet-review-check bulk-staging__check" data-ri="' + ri + '" aria-label="Select for adding or outreach"></td>' +
+            '<td class="table__cell-secondary" data-label="#">' + (ri + 1) + '</td>' +
             '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
             '<td data-label="Suggested industry">' +
               (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
@@ -376,6 +441,22 @@
           '</tr>'
         );
       }).join('');
+
+      if (reviewAll) reviewAll.checked = false;
+      updateReviewCount();
+    }
+
+    // Selected review rows, resolved back to their Matcher result objects.
+    function selectedReviewResults() {
+      return Array.prototype.slice.call(reviewTbody.querySelectorAll('.vet-review-check:checked'))
+        .map(function (b) { return results[parseInt(b.getAttribute('data-ri'), 10)]; })
+        .filter(Boolean);
+    }
+
+    function updateReviewCount() {
+      const n = reviewTbody.querySelectorAll('.vet-review-check:checked').length;
+      if (reviewSelText) reviewSelText.textContent = n + ' selected';
+      if (sendToStaging) sendToStaging.disabled = n === 0;
     }
 
     function pillFor(bucket) {
@@ -437,12 +518,59 @@
       return '<span class="status-pill status-pill--' + cat + '">' + (labels[cat] || cat) + '</span>';
     }
 
-    // ---- send not-on-record companies to the staging table ----
+    // ---- outreach logging (Panel A) ----
+
+    function updateLogCount() {
+      if (!logBtn || !logCountEl) return;
+      const n = matchedTbody.querySelectorAll('.vet-log-check:checked').length;
+      logCountEl.textContent = n;
+      logBtn.disabled = n === 0;
+    }
+
+    // Record one outreach against a sponsor: +1 to the running count, mirroring
+    // the rule in window.Caps. At the cap the company enters cooldown; an
+    // elapsed prior cooldown (count already reset) has its stale stamp cleared.
+    // In Supabase this becomes: insert into outreach_log (sponsor_id, ...).
+    function logOutreach(id) {
+      const o = window.MOCK_DATA.outreach || (window.MOCK_DATA.outreach = {});
+      const st = window.Caps.state(id);
+      if (st.inCooldown) return 'skipped';           // already capped; not selectable
+      const rec = o[id] || (o[id] = { count: 0, cooldown_started_at: null });
+      const next = st.count + 1;
+      if (next >= st.cap) {
+        rec.count = st.cap;
+        rec.cooldown_started_at = new Date().toISOString();
+        return 'capped';
+      }
+      rec.count = next;
+      rec.cooldown_started_at = null;
+      return 'logged';
+    }
+
+    // ---- Panel B: select-all + per-row sync ----
+    if (reviewAll) {
+      reviewAll.addEventListener('change', function () {
+        const on = reviewAll.checked;
+        reviewTbody.querySelectorAll('.vet-review-check').forEach(function (b) { b.checked = on; });
+        updateReviewCount();
+      });
+    }
+
+    reviewTbody.addEventListener('change', function (e) {
+      if (!e.target.classList.contains('vet-review-check')) return;
+      const all = Array.prototype.slice.call(reviewTbody.querySelectorAll('.vet-review-check'));
+      if (reviewAll) reviewAll.checked = all.length > 0 && all.every(function (b) { return b.checked; });
+      updateReviewCount();
+    });
+
+    // ---- send selected not-on-record companies to the staging table ----
     if (sendToStaging) {
       sendToStaging.addEventListener('click', function () {
+        const sel = selectedReviewResults();
+        if (sel.length === 0) return;
         const staged = new Set(stagingRows.map(function (r) { return window.Matcher.normalise(r.name); }));
         let added = 0;
-        reviewCompanies().forEach(function (r) {
+        sel.forEach(function (r) {
           const norm = window.Matcher.normalise(r.input);
           if (staged.has(norm)) return; // already staged, skip
           staged.add(norm);
@@ -450,11 +578,55 @@
           added++;
         });
         renderStaging();
+        renderReview();   // staged companies leave Panel B
         document.getElementById('section-add').scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.toast) {
           window.toast(added > 0
             ? { type: 'success', title: 'Staged', message: added + (added === 1 ? ' company' : ' companies') + ' ready to review.' }
             : { type: 'info', title: 'Already staged', message: 'These companies are already in the table below.' });
+        }
+      });
+    }
+
+    // ---- Panel A outreach logging: select-all, per-row sync, and commit ----
+    if (logAll) {
+      logAll.addEventListener('change', function () {
+        const on = logAll.checked;
+        matchedTbody.querySelectorAll('.vet-log-check').forEach(function (b) { b.checked = on; });
+        updateLogCount();
+      });
+    }
+
+    matchedTbody.addEventListener('change', function (e) {
+      if (!e.target.classList.contains('vet-log-check')) return;
+      const all = Array.prototype.slice.call(matchedTbody.querySelectorAll('.vet-log-check'));
+      if (logAll) logAll.checked = all.length > 0 && all.every(function (b) { return b.checked; });
+      updateLogCount();
+    });
+
+    if (logBtn) {
+      logBtn.addEventListener('click', function () {
+        const boxes = Array.prototype.slice.call(matchedTbody.querySelectorAll('.vet-log-check:checked'));
+        if (boxes.length === 0) return;
+        const label = boxes.length === 1 ? '1 company' : boxes.length + ' companies';
+        if (!confirm('Log an outreach for ' + label + '? This adds 1 to each running count and cannot be undone here.')) return;
+
+        let logged = 0, capped = 0;
+        boxes.forEach(function (b) {
+          const res = logOutreach(b.getAttribute('data-id'));
+          if (res === 'logged') logged++;
+          else if (res === 'capped') { logged++; capped++; }
+        });
+
+        window.AdminShell.logActivity('outreach.logged', logged + ' companies',
+          'Logged outreach for ' + logged + ' companies' + (capped ? ' (' + capped + ' reached the cap)' : ''));
+
+        revet();  // refresh status, remarks, outreach and panels consistently
+
+        if (window.toast) {
+          let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';
+          if (capped) msg += ' ' + (capped === 1 ? '1 reached its cap and is now in cooldown.' : capped + ' reached their cap and are now in cooldown.');
+          window.toast({ type: 'success', title: 'Outreach logged', message: msg });
         }
       });
     }
@@ -465,13 +637,15 @@
 
     function makeRow(seed) {
       seed = seed || {};
+      const category = seed.category || 'master';
       return {
         uid: 'r' + (uidSeq++),
         name: seed.name || '',
-        category: seed.category || 'master',
+        category: category,
         industry: seed.industry || 'other',
         detail: seed.detail || '',
-        include: true
+        include: true,
+        logOutreach: category === 'master'   // default on for approved companies only
       };
     }
 
@@ -508,6 +682,9 @@
                 (row.include ? ' checked' : '') + ' aria-label="Include this row"></td>' +
               '<td><input type="text" class="form-input" data-field="name" value="' + esc(row.name) + '" placeholder="Company name"></td>' +
               '<td><select class="form-input" data-field="category">' + statusOptions(row.category) + '</select></td>' +
+              '<td class="bulk-staging__log"><input type="checkbox" class="bulk-staging__check" data-field="logOutreach"' +
+                (row.include && row.category === 'master' && row.logOutreach ? ' checked' : '') +
+                (row.include && row.category === 'master' ? '' : ' disabled') + ' aria-label="Log first outreach"></td>' +
               '<td><select class="form-input" data-field="industry">' + industryOptions(row.industry) + '</select></td>' +
               '<td><input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) + '" placeholder="' + esc(meta.placeholder) + '"></td>' +
               '<td><button type="button" class="bulk-staging__remove" data-field="remove" title="Remove row"><i class="bi bi-trash"></i></button></td>' +
@@ -536,6 +713,18 @@
       e.target.classList.remove('is-invalid');
     });
 
+    // Sync a row's "Log outreach" checkbox to its state: only an INCLUDED,
+    // approved row can log outreach. Unticking the sponsor, or setting any
+    // status other than Approved, clears + disables the outreach box.
+    function applyLogState(tr, row) {
+      const logInput = tr.querySelector('[data-field="logOutreach"]');
+      if (!logInput) return;
+      const canLog = row.include && row.category === 'master';
+      row.logOutreach = canLog;
+      logInput.checked = canLog;
+      logInput.disabled = !canLog;
+    }
+
     stagingTbody.addEventListener('change', function (e) {
       const tr = e.target.closest('tr');
       if (!tr) return;
@@ -546,10 +735,12 @@
       if (field === 'include') {
         row.include = e.target.checked;
         tr.classList.toggle('is-excluded', !row.include);
+        applyLogState(tr, row);   // unticking the sponsor also clears its outreach box
         syncSelectAll();
         updateStagingCount();
       }
       if (field === 'industry') row.industry = e.target.value;
+      if (field === 'logOutreach') row.logOutreach = e.target.checked;
       if (field === 'category') {
         row.category = e.target.value;
         // Update the detail field's placeholder to match the new status.
@@ -558,6 +749,7 @@
           detailInput.placeholder = DETAIL_META[row.category].placeholder;
           detailInput.classList.remove('is-invalid');
         }
+        applyLogState(tr, row);
       }
     });
 
@@ -568,6 +760,7 @@
       const uid = tr.getAttribute('data-uid');
       stagingRows = stagingRows.filter(function (r) { return r.uid !== uid; });
       renderStaging();
+      renderReview();   // a removed company returns to Panel B if it came from there
     });
 
     function updateStagingCount() {
@@ -585,11 +778,14 @@
     if (stagingAll) {
       stagingAll.addEventListener('change', function () {
         const on = stagingAll.checked;
-        stagingRows.forEach(function (r) { r.include = on; });
         stagingTbody.querySelectorAll('tr').forEach(function (tr) {
+          const row = rowByUid(tr.getAttribute('data-uid'));
+          if (!row) return;
+          row.include = on;
           const cb = tr.querySelector('[data-field="include"]');
           if (cb) cb.checked = on;
           tr.classList.toggle('is-excluded', !on);
+          applyLogState(tr, row);   // clear outreach boxes when unticking all
         });
         updateStagingCount();
       });
@@ -612,6 +808,7 @@
         if (!confirm('Clear all staged rows? This does not touch the database.')) return;
         stagingRows = [];
         renderStaging();
+        renderReview();   // cleared companies return to Panel B
       });
     }
 
@@ -655,6 +852,7 @@
       }));
       const seen = new Set();
       const payloads = [];
+      const toLog = [];          // ids to record a first outreach against
       const skipped = [];
       const now = Date.now();
 
@@ -681,6 +879,7 @@
         if (row.category === 'banned') payload.ban_reason = row.detail.trim();
         if (row.category === 'alumni') payload.alumni_owner = row.detail.trim();
         payloads.push(payload);
+        if (row.category === 'master' && row.logOutreach) toLog.push(payload.id);
       });
 
       if (payloads.length === 0) {
@@ -694,16 +893,26 @@
 
       // 3. Write. In Supabase mode this becomes a single insert().
       payloads.forEach(function (p) { window.MOCK_DATA.sponsors.push(p); });
+
+      // Record a first outreach for approved rows that opted in.
+      let loggedCount = 0;
+      toLog.forEach(function (id) { if (logOutreach(id) !== 'skipped') loggedCount++; });
+
       window.AdminShell.logActivity('sponsor.bulk_added', payloads.length + ' sponsors',
-        'Bulk add of ' + payloads.length + ' sponsors' + (skipped.length ? ' (' + skipped.length + ' skipped as duplicates)' : ''));
+        'Bulk add of ' + payloads.length + ' sponsors' + (loggedCount ? ', ' + loggedCount + ' with first outreach' : '') + (skipped.length ? ' (' + skipped.length + ' skipped as duplicates)' : ''));
 
       // 4. Remove the committed + skipped rows; keep only unticked ones.
       stagingRows = stagingRows.filter(function (r) { return !r.include; });
       renderStaging();
 
       const parts = ['Added ' + payloads.length + (payloads.length === 1 ? ' sponsor' : ' sponsors') + '.'];
+      if (loggedCount) parts.push('First outreach recorded for ' + loggedCount + '.');
       if (skipped.length) parts.push(skipped.length + ' skipped (already in the database).');
       window.toast && window.toast({ type: 'success', title: 'Database updated', message: parts.join(' ') });
+
+      // Re-vet the uploaded list so anything just added moves from the review
+      // panel up into "Found in the database", where its outreach can be logged.
+      revet();
     }
 
     // ---------- boot ----------

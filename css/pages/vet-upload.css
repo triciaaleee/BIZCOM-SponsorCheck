@@ -8,6 +8,11 @@
    (Internal class names keep the `bulk-` prefix.)
    ============================================================ */
 
+/* This page's tables are wide (matched panel has 8 columns), so give the
+   whole content area more room than the default 1280px admin cap. Scoped to
+   this page because vet-upload.css only loads here. */
+.admin-main { max-width: 1600px; }
+
 /* Numbered step badge in each section heading. */
 .bulk-step {
   display: inline-flex;
@@ -184,6 +189,27 @@
   color: #8C7212;
 }
 
+/* Neutral helper text in a panel footer (e.g. the outreach-logging note). */
+.vet-panel__foot-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+/* Grouped actions on the right of a panel footer (count + buttons). */
+.vet-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.vet-foot-count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
 /* ---------- Matched-record cell (Panel A) ---------- */
 
 /* "approx." badge on fuzzy matches: a nudge to eyeball the pairing. */
@@ -258,6 +284,10 @@
   cursor: pointer;
   accent-color: var(--color-navy);
 }
+
+/* Centre the per-row "Log outreach" checkbox under its heading. */
+.bulk-staging__log { text-align: center; }
+.bulk-staging__log .bulk-staging__check { margin-top: var(--space-2); }
 
 /* A row the admin has un-ticked: dim it so it reads as "won't be added". */
 .bulk-staging tr.is-excluded td .form-input {

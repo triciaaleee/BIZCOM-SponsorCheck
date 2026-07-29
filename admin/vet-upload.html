@@ -99,36 +99,45 @@
         <div class="vet-panel">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
-            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Banned and approved are flagged. Please verify any marked <em>approx.</em></span>
+            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Banned and approved are flagged. Tick the approved companies being contacted for this event, then log the outreach to add to their cap counts.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
               <thead>
                 <tr>
+                  <th style="width: 40px"><input type="checkbox" id="log-all" class="bulk-staging__check" aria-label="Select all approved companies"></th>
                   <th style="width: 44px">#</th>
                   <th>Company (from list)</th>
                   <th>Matched in database</th>
                   <th>Status</th>
                   <th>Industry</th>
                   <th>Outreach</th>
+                  <th>Remarks</th>
                 </tr>
               </thead>
               <tbody id="matched-tbody"></tbody>
             </table>
           </div>
           <div class="vet-panel__empty" id="matched-empty" hidden>None of the uploaded companies were found in the database.</div>
+          <div class="vet-panel__foot" id="matched-foot" style="display: none">
+            <span class="vet-panel__foot-note">Logging adds 1 to each ticked company's outreach count. Companies that reach the cap move into cooldown.</span>
+            <button type="button" class="btn btn--primary btn--sm" id="log-outreach-btn" disabled>
+              <i class="bi bi-graph-up-arrow"></i> Log outreach for <span id="log-count">0</span>
+            </button>
+          </div>
         </div>
 
         <!-- Panel B: the separate review window for companies not on record -->
         <div class="vet-panel vet-panel--review">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>
-            <span class="vet-panel__sub" id="review-sub">No confident match was found. Where a close record exists it is shown as a possible match. Check it before staging, so you do not add a duplicate.</span>
+            <span class="vet-panel__sub" id="review-sub">No confident match was found. Where a close record exists it is shown as a possible match, so you can catch a company that is already on record under another name and avoid a duplicate. Tick the genuinely new companies and stage them for adding in step 2.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
               <thead>
                 <tr>
+                  <th style="width: 40px"><input type="checkbox" id="review-all" class="bulk-staging__check" aria-label="Select all companies"></th>
                   <th style="width: 44px">#</th>
                   <th>Company (from list)</th>
                   <th>Suggested industry</th>
@@ -140,10 +149,13 @@
           </div>
           <div class="vet-panel__empty" id="review-empty" hidden>Every company on the list was found in the database.</div>
           <div class="vet-panel__foot" id="review-foot">
-            <span class="vet-panel__foot-text" id="review-count-text"></span>
-            <button type="button" class="btn btn--primary btn--sm" id="send-to-staging">
-              <i class="bi bi-arrow-down-circle"></i> Stage these for adding
-            </button>
+            <span class="vet-panel__foot-note">Adding a company does not record any outreach. Once it is in the database, log outreach from the &ldquo;Found in the database&rdquo; list above.</span>
+            <div class="vet-foot-actions">
+              <span class="vet-foot-count" id="review-sel-text">0 selected</span>
+              <button type="button" class="btn btn--primary btn--sm" id="send-to-staging" disabled>
+                <i class="bi bi-arrow-down-circle"></i> Stage for adding
+              </button>
+            </div>
           </div>
         </div>
 
@@ -161,6 +173,7 @@
         <h2 class="admin-section__title"><span class="bulk-step">2</span>Add sponsors to the database</h2>
         <p class="admin-section__sub">
           Set each company's status and industry, untick any you do not want, then add them all at once.
+          Approved companies also record their first outreach when added, unless you untick Log outreach.
           You can also click &ldquo;Add row&rdquo; to enter sponsors without uploading a list.
         </p>
       </div>
@@ -177,6 +190,7 @@
               <th style="width: 40px"><input type="checkbox" id="staging-all" class="bulk-staging__check" checked aria-label="Select all rows"></th>
               <th>Company name</th>
               <th style="width: 150px">Status</th>
+              <th style="width: 110px">Log outreach</th>
               <th style="width: 200px">Industry</th>
               <th>Reason / notes</th>
               <th style="width: 48px"></th>
