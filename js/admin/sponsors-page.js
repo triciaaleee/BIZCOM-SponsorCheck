@@ -144,28 +144,8 @@
     }
 
     // ----------------- Annex A / B -----------------
-    // Annex A reference: Board-of-Trustees companies (banned sponsors) + the
-    // prohibited category types (annex_a_categories).
-    async function renderAnnexA() {
-      const aEl = document.getElementById('annex-a-body');
-      if (!aEl) return;
-      let ref;
-      try {
-        ref = await window.AdminAPI.annexAReference();
-      } catch (e) {
-        toastError('Could not load Annex A', e);
-        return;
-      }
-      aEl.innerHTML =
-        '<div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>' +
-        '<ul class="annex-list">' +
-          ref.trustees.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') +
-        '</ul>' +
-        '<div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>' +
-        '<div class="annex-tags">' +
-          ref.categories.map(function (c) { return '<span class="annex-tag">' + esc(c) + '</span>'; }).join('') +
-        '</div>';
-    }
+    // Annex A is a fixed policy reference — hardcoded directly in sponsors.html
+    // for instant load (no DB query). See the "Annex A — Prohibited" card there.
 
     // Annex B partner list — active partners show normally; lapsed ones are
     // muted with a Remove button so the team can clear them from the database.
@@ -217,7 +197,6 @@
     }
 
     function renderAnnexes() {
-      renderAnnexA();
       renderAnnexBList();
     }
 

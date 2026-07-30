@@ -168,24 +168,6 @@
           .not('contract_ends', 'is', null)
           .order('contract_ends', { ascending: true })
       ).then(unwrap).then(function (rows) { return rows || []; });
-    },
-
-    // Annex A reference: Board-of-Trustees companies are banned sponsors tagged
-    // ban_reason='Annex A, Board of Trustees'; the prohibited category *types*
-    // live in annex_a_categories. returns: { trustees:[name], categories:[label] }
-    annexAReference: function () {
-      var trustees = Promise.resolve(
-        sb().from('sponsors').select('name').eq('ban_reason', 'Annex A, Board of Trustees').order('name')
-      ).then(unwrap);
-      var categories = Promise.resolve(
-        sb().from('annex_a_categories').select('label').order('sort_order')
-      ).then(unwrap);
-      return Promise.all([trustees, categories]).then(function (out) {
-        return {
-          trustees: (out[0] || []).map(function (r) { return r.name; }),
-          categories: (out[1] || []).map(function (r) { return r.label; })
-        };
-      });
     }
   };
 
