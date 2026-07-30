@@ -34,10 +34,10 @@ values (true, 10, 30, 300, 600, 1000)
 on conflict (id) do nothing;
 
 -- ---------- admins -----------------------------------------------------------
-insert into public.admins (email, name, role, added_at, added_by) values
-  ('biz@sa.smu.edu.sg',          'Tricia',  'super_admin', '2026-01-01'::timestamptz, 'system'),
-  ('biz.deputy@sa.smu.edu.sg',   'Wei Jie', 'admin',       '2026-01-04'::timestamptz, 'biz@sa.smu.edu.sg'),
-  ('biz.outreach@sa.smu.edu.sg', 'Arjun',   'admin',       '2026-02-12'::timestamptz, 'biz@sa.smu.edu.sg')
+insert into public.admins (email, name, role) values
+  ('biz@sa.smu.edu.sg',          'Tricia',  'super_admin'),
+  ('biz.deputy@sa.smu.edu.sg',   'Wei Jie', 'admin'),
+  ('biz.outreach@sa.smu.edu.sg', 'Arjun',   'admin')
 on conflict (email) do nothing;
 
 -- ---------- sponsors ---------------------------------------------------------

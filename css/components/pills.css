@@ -59,18 +59,24 @@
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 2px 10px;
+  gap: 5px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+  border: 1px solid transparent;
+}
+
+.status-pill i {
+  font-size: 12px;
+  line-height: 1;
 }
 
 /* Sponsor category modifiers */
-.status-pill--master   { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
-.status-pill--banned   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange-dark); }
-.status-pill--closed   { background-color: var(--surface-muted); color: var(--text-muted); }
-.status-pill--alumni   { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
+.status-pill--master   { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); border-color: rgba(42, 148, 99, 0.25); }
+.status-pill--banned   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange-dark); border-color: rgba(202, 88, 28, 0.25); }
+.status-pill--closed   { background-color: var(--surface-muted); color: var(--text-muted); border-color: var(--border-subtle); }
+.status-pill--alumni   { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); border-color: rgba(46, 82, 157, 0.25); }
 
 /* Submission status modifiers */
 .status-pill--new        { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }

@@ -100,8 +100,6 @@ create table if not exists public.admins (
   email     text not null unique check (email like '%@sa.smu.edu.sg'),
   name      text not null,
   role      text not null default 'admin' check (role in ('super_admin','admin')),
-  added_at  timestamptz not null default now(),
-  added_by  text not null default 'system',
   user_id   uuid references auth.users(id) on delete set null  -- linked on first sign-in
 );
 

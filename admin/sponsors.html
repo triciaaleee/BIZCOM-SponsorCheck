@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="../css/components/pills.css">
   <link rel="stylesheet" href="../css/components/states.css">
   <link rel="stylesheet" href="../css/components/tables.css">
+  <link rel="stylesheet" href="../css/components/forms.css">
+  <link rel="stylesheet" href="../css/components/modals.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/utilities.css">
@@ -52,16 +54,7 @@
         </button>
       </div>
       <div class="annex-card__body">
-        <div class="annex-group__label">BIZCOM clients</div>
-
-        <form class="annex-b-form" id="annex-b-form" hidden>
-          <input type="text" class="form-input" id="annex-b-name" placeholder="Company name" autocomplete="off">
-          <input type="date" class="form-input" id="annex-b-date" aria-label="Contract end date">
-          <div class="annex-b-form__actions">
-            <button type="button" class="btn btn--tertiary btn--sm" id="annex-b-cancel">Cancel</button>
-            <button type="submit" class="btn btn--primary btn--sm">Add company</button>
-          </div>
-        </form>
+        <div class="annex-group__label">BIZCOM clients <span class="annex-group__kind">companies</span></div>
 
         <div id="annex-b-list"></div>
 
@@ -72,7 +65,12 @@
             <span class="annex-tag">Banks &amp; financial institutions</span>
             <span class="annex-tag">SMU alumni</span>
           </div>
-          <div class="annex-note">SMU alumni: seek OAR / OA approval before soliciting.</div>
+          <div class="annex-callout" role="note">
+            <i class="bi bi-exclamation-triangle-fill annex-callout__icon"></i>
+            <div class="annex-callout__text">
+              <strong>SMU alumni companies</strong> require OAR / OA approval before you solicit them. Confirm sign-off first.
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -94,6 +92,16 @@
       <i class="bi bi-search search-field__icon"></i>
       <input type="search" class="form-input" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
     </div>
+    <div class="status-filter" id="sponsors-status-filter" role="group" aria-label="Filter by status">
+      <button type="button" class="status-filter__pill status-filter__pill--all is-active" data-status="all" aria-pressed="true">All</button>
+      <button type="button" class="status-filter__pill status-filter__pill--master" data-status="master" aria-pressed="false"><i class="bi bi-check-circle-fill"></i> Approved</button>
+      <button type="button" class="status-filter__pill status-filter__pill--banned" data-status="banned" aria-pressed="false"><i class="bi bi-slash-circle-fill"></i> Banned</button>
+      <button type="button" class="status-filter__pill status-filter__pill--closed" data-status="closed" aria-pressed="false"><i class="bi bi-dash-circle-fill"></i> Closed</button>
+      <button type="button" class="status-filter__pill status-filter__pill--alumni" data-status="alumni" aria-pressed="false"><i class="bi bi-mortarboard-fill"></i> Alumni</button>
+    </div>
+    <select class="form-input page-filters__select" id="sponsors-industry-filter" aria-label="Filter by industry">
+      <option value="all">All industries</option>
+    </select>
   </div>
 
   <div class="admin-table-wrap">
@@ -125,8 +133,48 @@
 
 </main>
 
+<!-- Add BizCom client modal -->
+<div class="modal" id="annex-b-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="annex-b-title">
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <h2 class="modal__title" id="annex-b-title">Add BizCom client</h2>
+      <button class="modal__close" data-modal-close aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </header>
+    <form id="annex-b-form">
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label" for="annex-b-name">Company name <span class="form-label__required">*</span></label>
+          <input type="text" class="form-input" id="annex-b-name" placeholder="e.g. Aurora Events Co" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="annex-b-date">Contract end date <span class="form-label__required">*</span></label>
+          <input type="date" class="form-input" id="annex-b-date">
+          <div class="form-helper">The company is blocked as a sponsor until this date, then automatically cleared. This is when the contract ends — not the date it was added.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="annex-b-industry">Industry</label>
+          <select class="form-input" id="annex-b-industry"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="annex-b-notes">Notes <span class="form-label__optional">optional</span></label>
+          <textarea class="form-input form-textarea" id="annex-b-notes" rows="2" placeholder="e.g. Signed for AY25/26 orientation season."></textarea>
+        </div>
+      </div>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn--primary btn--sm">
+          <i class="bi bi-plus-lg"></i> Add client
+        </button>
+      </footer>
+    </form>
+  </div>
+</div>
+
 <script src="../js/lib/mock-data.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>
+<script src="../js/components/modal.js" defer></script>
 <script src="../js/admin/sponsors-page.js" defer></script>
 </body>
 </html>

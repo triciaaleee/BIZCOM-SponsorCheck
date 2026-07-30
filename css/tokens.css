@@ -106,6 +106,7 @@
   --radius-lg:   12px;
   --radius-xl:   16px;
   --radius-full: 9999px;
+  --radius-pill: 9999px;   /* fully-rounded pills/chips/tabs */
 
   /* ---------- Shadows / elevation ---------- */
   --shadow-none:  none;

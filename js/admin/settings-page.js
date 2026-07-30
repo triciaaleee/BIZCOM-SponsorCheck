@@ -46,14 +46,6 @@
     const settingsSave = document.getElementById('settings-save');
 
     // ---------- helpers ----------
-    function formatDate(iso) {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return iso;
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-    }
-
     function roleBadge(role) {
       if (role === 'super_admin') {
         return '<span class="role-badge role-badge--super">Super-admin</span>';
@@ -118,7 +110,6 @@
             '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(a.email) + '</span></td>' +
             '<td>' + roleBadge(a.role) + '</td>' +
-            '<td><span class="text-xs text-muted">' + esc(formatDate(a.added_at)) + '</span></td>' +
             '<td class="text-right">' + actions + '</td>' +
           '</tr>'
         );
@@ -227,9 +218,7 @@
       const newAdmin = {
         email: email,
         name: name,
-        role: role,
-        added_at: new Date().toISOString().slice(0, 10),
-        added_by: session.email
+        role: role
       };
       window.MOCK_DATA.admins.push(newAdmin);
 

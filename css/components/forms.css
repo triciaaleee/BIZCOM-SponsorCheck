@@ -24,6 +24,12 @@
   margin-left: var(--space-1);
 }
 
+.form-label__optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--text-muted);
+  margin-left: var(--space-1);
+}
+
 .form-helper {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
@@ -65,5 +71,14 @@
   color: var(--text-muted);
   border-color: var(--border-subtle);
   cursor: not-allowed;
+}
+
+/* Multi-line text field: same look as .form-input but auto-height. */
+.form-textarea {
+  height: auto;
+  min-height: 68px;
+  padding: var(--space-2) var(--space-3);
+  line-height: var(--line-height-normal);
+  resize: vertical;
 }
 

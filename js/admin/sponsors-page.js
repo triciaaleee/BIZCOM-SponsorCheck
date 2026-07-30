@@ -22,6 +22,8 @@
     // ----------------- state -----------------
     const PAGE_SIZE = 50;
     let searchQuery = '';
+    let statusFilter = [];   // empty = all statuses; otherwise multi-select of categories
+    let industryFilter = 'all';
     let currentPage = 1;
 
     // ----------------- elements -----------------
@@ -31,6 +33,8 @@
     const emptySub = document.getElementById('sponsors-empty-sub');
     const countEl = document.getElementById('sponsors-count');
     const searchInput = document.getElementById('sponsors-search-input');
+    const statusFilterEl = document.getElementById('sponsors-status-filter');
+    const industryFilterEl = document.getElementById('sponsors-industry-filter');
     const pager = document.getElementById('sponsors-pager');
     const pagerNav = document.getElementById('sponsors-pager-nav');
     const pagerRange = document.getElementById('sponsors-range');
@@ -41,10 +45,18 @@
       return ind ? ind.display_name : code;
     }
 
+    // Status shown as a coloured tag (icon + label) — same data as before, just
+    // presented as a chip so the list reads less flat.
     function statusPill(category) {
-      const labels = { master: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
-      const cls = 'status-pill--' + category;
-      return '<span class="status-pill ' + cls + '">' + (labels[category] || category) + '</span>';
+      const meta = {
+        master: { label: 'Approved', icon: 'bi-check-circle-fill' },
+        banned: { label: 'Banned',   icon: 'bi-slash-circle-fill' },
+        closed: { label: 'Closed',   icon: 'bi-dash-circle-fill' },
+        alumni: { label: 'Alumni',   icon: 'bi-mortarboard-fill' }
+      };
+      const m = meta[category] || { label: category, icon: 'bi-tag-fill' };
+      return '<span class="status-pill status-pill--' + category + '">' +
+        '<i class="bi ' + m.icon + '"></i>' + m.label + '</span>';
     }
 
     function notesFor(sponsor) {
@@ -57,16 +69,42 @@
     // Search-only: the list is driven purely by the name search box. Status and
     // industry filters were removed — at thousands of rows, browsing the whole
     // list isn't useful, so the admin searches for the company they need.
-    function getFilteredSponsors() {
-      const all = window.MOCK_DATA.sponsors;
-      const q = searchQuery.trim().toLowerCase();
-      if (!q) return [];
-      return all.filter(function (s) {
+    // Query layer — mirrors a server-side paged query. Today it filters, sorts
+    // and slices the in-memory MOCK_DATA. When Supabase is wired this becomes a
+    // single .select(count).ilike().eq().range() call with the same inputs and
+    // the same { rows, total, page } output, so render() doesn't have to change.
+    // The point: the UI only ever holds one page, never the whole table — so it
+    // scales the same at 50 rows or 50,000.
+    function querySponsors(params) {
+      const q = (params.search || '').trim().toLowerCase();
+      const statuses = params.status || [];   // array; empty = all
+      const industry = params.industry || 'all';
+      const pageSize = params.pageSize || PAGE_SIZE;
+
+      const matched = window.MOCK_DATA.sponsors.filter(function (s) {
         // Lapsed Annex B partners are dormant history — they live only in the
         // Annex B panel (for removal), not the active sponsor list.
         if (window.Bans.isExpired(s)) return false;
-        return s.name.toLowerCase().indexOf(q) !== -1;
+        if (q && s.name.toLowerCase().indexOf(q) === -1) return false;
+        if (statuses.length && statuses.indexOf(s.category) === -1) return false;
+        if (industry !== 'all' && s.industry !== industry) return false;
+        return true;
+      }).sort(function (a, b) {
+        return a.name.localeCompare(b.name);   // alphabetical default
       });
+
+      const total = matched.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(Math.max(1, params.page || 1), totalPages);
+      const start = (page - 1) * pageSize;
+      return {
+        rows: matched.slice(start, start + pageSize),
+        total: total, page: page, totalPages: totalPages, start: start
+      };
+    }
+
+    function isFiltering() {
+      return searchQuery.trim() !== '' || statusFilter.length > 0 || industryFilter !== 'all';
     }
 
     // Companies whose cooldown ends in the current calendar month — i.e. those
@@ -164,7 +202,10 @@
         const ends = new Date(p.contract_ends);
         const dateText = (expired ? 'Ended ' : 'Ends ') + window.Caps.formatDate(ends);
         return '<li class="annex-partner' + (expired ? ' is-expired' : '') + '">' +
-          '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
+          '<span class="annex-partner__main">' +
+            '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
+            '<span class="annex-partner__industry">' + esc(industryDisplay(p.industry)) + '</span>' +
+          '</span>' +
           '<span class="annex-partner__meta">' +
             '<span class="annex-partner__date">' + esc(dateText) + '</span>' +
             '<button type="button" class="annex-partner__remove" data-remove-id="' + esc(p.id) + '" title="Remove from database" aria-label="Remove ' + esc(p.name) + '">' +
@@ -189,15 +230,15 @@
       return String(name).toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    function addAnnexBPartner(name, dateStr) {
+    function addAnnexBPartner(name, dateStr, industry, notes) {
       const sponsor = {
         id: 'b-' + Date.now().toString(36),
         name: name,
         normalised: normaliseName(name),
-        industry: 'other',
+        industry: industry || 'other',
         category: 'banned',
         ban_reason: 'Annex B, BIZCOM partner',
-        notes: '',
+        notes: notes || '',
         contract_ends: dateStr
       };
       window.MOCK_DATA.sponsors.push(sponsor);
@@ -219,50 +260,40 @@
       render();
     }
 
-    // The list is search-driven: nothing is shown until the admin types a search
-    // term. Keeps the page fast and uncluttered as the database grows.
-    function hasActiveQuery() {
-      return searchQuery.trim() !== '';
-    }
-
+    // The list shows page 1 (alphabetical) on load — not an empty screen — and
+    // narrows as the admin searches or filters. Only ever one page is rendered,
+    // so it stays fast no matter how large the underlying table grows.
     function render() {
-      if (!hasActiveQuery()) {
-        tbody.innerHTML = '';
-        countEl.textContent = 0;
-        pager.hidden = true;
-        empty.style.display = '';
-        empty.classList.add('empty-card--search');
-        emptyTitle.textContent = 'Search the sponsor list';
-        emptySub.textContent = 'Type a company name to see matching sponsors.';
-        return;
-      }
-      empty.classList.remove('empty-card--search');
+      const res = querySponsors({
+        page: currentPage,
+        pageSize: PAGE_SIZE,
+        search: searchQuery,
+        status: statusFilter,
+        industry: industryFilter
+      });
+      currentPage = res.page;
+      countEl.textContent = res.total;
 
-      const rows = getFilteredSponsors();
-      countEl.textContent = rows.length;
-
-      if (rows.length === 0) {
+      if (res.total === 0) {
         tbody.innerHTML = '';
         empty.style.display = '';
         pager.hidden = true;
-        emptyTitle.textContent = 'No sponsors match';
-        emptySub.textContent = 'Try a different name.';
+        if (isFiltering()) {
+          emptyTitle.textContent = 'No sponsors match';
+          emptySub.textContent = 'Try a different search or clear the filters.';
+        } else {
+          emptyTitle.textContent = 'No sponsors yet';
+          emptySub.textContent = 'Add your first sponsor to get started.';
+        }
         return;
       }
 
       empty.style.display = 'none';
 
-      const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-      if (currentPage > totalPages) currentPage = totalPages;
-      if (currentPage < 1) currentPage = 1;
-
-      const start = (currentPage - 1) * PAGE_SIZE;
-      const pageRows = rows.slice(start, start + PAGE_SIZE);
-
       const esc = window.AdminShell.escapeHtml;
       const mapsLink = window.AdminShell.mapsLink;
 
-      tbody.innerHTML = pageRows.map(function (s) {
+      tbody.innerHTML = res.rows.map(function (s) {
         const notes = notesFor(s);
         return (
           '<tr>' +
@@ -279,7 +310,7 @@
         );
       }).join('');
 
-      renderPager(rows.length, totalPages, start);
+      renderPager(res.total, res.totalPages, res.start);
     }
 
     function pageList(current, total) {
@@ -350,27 +381,88 @@
     }
 
     // ----------------- wire events -----------------
+    // Debounce typing so we only re-query after the admin pauses (~250ms) —
+    // matches the cadence you'd want against a real backend, not on every keystroke.
+    let searchDebounce;
     searchInput.addEventListener('input', function (e) {
       searchQuery = e.target.value || '';
       currentPage = 1;
-      render();
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(render, 250);
     });
 
-    // Annex B add-partner form (name + contract end date).
+    // Industry filter dropdown. Options come from the same canonical list used
+    // everywhere else, so codes stay in sync.
+    if (industryFilterEl) {
+      window.MOCK_DATA.industries.forEach(function (ind) {
+        const opt = document.createElement('option');
+        opt.value = ind.code;
+        opt.textContent = ind.display_name;
+        industryFilterEl.appendChild(opt);
+      });
+      industryFilterEl.addEventListener('change', function (e) {
+        industryFilter = e.target.value || 'all';
+        currentPage = 1;
+        render();
+      });
+    }
+
+    // Status filter — multi-select pills. "All" clears the selection; clicking a
+    // status toggles it in/out. With nothing selected the list shows every status.
+    function syncStatusPills() {
+      if (!statusFilterEl) return;
+      statusFilterEl.querySelectorAll('[data-status]').forEach(function (btn) {
+        const val = btn.getAttribute('data-status');
+        const active = val === 'all' ? statusFilter.length === 0 : statusFilter.indexOf(val) !== -1;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+    if (statusFilterEl) {
+      statusFilterEl.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-status]');
+        if (!btn) return;
+        const val = btn.getAttribute('data-status');
+        if (val === 'all') {
+          statusFilter = [];
+        } else {
+          const i = statusFilter.indexOf(val);
+          if (i === -1) statusFilter.push(val); else statusFilter.splice(i, 1);
+        }
+        currentPage = 1;
+        syncStatusPills();
+        render();
+      });
+      syncStatusPills();
+    }
+
+    // Annex B add-client modal (name + contract end date + industry + notes).
     const annexAddBtn = document.getElementById('annex-b-add-btn');
     const annexForm = document.getElementById('annex-b-form');
     const annexName = document.getElementById('annex-b-name');
     const annexDate = document.getElementById('annex-b-date');
-    const annexCancel = document.getElementById('annex-b-cancel');
+    const annexIndustry = document.getElementById('annex-b-industry');
+    const annexNotes = document.getElementById('annex-b-notes');
 
-    function toggleAnnexForm(show) {
-      annexForm.hidden = !show;
-      if (show) { annexName.value = ''; annexDate.value = ''; annexName.focus(); }
+    // Populate the industry dropdown from the canonical list, defaulting to
+    // "Other" — the same source the sponsor form uses, so codes stay in sync.
+    if (annexIndustry) {
+      window.MOCK_DATA.industries.forEach(function (ind) {
+        const opt = document.createElement('option');
+        opt.value = ind.code;
+        opt.textContent = ind.display_name;
+        annexIndustry.appendChild(opt);
+      });
+      annexIndustry.value = 'other';
     }
 
     if (annexAddBtn && annexForm) {
-      annexAddBtn.addEventListener('click', function () { toggleAnnexForm(annexForm.hidden); });
-      annexCancel.addEventListener('click', function () { toggleAnnexForm(false); });
+      annexAddBtn.addEventListener('click', function () {
+        annexForm.reset();
+        if (annexIndustry) annexIndustry.value = 'other';
+        window.openModal && window.openModal('annex-b-modal');
+      });
+
       annexForm.addEventListener('submit', function (e) {
         e.preventDefault();
         const name = annexName.value.trim();
@@ -385,8 +477,8 @@
           annexDate.focus();
           return;
         }
-        addAnnexBPartner(name, date);
-        toggleAnnexForm(false);
+        addAnnexBPartner(name, date, annexIndustry ? annexIndustry.value : 'other', annexNotes ? annexNotes.value.trim() : '');
+        window.closeModal && window.closeModal('annex-b-modal');
       });
     }
 
