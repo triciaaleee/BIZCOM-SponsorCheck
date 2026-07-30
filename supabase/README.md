@@ -1,8 +1,13 @@
 # Supabase backend — BIZCOM SponsorCheck
 
-This folder holds the database schema and seed data for the app. The frontend
-is **not** wired up yet (that's a later step) — for now these scripts stand up a
-real backend that mirrors `js/lib/mock-data.js`.
+This folder holds the finalised database schema and seed data for the app. It is
+derived from the **actual admin + public pages** (not the earlier draft), so it
+is the source of truth for the backend build.
+
+> 📘 For a visual, plain-English walkthrough of the whole database — the ER
+> diagram, every foreign key, the business rules, and how each screen uses the
+> data — see **[`DATABASE_GUIDE.md`](DATABASE_GUIDE.md)**. This README is the
+> build/ops guide; the guide is the conceptual reference.
 
 | Project URL | `https://qapczpyehtyybwyqbfov.supabase.co` |
 | ----------- | ------------------------------------------- |
@@ -23,71 +28,96 @@ REPLACE`, and `0002` guards every insert so it won't create duplicates.
 | Table | Purpose |
 | ----- | ------- |
 | `industries` | 15 canonical industry codes |
-| `sponsors` | master list — name, normalised key, industry, category (`master`/`banned`/`closed`/`alumni`), notes, ban_reason, alumni_owner |
-| `outreach_log` | append-only contact events; the rolling 30-day count is derived from this |
-| `submissions` | one row per club's submitted sponsor list |
+| `sponsors` | every company — name, normalised key, industry, category (`master`/`banned`/`closed`/`alumni`), notes, ban_reason, alumni_owner, contract_ends, cooldown state |
+| `outreach_log` | append-only contact events; the running count is derived from this |
+| `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
+| `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
 | `submission_sponsors` | the companies on each submission + their computed status |
-| `admins` | EXCO whitelist + role (`super_admin`/`admin`) |
-| `activity_log` | append-only audit trail |
+| `admins` | EXCO whitelist + role (`super_admin`/`admin`); at most one super-admin |
 | `settings` | single-row caps + cooldown window |
+| `activity_log` | append-only audit trail |
 
 **Views**
 
-- `sponsor_outreach` — `(sponsor_id, contact_count, cooldown_started_at, in_cooldown)`. `contact_count` is the cumulative outreach total since the sponsor's `count_reset_at`; `in_cooldown` reflects the `cooldown_started_at` timer against `settings.cooldown_days`. Public-readable, but exposes only the aggregate (raw `outreach_log` rows stay admin-only).
-- `dashboard_stats` — live counts (total / master / banned / alumni / submissions this month / in cooldown) computed from real rows.
+- `sponsor_outreach` — `(sponsor_id, contact_count, cooldown_started_at, in_cooldown)`. Encodes the confirmed cap rule, **including the reset**: once a cooldown elapses `contact_count` reads `0`. Public-readable, but exposes only the aggregate (raw `outreach_log` rows stay admin-only).
 
-## Important notes
+**Functions (RPC)**
 
-### 1. The old `dashboardStats` numbers are gone on purpose
-The mock had inflated demo figures (`total: 12403`, etc.). Those are **not**
-seeded — `dashboard_stats` now returns the *real* counts from the seeded data
-(30 sponsors, 7 submissions, …). When you connect the frontend, read from the
-view instead of hardcoding.
+- `log_outreach(sponsor_id, note?)` → `'logged' | 'capped' | 'skipped'`. The server-side twin of the app's cap logic: rejects contacts during an active cooldown, resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` on reaching the cap. **Use this instead of inserting into `outreach_log` directly** so the rule lives in one place.
+- `transfer_super_admin(target_email)` — atomically moves the single super-admin seat (demotes the current holder first so the one-super-admin index is never violated).
+- `is_admin()` / `is_super_admin()` — RLS helpers, matching the JWT `email` claim against `admins`.
 
-### 2. Admins must also exist in Supabase Auth
-The `admins` table is just the **whitelist + roles**. For someone to actually
-log in (email + password), they need a real account in **Authentication →
-Users**. Create one account per admin email:
+## Key modelling decisions
+
+### 1. Annex A + Annex B companies are just `banned` sponsors
+There is **no separate annex-companies table**. Everything prohibited/restricted
+lives in `sponsors` with `category = 'banned'`, distinguished by:
+
+- `ban_reason` — free text (`'Annex A, Gaming & Betting'`, `'Annex A, Board of Trustees'`, `'Annex B, BIZCOM partner'`, …)
+- `contract_ends` — set only for **time-boxed BIZCOM partners** (Annex B). `NULL` = permanent ban. A partner whose contract has lapsed drops out of the active banned set automatically.
+
+The single "currently banned?" rule used by the matcher, lists and panels is:
+
+```
+category = 'banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+```
+
+The Board-of-Trustees companies are seeded as banned sponsors too (so the checker
+flags them). The Sponsors-page "Board of Trustees" panel lists them by querying
+`ban_reason = 'Annex A, Board of Trustees'`. Only the prohibited **category
+types** (which aren't companies) live in `annex_a_categories`.
+
+### 2. Submissions are admin-managed
+The public checker (`sponsor-check.html`) only **emails** BIZCOM — it does not
+write to the database. Admins log/edit each club's submission on the Home
+calendar. RLS therefore locks `submissions` + `submission_sponsors` to signed-in
+admins (no anonymous insert). If you later add a public submit form, add an
+`anon` INSERT policy and generate the row id client-side with `crypto.randomUUID()`.
+
+### 3. Admins must also exist in Supabase Auth
+The `admins` table is the **whitelist + roles**. To actually log in, each admin
+needs an account in **Authentication → Users** whose email matches exactly:
 
 - `biz@sa.smu.edu.sg` (super admin)
 - `biz.deputy@sa.smu.edu.sg`
 - `biz.outreach@sa.smu.edu.sg`
 
-Use **Add user → Create new user** (set a password, mark email confirmed), or
-send an invite. RLS authorises them by matching the JWT's `email` claim against
-the `admins` table via the `is_admin()` / `is_super_admin()` functions — so the
-email on the auth account **must match exactly** the email in `admins`.
+RLS authorises them by matching the JWT `email` claim against `admins` via
+`is_admin()` / `is_super_admin()`. Optionally store `auth.users.id` in
+`admins.user_id` on first sign-in, but the email match is what RLS uses.
 
-> Tip: when an admin first signs in, you can store their `auth.users.id` in
-> `admins.user_id` if you want a hard FK link, but the email match is what RLS
-> uses.
+### 4. `normalised` is supplied by the app
+The normalisation rules (lower-case, strip `Pte`/`Ltd`/`LLP`, drop parenthesised
+locales, `&` → `and`) live in `js/lib/matcher.js` — keep that the single source
+of truth. When the admin app inserts/updates a sponsor, compute `normalised` with
+the shared `normalise()` helper rather than duplicating the logic in SQL.
 
-### 3. Security model (RLS) at a glance
+> Note: `sponsor-page.js` / `sponsors-page.js` currently use a **simpler** inline
+> `normalise()` that does *not* strip legal suffixes. When wiring the backend,
+> switch those to `Matcher.normalise()` so a saved key can't drift from the
+> lookup key (a mismatch would let a banned company read as "unverified").
+
+### 5. Security model (RLS) at a glance
 
 | Data | Public (anon) | Signed-in admin |
 | ---- | ------------- | --------------- |
-| industries, sponsors, settings | read | read + write |
-| `sponsor_outreach`, `dashboard_stats` | read | read |
-| submissions / submission_sponsors | **insert only** (lodge a list) | full read + manage |
-| outreach_log | none | full |
+| industries, sponsors, settings, annex_a_categories | read | read + write¹ |
+| `sponsor_outreach` view | read | read |
+| submissions / submission_sponsors | none | full |
+| outreach_log | none | full (write via `log_outreach`) |
 | admins | none | read; **super-admin** writes |
 | activity_log | none | read + append; **super-admin** deletes |
 | settings updates | none | **super-admin** only |
 
-### 4. Public submission flow — generate the id client-side
-Because anon can `INSERT` a submission but cannot `SELECT` it back, don't rely
-on `insert().select()` to return the new id for an anonymous submit. Instead,
-generate the UUID in the browser (`crypto.randomUUID()`), insert the parent
-`submissions` row and its `submission_sponsors` children with that same known
-id, so no read-back is needed.
+¹ `settings` writes are super-admin only; the rest are any admin.
 
-### 5. `normalised` is supplied by the app
-The matcher's normalisation rules (lower-case, strip suffixes like `PTE`/`Ltd`)
-live in `js/lib/matcher.js`. Keep that the single source of truth: when the
-admin app inserts/updates a sponsor, compute `normalised` with the shared
-`normalize()` helper rather than duplicating the logic in SQL. A `pg_trgm` GIN
-index on `sponsors.normalised` is already in place to support the fuzzy
-fallback when you move matching server-side.
+## Changed vs the earlier draft
+- Added `annex_a_categories` (types only) and `activity_log`.
+- Added `log_outreach()` + `transfer_super_admin()` RPCs and the one-super-admin index.
+- `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
+- Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).
+- Dropped the unused `dashboard_stats` view (no page reads it; the public dashboard counts client-side, and the admin list uses a paged `count`).
+- Field-integrity `CHECK`s mirror the sponsor form (banned⇒ban_reason, alumni⇒alumni_owner, contract_ends only when banned).
 
 ## Next step (not done yet)
 Wire the frontend to these tables: add the `supabase-js` client + config, then

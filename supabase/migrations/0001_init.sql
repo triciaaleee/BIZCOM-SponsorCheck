@@ -1,11 +1,27 @@
 -- ============================================================
--- 0001_init.sql  —  BIZCOM SponsorCheck schema
+-- 0001_init.sql  —  BIZCOM SponsorCheck schema (finalised)
 --
 -- Run this FIRST in the Supabase SQL Editor, then run 0002_seed.sql.
--- Mirrors the data model in js/lib/mock-data.js (PRD §13).
+-- Derived from the actual admin + public pages (not the older draft):
+--   public/  index.html, dashboard.html, sponsor-check.html, standing-order.html
+--   admin/   home, sponsors, sponsor, vet-upload, settings, login
 --
--- Safe to re-run: uses IF NOT EXISTS / CREATE OR REPLACE / DROP POLICY
--- IF EXISTS throughout.
+-- Safe to re-run: IF NOT EXISTS / CREATE OR REPLACE / DROP ... IF EXISTS.
+--
+-- DESIGN NOTES
+--   * One companies table (`sponsors`). Annex A and Annex B companies are just
+--     `category = 'banned'` rows — described by `ban_reason`, and (for time-boxed
+--     BIZCOM partners) auto-expiring via `contract_ends`. There is deliberately
+--     NO separate "annex companies" table.
+--   * `annex_a_categories` holds only the prohibited *category types* (Alcohol,
+--     Tobacco, Foundations, …) shown on the Sponsors page — these are policy
+--     rules, not companies, so they can't live in `sponsors`.
+--   * Outreach cap/cooldown is an append-only `outreach_log`; the running count
+--     and live cooldown state are DERIVED in the `sponsor_outreach` view, which
+--     encodes the confirmed rule (count resets to 0 once a cooldown elapses).
+--     Writes go through the `log_outreach()` RPC so the rule lives in one place.
+--   * Submissions are admin-managed (the public checker only emails BIZCOM); RLS
+--     locks submissions + line items to signed-in admins.
 -- ============================================================
 
 -- ---------- Extensions -------------------------------------------------------
@@ -16,54 +32,72 @@ create extension if not exists pg_trgm;     -- trigram fuzzy match (matcher.js f
 -- TABLES
 -- ============================================================
 
--- 15 canonical industries (PRD §11.1). Referenced by sponsors + submission rows.
+-- 15 canonical industries. Referenced by sponsors + submission line items.
 create table if not exists public.industries (
   code         text primary key,
   display_name text not null,
   sort_order   int  not null default 0
 );
 
--- Master sponsor list. `category` is the vetting status; `normalised` is the
--- lower-cased / suffix-stripped key the matcher does its exact lookup on and
--- is supplied by the app via the shared normalize() helper.
+-- Master company list. `category` is the vetting status; `normalised` is the
+-- lower-cased / suffix-stripped key the matcher does its exact lookup on and is
+-- supplied by the app via the shared normalize() helper in js/lib/matcher.js.
+--
+-- Banned companies (Annex A + Annex B) all live here:
+--   * Annex A permanent bans  -> category='banned', ban_reason set, contract_ends NULL
+--   * Board-of-Trustees cos    -> category='banned', ban_reason='Annex A, Board of Trustees'
+--   * Annex B BIZCOM partners  -> category='banned', ban_reason set, contract_ends set
+-- The single "currently banned?" rule used everywhere (matcher, lists, panels):
+--   category='banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
 create table if not exists public.sponsors (
   id           uuid primary key default gen_random_uuid(),
   name         text not null,
   normalised   text not null unique,
   industry     text not null references public.industries(code),
   category     text not null check (category in ('master','banned','closed','alumni')),
-  notes        text not null default '',
-  ban_reason   text,            -- populated when category = 'banned'
-  alumni_owner text,            -- populated when category = 'alumni'
-  -- Annex B (BIZCOM partner) support: a banned sponsor with contract_ends set is
-  -- restricted only while the contract runs. NULL = permanent ban (Annex A). The
-  -- "currently banned" rule everywhere is:
-  --   category = 'banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+  notes        text not null default '',        -- used by master (notes) and closed (closed notes)
+  ban_reason   text,                             -- required when category='banned'
+  alumni_owner text,                             -- required when category='alumni'
+  -- Annex B (time-boxed BIZCOM partner). NULL = permanent ban. A partner whose
+  -- contract has lapsed drops out of the active banned set automatically.
   contract_ends date,
-  -- Outreach cap/cooldown state (see settings.outreach_cap). The running count
-  -- is derived in the sponsor_outreach view from outreach_log rows since
-  -- count_reset_at. When the count hits the cap, cooldown_started_at is stamped;
-  -- when the cooldown elapses the count is zeroed by advancing count_reset_at
-  -- and cooldown_started_at is cleared.
+  -- Outreach cap/cooldown state. The running count is DERIVED (sponsor_outreach
+  -- view) by counting outreach_log rows since count_reset_at. When the count hits
+  -- settings.outreach_cap, cooldown_started_at is stamped; when that cooldown
+  -- elapses the count is treated as reset (view returns 0) and the next
+  -- log_outreach() call advances count_reset_at + clears the stamp.
   cooldown_started_at timestamptz,
   count_reset_at      timestamptz,
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  -- Field requirements mirror the sponsor form's validation.
+  constraint sponsors_category_fields check (
+    (category <> 'banned' or ban_reason   is not null) and
+    (category <> 'alumni' or alumni_owner is not null) and
+    (contract_ends is null or category = 'banned')
+  )
 );
 
--- Append-only record of every time a sponsor was contacted. The cumulative
--- outreach count (used for cap / cooldown logic) is derived from this in the
--- sponsor_outreach view — counting rows since the sponsor's count_reset_at —
--- rather than being a frozen integer.
+-- Append-only record of every logged contact. The cumulative count used for the
+-- cap/cooldown is derived from this in sponsor_outreach (rows since count_reset_at).
 create table if not exists public.outreach_log (
   id            uuid primary key default gen_random_uuid(),
   sponsor_id    uuid not null references public.sponsors(id) on delete cascade,
   contacted_at  timestamptz not null default now(),
-  contacted_by  text,           -- admin email or null
+  contacted_by  text,            -- admin email (set by log_outreach) or null
   note          text
 );
 
--- One row per club's submitted sponsor list (the admin "submission inbox").
+-- Prohibited category *types* from Standing Order Annex A (not companies).
+-- Rendered as tags on the admin Sponsors page. Editable reference data.
+create table if not exists public.annex_a_categories (
+  id         uuid primary key default gen_random_uuid(),
+  label      text not null unique,
+  sort_order int  not null default 0
+);
+
+-- One row per club's submitted sponsor list (the admin Home calendar cards).
+-- Admin-managed: students email their list, an admin logs/edits it here.
 create table if not exists public.submissions (
   id            uuid primary key default gen_random_uuid(),
   event_name    text not null,
@@ -74,14 +108,15 @@ create table if not exists public.submissions (
   submitted_at  timestamptz not null default now(),
   complete_by   date,
   status        text not null default 'new' check (status in ('new','reviewing','completed')),
-  reviewed_by   text,           -- admin email or null
+  reviewed_by   text,            -- admin email or null
   reviewed_at   timestamptz,
   notes         text not null default '',
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
 
--- Child rows of a submission: each company on the list plus its computed status.
+-- Child rows of a submission: each company on the list + its computed status.
+-- (Present in the data model; not yet read/written by any current admin page.)
 create table if not exists public.submission_sponsors (
   id                  uuid primary key default gen_random_uuid(),
   submission_id       uuid not null references public.submissions(id) on delete cascade,
@@ -93,20 +128,21 @@ create table if not exists public.submission_sponsors (
   matched_sponsor_id  uuid references public.sponsors(id) on delete set null
 );
 
--- EXCO whitelist + roles. Login is gated to these emails; role drives access.
--- A row here authorises the matching auth.users account to act as an admin.
+-- EXCO whitelist + roles. Authorises the matching auth.users account as admin.
 create table if not exists public.admins (
-  id        uuid primary key default gen_random_uuid(),
-  email     text not null unique check (email like '%@sa.smu.edu.sg'),
-  name      text not null,
-  role      text not null default 'admin' check (role in ('super_admin','admin')),
-  user_id   uuid references auth.users(id) on delete set null  -- linked on first sign-in
+  id         uuid primary key default gen_random_uuid(),
+  email      text not null unique check (email like '%@sa.smu.edu.sg'),
+  name       text not null,
+  role       text not null default 'admin' check (role in ('super_admin','admin')),
+  user_id    uuid references auth.users(id) on delete set null,  -- linked on first sign-in
+  created_at timestamptz not null default now()
 );
 
--- Single-row global settings (caps + cooldown window). The id check pins it
--- to exactly one row. `outreach_cap` is a CUMULATIVE cap: it counts total
--- outreach to a company (not a rolling 30-day window); once reached, the
--- company enters a cooldown of `cooldown_days` and its count resets afterwards.
+-- Exactly one super-admin at a time (transfer semantics). See transfer_super_admin().
+create unique index if not exists admins_one_super_admin
+  on public.admins (role) where role = 'super_admin';
+
+-- Single-row global settings (caps + cooldown window). id check pins one row.
 create table if not exists public.settings (
   id                boolean primary key default true check (id),
   outreach_cap      int not null default 10,
@@ -117,114 +153,160 @@ create table if not exists public.settings (
   updated_at        timestamptz not null default now()
 );
 
+-- Append-only audit trail. The app already calls AdminShell.logActivity() at
+-- every mutation (currently a no-op); point those at an insert here to activate.
+create table if not exists public.activity_log (
+  id          uuid primary key default gen_random_uuid(),
+  actor_email text,            -- admin email or null
+  action      text not null,   -- e.g. 'sponsor.created', 'submission.status_changed'
+  entity      text,            -- human label of the affected thing
+  details     text,
+  created_at  timestamptz not null default now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
-create index if not exists sponsors_category_idx       on public.sponsors (category);
-create index if not exists sponsors_industry_idx       on public.sponsors (industry);
-create index if not exists sponsors_normalised_trgm    on public.sponsors using gin (normalised gin_trgm_ops);
-create index if not exists outreach_sponsor_idx        on public.outreach_log (sponsor_id);
-create index if not exists outreach_contacted_at_idx   on public.outreach_log (contacted_at);
-create index if not exists submissions_status_idx      on public.submissions (status);
-create index if not exists submissions_submitted_idx   on public.submissions (submitted_at desc);
-create index if not exists subsponsors_submission_idx  on public.submission_sponsors (submission_id);
+create index if not exists sponsors_category_idx      on public.sponsors (category);
+create index if not exists sponsors_industry_idx      on public.sponsors (industry);
+create index if not exists sponsors_normalised_trgm   on public.sponsors using gin (normalised gin_trgm_ops);
+create index if not exists outreach_sponsor_idx       on public.outreach_log (sponsor_id);
+create index if not exists outreach_contacted_at_idx  on public.outreach_log (contacted_at);
+create index if not exists submissions_status_idx     on public.submissions (status);
+create index if not exists submissions_submitted_idx  on public.submissions (submitted_at desc);
+create index if not exists subsponsors_submission_idx on public.submission_sponsors (submission_id);
+create index if not exists activity_created_idx       on public.activity_log (created_at desc);
 
 -- ============================================================
--- HELPER FUNCTIONS (auth) — SECURITY DEFINER so they can read the
--- admins table while bypassing its own RLS (avoids recursion).
+-- HELPER FUNCTIONS (auth) — SECURITY DEFINER so they read `admins`
+-- while bypassing its own RLS (avoids recursion).
 -- ============================================================
 create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.admins a
-    where a.email = (auth.jwt() ->> 'email')
-  );
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.admins a where a.email = (auth.jwt() ->> 'email'));
 $$;
 
 create or replace function public.is_super_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
+returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.admins a
-    where a.email = (auth.jwt() ->> 'email')
-      and a.role = 'super_admin'
+    where a.email = (auth.jwt() ->> 'email') and a.role = 'super_admin'
   );
 $$;
 
 -- Keep updated_at fresh on row changes.
 create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end;
 $$;
 
 drop trigger if exists trg_sponsors_updated on public.sponsors;
-create trigger trg_sponsors_updated
-  before update on public.sponsors
+create trigger trg_sponsors_updated before update on public.sponsors
   for each row execute function public.set_updated_at();
 
 drop trigger if exists trg_submissions_updated on public.submissions;
-create trigger trg_submissions_updated
-  before update on public.submissions
+create trigger trg_submissions_updated before update on public.submissions
   for each row execute function public.set_updated_at();
 
 drop trigger if exists trg_settings_updated on public.settings;
-create trigger trg_settings_updated
-  before update on public.settings
+create trigger trg_settings_updated before update on public.settings
   for each row execute function public.set_updated_at();
+
+-- ============================================================
+-- BUSINESS-RULE FUNCTIONS (RPC)
+-- ============================================================
+
+-- Record one outreach against a sponsor, enforcing the cap/cooldown rule in a
+-- single place (the server-side twin of window.Caps + vet-upload logOutreach):
+--   * in an active cooldown            -> 'skipped' (no row written)
+--   * a prior cooldown that has elapsed -> reset the cycle first, then log
+--   * reaching the cap                 -> stamp cooldown_started_at, return 'capped'
+--   * otherwise                        -> 'logged'
+create or replace function public.log_outreach(p_sponsor_id uuid, p_note text default null)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_cap int; v_days int; v_count int;
+  v_stamp timestamptz; v_reset timestamptz;
+begin
+  if not public.is_admin() then raise exception 'not authorized'; end if;
+
+  select outreach_cap, cooldown_days into v_cap, v_days from public.settings limit 1;
+
+  select cooldown_started_at, count_reset_at into v_stamp, v_reset
+    from public.sponsors where id = p_sponsor_id for update;
+  if not found then raise exception 'sponsor % not found', p_sponsor_id; end if;
+
+  -- Active cooldown -> not contactable.
+  if v_stamp is not null and now() < v_stamp + make_interval(days => v_days) then
+    return 'skipped';
+  end if;
+
+  -- Elapsed cooldown -> start a fresh cycle before counting this contact.
+  if v_stamp is not null then
+    update public.sponsors set count_reset_at = now(), cooldown_started_at = null
+      where id = p_sponsor_id;
+    v_reset := now();
+  end if;
+
+  select count(*) into v_count from public.outreach_log
+    where sponsor_id = p_sponsor_id
+      and contacted_at > coalesce(v_reset, '-infinity'::timestamptz);
+
+  insert into public.outreach_log (sponsor_id, contacted_by, note)
+    values (p_sponsor_id, auth.jwt() ->> 'email', p_note);
+  v_count := v_count + 1;
+
+  if v_count >= v_cap then
+    update public.sponsors set cooldown_started_at = now() where id = p_sponsor_id;
+    return 'capped';
+  end if;
+  return 'logged';
+end;
+$$;
+
+-- Move the single super-admin seat to another admin, atomically (demote current
+-- first so the admins_one_super_admin index is never violated mid-transfer).
+create or replace function public.transfer_super_admin(p_target_email text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super_admin() then raise exception 'not authorized'; end if;
+  if not exists (select 1 from public.admins where email = p_target_email) then
+    raise exception 'target % is not an admin', p_target_email;
+  end if;
+  update public.admins set role = 'admin'       where role = 'super_admin';
+  update public.admins set role = 'super_admin' where email = p_target_email;
+end;
+$$;
 
 -- ============================================================
 -- VIEWS
 -- ============================================================
 
--- Cumulative outreach count per sponsor (0 for sponsors never contacted), plus
--- live cooldown state. The count sums outreach_log rows since the sponsor's
--- count_reset_at (nulls count everything); in_cooldown is driven by the
--- cooldown_started_at timer against settings.cooldown_days. Owned by the
--- migration role, so it reads outreach_log past RLS and exposes only the
--- aggregate — anon can see counts without seeing raw contact rows.
+-- Cumulative outreach count + live cooldown state per sponsor. Encodes the
+-- confirmed rule so reads match window.Caps.state() exactly, including the lazy
+-- reset: once a cooldown has elapsed the count reads 0 (even before the next
+-- write clears the stamp). Owned by the migration role, so it reads outreach_log
+-- past RLS and exposes only the aggregate — anon sees counts, never raw contacts.
 create or replace view public.sponsor_outreach as
   select
     s.id as sponsor_id,
-    count(o.id) filter (
-      where o.contacted_at > coalesce(s.count_reset_at, '-infinity'::timestamptz)
-    ) as contact_count,
+    case
+      when s.cooldown_started_at is not null
+           and now() >= s.cooldown_started_at + make_interval(days => cfg.cooldown_days)
+      then 0
+      else count(o.id) filter (
+        where o.contacted_at > coalesce(s.count_reset_at, '-infinity'::timestamptz)
+      )
+    end as contact_count,
     s.cooldown_started_at,
     (
       s.cooldown_started_at is not null
-      and now() < s.cooldown_started_at
-                  + make_interval(days => (select cooldown_days from public.settings limit 1))
+      and now() < s.cooldown_started_at + make_interval(days => cfg.cooldown_days)
     ) as in_cooldown
   from public.sponsors s
+  cross join (select cooldown_days from public.settings limit 1) cfg
   left join public.outreach_log o on o.sponsor_id = s.id
-  group by s.id;
-
--- Live counts for the public landing/dashboard stats. Replaces the hardcoded
--- dashboardStats object — these are now computed from real rows.
-create or replace view public.dashboard_stats as
-  select
-    (select count(*) from public.sponsors)                              as total,
-    (select count(*) from public.sponsors where category = 'master')    as master,
-    (select count(*) from public.sponsors
-       where category = 'banned'
-         and (contract_ends is null or contract_ends >= current_date))   as banned,
-    (select count(*) from public.sponsors where category = 'alumni')    as alumni,
-    (select count(*) from public.submissions
-       where submitted_at >= date_trunc('month', now()))                as submissions_this_month,
-    (select count(*) from public.sponsor_outreach v where v.in_cooldown) as in_cooldown;
+  group by s.id, cfg.cooldown_days;
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -232,10 +314,12 @@ create or replace view public.dashboard_stats as
 alter table public.industries          enable row level security;
 alter table public.sponsors            enable row level security;
 alter table public.outreach_log        enable row level security;
+alter table public.annex_a_categories  enable row level security;
 alter table public.submissions         enable row level security;
 alter table public.submission_sponsors enable row level security;
 alter table public.admins              enable row level security;
 alter table public.settings            enable row level security;
+alter table public.activity_log        enable row level security;
 
 -- ---- industries: public read, admin write ----
 drop policy if exists industries_read  on public.industries;
@@ -251,32 +335,27 @@ create policy sponsors_read  on public.sponsors for select using (true);
 create policy sponsors_write on public.sponsors for all
   using (public.is_admin()) with check (public.is_admin());
 
--- ---- outreach_log: admin only (aggregates exposed via view) ----
+-- ---- outreach_log: admin only (aggregate exposed via sponsor_outreach) ----
 drop policy if exists outreach_admin on public.outreach_log;
 create policy outreach_admin on public.outreach_log for all
   using (public.is_admin()) with check (public.is_admin());
 
--- ---- submissions: anyone may submit; only admins read/manage ----
-drop policy if exists submissions_insert on public.submissions;
-drop policy if exists submissions_read   on public.submissions;
-drop policy if exists submissions_update on public.submissions;
-drop policy if exists submissions_delete on public.submissions;
-create policy submissions_insert on public.submissions for insert with check (true);
-create policy submissions_read   on public.submissions for select using (public.is_admin());
-create policy submissions_update on public.submissions for update
+-- ---- annex_a_categories: public read, admin write ----
+drop policy if exists annexa_read  on public.annex_a_categories;
+drop policy if exists annexa_write on public.annex_a_categories;
+create policy annexa_read  on public.annex_a_categories for select using (true);
+create policy annexa_write on public.annex_a_categories for all
   using (public.is_admin()) with check (public.is_admin());
-create policy submissions_delete on public.submissions for delete using (public.is_admin());
 
--- ---- submission_sponsors: anyone may insert (children of a submission) ----
-drop policy if exists subsponsors_insert on public.submission_sponsors;
-drop policy if exists subsponsors_read   on public.submission_sponsors;
-drop policy if exists subsponsors_update on public.submission_sponsors;
-drop policy if exists subsponsors_delete on public.submission_sponsors;
-create policy subsponsors_insert on public.submission_sponsors for insert with check (true);
-create policy subsponsors_read   on public.submission_sponsors for select using (public.is_admin());
-create policy subsponsors_update on public.submission_sponsors for update
+-- ---- submissions: admin only (public checker emails; it does not insert) ----
+drop policy if exists submissions_all on public.submissions;
+create policy submissions_all on public.submissions for all
   using (public.is_admin()) with check (public.is_admin());
-create policy subsponsors_delete on public.submission_sponsors for delete using (public.is_admin());
+
+-- ---- submission_sponsors: admin only ----
+drop policy if exists subsponsors_all on public.submission_sponsors;
+create policy subsponsors_all on public.submission_sponsors for all
+  using (public.is_admin()) with check (public.is_admin());
 
 -- ---- admins: admins read the team; super-admin manages it ----
 drop policy if exists admins_read  on public.admins;
@@ -292,21 +371,30 @@ create policy settings_read   on public.settings for select using (true);
 create policy settings_update on public.settings for update
   using (public.is_super_admin()) with check (public.is_super_admin());
 
+-- ---- activity_log: admins read + append; super-admin prunes ----
+drop policy if exists activity_read   on public.activity_log;
+drop policy if exists activity_insert on public.activity_log;
+drop policy if exists activity_delete on public.activity_log;
+create policy activity_read   on public.activity_log for select using (public.is_admin());
+create policy activity_insert on public.activity_log for insert with check (public.is_admin());
+create policy activity_delete on public.activity_log for delete using (public.is_super_admin());
+
 -- ============================================================
 -- GRANTS  (RLS still gates which rows each role can touch)
 -- ============================================================
 grant usage on schema public to anon, authenticated;
 
 -- public, read-only data
-grant select on public.industries, public.sponsors, public.settings to anon, authenticated;
-grant select on public.sponsor_outreach, public.dashboard_stats       to anon, authenticated;
-
--- students can lodge a submission + its rows
-grant insert on public.submissions, public.submission_sponsors to anon, authenticated;
+grant select on public.industries, public.sponsors, public.settings,
+                public.annex_a_categories                     to anon, authenticated;
+grant select on public.sponsor_outreach                       to anon, authenticated;
 
 -- admins (any signed-in user; RLS narrows to whitelisted emails)
 grant select, insert, update, delete on
-  public.industries, public.sponsors, public.outreach_log,
+  public.industries, public.sponsors, public.outreach_log, public.annex_a_categories,
   public.submissions, public.submission_sponsors,
-  public.admins, public.settings
+  public.admins, public.settings, public.activity_log
   to authenticated;
+
+grant execute on function public.log_outreach(uuid, text)      to authenticated;
+grant execute on function public.transfer_super_admin(text)    to authenticated;

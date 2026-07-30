@@ -1,12 +1,13 @@
 -- ============================================================
--- 0002_seed.sql  —  seed data from js/lib/mock-data.js
+-- 0002_seed.sql  —  seed data (finalised)
 --
--- Run AFTER 0001_init.sql. Idempotent: tables with natural keys use
--- ON CONFLICT DO NOTHING; the rest are guarded with WHERE NOT EXISTS so
--- re-running won't duplicate rows.
+-- Run AFTER 0001_init.sql. Idempotent: natural-key tables use ON CONFLICT
+-- DO NOTHING; the rest are guarded with WHERE NOT EXISTS.
 --
--- NOTE: the old hardcoded dashboardStats (total 12403, etc.) are intentionally
--- NOT seeded — those numbers are now computed live by the dashboard_stats view.
+-- Annex A + Annex B companies are seeded as `category='banned'` rows in
+-- `sponsors` (there is no separate annex-companies table). The Board-of-Trustees
+-- companies are seeded as banned sponsors too, so the matcher blocks them. Only
+-- the prohibited category *types* live in `annex_a_categories`.
 -- ============================================================
 
 -- ---------- industries -------------------------------------------------------
@@ -40,9 +41,22 @@ insert into public.admins (email, name, role) values
   ('biz.outreach@sa.smu.edu.sg', 'Arjun',   'admin')
 on conflict (email) do nothing;
 
+-- ---------- annex_a_categories (prohibited *types*, not companies) ----------
+insert into public.annex_a_categories (label, sort_order) values
+  ('Foundations',              1),
+  ('Alcohol',                  2),
+  ('Tobacco',                  3),
+  ('Gaming & betting',         4),
+  ('Sexual products',          5),
+  ('Insurance',                6),
+  ('Multi-level marketing',    7),
+  ('SMU Commencement sponsors',8)
+on conflict (label) do nothing;
+
 -- ---------- sponsors ---------------------------------------------------------
--- master (approved)
+-- master (approved) / banned examples / closed / alumni
 insert into public.sponsors (name, normalised, industry, category, notes, ban_reason, alumni_owner) values
+  -- master (approved)
   ('KOI',                'koi',                    'food_beverage',          'master', '', null, null),
   ('LiHO TEA',           'liho tea',               'food_beverage',          'master', '', null, null),
   ('Starbucks',          'starbucks',              'food_beverage',          'master', '', null, null),
@@ -58,17 +72,17 @@ insert into public.sponsors (name, normalised, industry, category, notes, ban_re
   ('Climb Central',      'climb central',          'activities_experiences', 'master', '', null, null),
   ('BoulderPlus',        'boulderplus',            'activities_experiences', 'master', '', null, null),
   ('Cathay Cineplexes',  'cathay cineplexes',      'entertainment_leisure',  'master', '', null, null),
-  -- banned (Annex A / B)
-  ('Singapore Pools',        'singapore pools',        'entertainment_leisure',  'banned', '', 'Annex A, Gaming & Betting',     null),
-  ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products',   null),
-  ('Marlboro',               'marlboro',               'retail_general',         'banned', '', 'Annex A, Tobacco Products',     null),
-  ('Durex',                  'durex',                  'beauty_personal_care',   'banned', '', 'Annex A, Sexual Products',      null),
-  ('AIA Insurance',          'aia insurance',          'professional_services',  'banned', '', 'Annex A, Insurance Companies',  null),
-  ('Prudential',             'prudential',             'professional_services',  'banned', '', 'Annex A, Insurance Companies',  null),
-  ('Shaw Foundation',        'shaw foundation',        'non_profit_government',  'banned', '', 'Annex A, Foundations',          null),
-  ('Lee Foundation',         'lee foundation',         'non_profit_government',  'banned', '', 'Annex A, Foundations',          null),
-  ('DBS Bank',               'dbs bank',               'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
-  ('OCBC Bank',              'ocbc bank',              'professional_services',  'banned', '', 'Annex B, Banks & Financial',    null),
+  -- banned (Annex A example companies)
+  ('Singapore Pools',        'singapore pools',        'entertainment_leisure',  'banned', '', 'Annex A, Gaming & Betting',    null),
+  ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products',  null),
+  ('Marlboro',               'marlboro',               'retail_general',         'banned', '', 'Annex A, Tobacco Products',    null),
+  ('Durex',                  'durex',                  'beauty_personal_care',   'banned', '', 'Annex A, Sexual Products',     null),
+  ('AIA Insurance',          'aia insurance',          'professional_services',  'banned', '', 'Annex A, Insurance Companies', null),
+  ('Prudential',             'prudential',             'professional_services',  'banned', '', 'Annex A, Insurance Companies', null),
+  ('Shaw Foundation',        'shaw foundation',        'non_profit_government',  'banned', '', 'Annex A, Foundations',         null),
+  ('Lee Foundation',         'lee foundation',         'non_profit_government',  'banned', '', 'Annex A, Foundations',         null),
+  ('DBS Bank',               'dbs bank',               'professional_services',  'banned', '', 'Annex B, Banks & Financial',   null),
+  ('OCBC Bank',              'ocbc bank',              'professional_services',  'banned', '', 'Annex B, Banks & Financial',   null),
   -- closed / defunct
   ('Robinsons',            'robinsons',             'retail_general', 'closed', 'Ceased operations 2020',  null, null),
   ('Crystal Jade Express', 'crystal jade express',  'food_beverage',  'closed', 'Brand discontinued 2023', null, null),
@@ -78,17 +92,40 @@ insert into public.sponsors (name, normalised, industry, category, notes, ban_re
   ('Loop Studio',  'loop studio',  'activities_experiences', 'alumni', '', null, 'Kumar A, ISIT 2020')
 on conflict (normalised) do nothing;
 
+-- Board of Trustees & associated companies (Annex A). Seeded as banned sponsors
+-- so the checker flags them; the Sponsors-page "Board of Trustees" panel lists
+-- them via ban_reason = 'Annex A, Board of Trustees'. normalised follows the
+-- matcher's rules (parens dropped, & -> and, legal suffixes like Pte Ltd/LLP/Corp
+-- stripped).
+insert into public.sponsors (name, normalised, industry, category, ban_reason) values
+  ('Banyan Tree Group',                        'banyan tree group',          'home_lifestyle',        'banned', 'Annex A, Board of Trustees'),
+  ('Global Business Integrators',              'global business integrators', 'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Reed Exhibitions',                         'reed exhibitions',           'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Hup Soon Global Corporation',              'hup soon global',            'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Singapore Telecommunications (Singtel)',   'singapore telecommunications','tech_electronics',     'banned', 'Annex A, Board of Trustees'),
+  ('Chinatrust Commercial Bank',               'chinatrust commercial bank', 'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Kuok (S)',                                 'kuok',                       'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Raffles Medical Corp',                     'raffles medical',            'health_wellness',       'banned', 'Annex A, Board of Trustees'),
+  ('Phoenix Advisers',                         'phoenix advisers',           'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Infosys Technologies',                     'infosys technologies',       'tech_electronics',      'banned', 'Annex A, Board of Trustees'),
+  ('WongPartnership LLP',                      'wongpartnership',            'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('SMRT',                                     'smrt',                       'transport_mobility',    'banned', 'Annex A, Board of Trustees'),
+  ('Bangkok Bank',                             'bangkok bank',               'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Symphony Asia Holdings',                   'symphony asia holdings',     'professional_services', 'banned', 'Annex A, Board of Trustees'),
+  ('Dane Court',                               'dane court',                 'other',                 'banned', 'Annex A, Board of Trustees')
+on conflict (normalised) do nothing;
+
 -- Annex B (BIZCOM partners): banned sponsors with a contract end date. One active,
 -- one lapsed — demo placeholders; replace with the real partner list. The lapsed
--- one drops out of the banned set automatically (contract_ends < current_date).
+-- one drops out of the active banned set automatically (contract_ends < current_date).
 insert into public.sponsors (name, normalised, industry, category, ban_reason, contract_ends) values
   ('Aurora Events Co',     'aurora events co', 'entertainment_leisure', 'banned', 'Annex B, BIZCOM partner', (current_date + interval '2 months')::date),
   ('Legacy Media Pte Ltd', 'legacy media',     'media_publishing',      'banned', 'Annex B, BIZCOM partner', (current_date - interval '20 days')::date)
 on conflict (normalised) do nothing;
 
 -- ---------- outreach_log -----------------------------------------------------
--- One row per contact. Counts are cumulative (not windowed), so they map
--- straight to sponsor_outreach.contact_count:
+-- One row per contact; counts are cumulative and map straight to
+-- sponsor_outreach.contact_count:
 --   KOI 9, LiHO TEA 10 (at cap), Starbucks 3, Subway 1, Uniqlo 4,
 --   Grab 10 (at cap), Cathay Cineplexes 2
 insert into public.outreach_log (sponsor_id, contacted_at)
@@ -107,8 +144,8 @@ join public.sponsors s on s.normalised = c.normalised
 cross join lateral generate_series(1, c.n) as g(i)
 where not exists (select 1 from public.outreach_log);
 
--- Sponsors at the cap are in cooldown: stamp cooldown_started_at so the
--- sponsor_outreach view reports them as in_cooldown (LiHO 8 days in, Grab 18).
+-- Sponsors at the cap are in cooldown: stamp cooldown_started_at so
+-- sponsor_outreach reports in_cooldown (LiHO 8 days in, Grab 18).
 update public.sponsors set cooldown_started_at = now() - interval '8 days'  where normalised = 'liho tea';
 update public.sponsors set cooldown_started_at = now() - interval '18 days' where normalised = 'grab';
 
@@ -116,7 +153,7 @@ update public.sponsors set cooldown_started_at = now() - interval '18 days' wher
 insert into public.submissions
   (event_name, club, contact_email, event_size, sponsor_count, submitted_at, complete_by, status, reviewed_by, reviewed_at, notes)
 select * from (values
-  ('Bizad Charity Run 2026', 'Accountancy Society',            'charityrun@smu.edu.sg', 'medium', 47,
+  ('Bizad Charity Run 2026', 'Accountancy Society', 'charityrun@smu.edu.sg', 'medium', 47,
      '2026-05-22T09:42:00+08:00'::timestamptz, '2026-06-05'::date, 'new',
      null::text, null::timestamptz, ''),
   ('Loop Music Festival', 'Music Interest Group', 'mig.exco@smu.edu.sg', 'large', 112,
