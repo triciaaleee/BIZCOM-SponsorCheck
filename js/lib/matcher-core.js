@@ -1,31 +1,50 @@
 /* ============================================================
-   js/admin/admin-matcher.js
-   Matcher for the admin Vet & Upload page. Unlike the shared
-   js/lib/matcher.js (which reads window.MOCK_DATA / Caps / Bans),
-   this one is a PURE function of the data passed to it, so the
-   admin page can match against LIVE Supabase data with no
-   MOCK_DATA globals.
+   js/lib/matcher-core.js
+   The one sponsor-matching module, shared by the admin Vet & Upload
+   page and the public checker. Pure: it takes the data it needs as
+   arguments (no MOCK_DATA / Caps / Bans globals), so both surfaces
+   feed it live Supabase data.
 
-   It REUSES window.Matcher.normalise as the single source of truth
-   for the lookup key (so a saved key can never drift from the
-   lookup and let a banned company read as "unverified"). The
-   fuzzy(trigram) + keyword + status logic is ported from
-   matcher.js; keep the two in step if that algorithm changes.
+   Exposes window.Matcher = { normalise, checkOne, checkBatch }.
+     normalise(name)                      -> the canonical lookup key
+     checkOne(name, industry?, ctx)       -> single result
+     checkBatch(rows, ctx)                -> array of results (sync)
+   where ctx = {
+     sponsors: [{ id, name, normalised, category, industry, ban_reason, contract_ends }],
+     capState: function (sponsorId) -> { count, cap, inCooldown, cooldownEndsAt, approaching, ... },
+     today:    'YYYY-MM-DD'
+   }
 
-   Usage:
-     AdminMatcher.checkBatch(rows, {
-       sponsors: [{ id, name, normalised, category, industry, ban_reason, contract_ends }],
-       capState: function (sponsorId) -> { count, cap, inCooldown, cooldownEndsAt, approaching, ... },
-       today: 'YYYY-MM-DD'
-     })
-   Returns the same result shape the page already consumes.
+   STATUS values: clear | caution | cooldown | alumni | blocked | unverified | duplicate.
    ============================================================ */
 (function () {
   'use strict';
 
-  function normalise(name) { return window.Matcher.normalise(name); }
+  // ---- normalise: the single source of truth for the lookup key ----
+  // Legal-entity / boilerplate suffixes only. "Singapore" is deliberately NOT
+  // here (it's part of real names like "Singapore Pools"); parenthesised locales
+  // like "(Singapore)" are removed by the paren pass below.
+  var SUFFIXES = [
+    'pte ltd', 'pte. ltd.', 'private limited', 'pte ltd.', 'pl',
+    'llp', 'l.l.p.', 'inc', 'corp', 'corporation', 'ltd', 'limited',
+    'co', 'co.'
+  ];
 
-  // Keyword classifier for tier-2 industry auto-classification (ported).
+  function normalise(name) {
+    if (!name) return '';
+    var n = String(name).toLowerCase();
+    n = n.replace(/\([^)]*\)/g, ' ');
+    n = n.replace(/&/g, ' and ');
+    n = n.replace(/[^\w\s]/g, ' ');
+    SUFFIXES.forEach(function (s) {
+      var re = new RegExp('\\b' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+      n = n.replace(re, ' ');
+    });
+    n = n.replace(/\s+/g, ' ').trim();
+    return n;
+  }
+
+  // ---- tier-2 industry keyword classifier ----
   var KEYWORDS = {
     food_beverage: ['tea', 'coffee', 'cafe', 'café', 'bistro', 'kitchen', 'bakery', 'restaurant', 'food', 'noodle', 'ramen', 'sushi', 'eats', 'mart'],
     apparel_accessories: ['apparel', 'fashion', 'wear', 'clothing', 'shoe', 'bag'],
@@ -48,7 +67,7 @@
     return null;
   }
 
-  // Trigram similarity (Jaccard on trigram sets), approximates pg_trgm.
+  // ---- trigram similarity (Jaccard), approximates pg_trgm ----
   function trigrams(s) {
     s = '  ' + s + ' ';
     var set = new Set();
@@ -64,7 +83,7 @@
   }
 
   // Currently-banned rule: banned AND (permanent OR contract not yet lapsed).
-  // Date strings are ISO (YYYY-MM-DD), so a lexicographic compare is correct.
+  // ISO date strings (YYYY-MM-DD) compare correctly lexicographically.
   function isActiveBan(s, today) {
     if (!s || s.category !== 'banned') return false;
     if (!s.contract_ends) return true;
@@ -175,8 +194,7 @@
     };
   }
 
-  // Synchronous (no artificial delay; the page shows its own loading state while
-  // the live data loads). Marks duplicates against earlier rows, same as matcher.js.
+  // Synchronous. Marks duplicates against earlier rows in the same list.
   function checkBatch(rows, ctx) {
     var seenAt = new Map(), dupesOfCanonical = new Map(), results = [];
 
@@ -206,5 +224,5 @@
     return results;
   }
 
-  window.AdminMatcher = { checkOne: checkOne, checkBatch: checkBatch };
+  window.Matcher = { normalise: normalise, checkOne: checkOne, checkBatch: checkBatch };
 })();

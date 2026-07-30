@@ -60,12 +60,65 @@
   let activeFilter = 'all';
   let isFromSample = false;
 
+  // ---------- Live data (Supabase, anon-readable) ----------
+  let sponsors = [];
+  let industries = [];
+  let outreachMap = {};
+  let settings = {};
+  let readyPromise = null;
+  const DAY_MS = 86400000;
+
+  function todayISO() {
+    const d = new Date();
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  const todayStr = todayISO();
+
+  function loadData() {
+    return Promise.all([
+      window.PublicData.allSponsors(),
+      window.PublicData.listIndustries(),
+      window.PublicData.outreachSnapshot(),
+      window.PublicData.getSettings()
+    ]).then(function (out) {
+      sponsors = out[0] || [];
+      industries = out[1] || [];
+      outreachMap = out[2] || {};
+      settings = out[3] || {};
+      // Reuse the shared normalise for the lookup key so it can't drift.
+      sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+    });
+  }
+
+  // Live cap/cooldown state for a sponsor (mirrors the admin cap logic), read
+  // from the loaded outreach snapshot + settings.
+  function capState(id) {
+    const cap = (settings.outreach_cap != null) ? settings.outreach_cap : 10;
+    const cooldownDays = (settings.cooldown_days != null) ? settings.cooldown_days : 30;
+    const rec = outreachMap[id];
+    let count = rec ? (rec.count || 0) : 0;
+    let inCooldown = false, cooldownEndsAt = null;
+    if (rec && rec.cooldown_started_at) {
+      const end = new Date(rec.cooldown_started_at).getTime() + cooldownDays * DAY_MS;
+      if (Date.now() < end) { inCooldown = true; cooldownEndsAt = new Date(end); }
+      else { count = 0; }
+    }
+    const atCap = count >= cap;
+    return {
+      count: count, cap: cap, cooldownDays: cooldownDays,
+      inCooldown: inCooldown, cooldownEndsAt: cooldownEndsAt,
+      atCap: atCap, approaching: !inCooldown && !atCap && count >= cap - 2
+    };
+  }
+  function matchCtx() { return { sponsors: sponsors, capState: capState, today: todayStr }; }
+
   // Per-size sponsor caps, read live from the admin-configured settings
   // (hydrated from localStorage in mock-data.js). Falls back to the PRD
   // defaults if settings are missing. Previously a hardcoded const, which is
   // why changes on the admin Settings page never showed up here.
   function eventCaps() {
-    const s = (window.MOCK_DATA && window.MOCK_DATA.settings) || {};
+    const s = settings || {};
     return {
       small:  (s.event_cap_small  != null) ? s.event_cap_small  : 300,
       medium: (s.event_cap_medium != null) ? s.event_cap_medium : 600,
@@ -313,9 +366,17 @@
     previewState.classList.add('d-none');
     checkingState.classList.remove('d-none');
 
-    window.Matcher.checkBatch(parsedRows).then(function (data) {
-      results = data;
-      renderResults();
+    // Ensure the live sponsor data is loaded, then match (synchronous). The
+    // short delay keeps the "cross-checking" animation visible.
+    (readyPromise || loadData()).then(function () {
+      setTimeout(function () {
+        results = window.Matcher.checkBatch(parsedRows, matchCtx());
+        renderResults();
+      }, 700);
+    }, function (e) {
+      checkingState.classList.add('d-none');
+      previewState.classList.remove('d-none');
+      window.toast && window.toast({ type: 'error', title: 'Could not reach the database', message: (e && e.message) || 'Please try again.' });
     });
   }
 
@@ -434,7 +495,7 @@
   }
 
   function industryDisplayName(code) {
-    const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
+    const ind = industries.find(function (i) { return i.code === code; });
     return ind ? ind.display_name : code;
   }
 
@@ -566,10 +627,16 @@
     });
   }
 
-  // Run once at boot so the email button reflects the initial empty fields
-  // and the size tiles show the current caps.
+  // Run once at boot: reflect the initial empty fields, then load the live
+  // sponsor data + settings and sync the size-tile caps.
   updateEmailButtonState();
-  syncTileCaps();
+  readyPromise = (window.PublicData && window.Matcher)
+    ? loadData()
+    : Promise.reject(new Error('data layer not ready'));
+  readyPromise.then(syncTileCaps, function (e) {
+    console.error('[sponsor-check] could not load data', e);
+    syncTileCaps();
+  });
 })();
 
 // Shake keyframe for invalid-drop feedback

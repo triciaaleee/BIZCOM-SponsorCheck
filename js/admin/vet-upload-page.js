@@ -56,7 +56,7 @@
   }
 
   function init() {
-    if (!window.sb || !window.AdminAPI || !window.AdminMatcher || !window.Matcher) {
+    if (!window.sb || !window.AdminAPI || !window.Matcher) {
       requestAnimationFrame(init);
       return;
     }
@@ -329,7 +329,7 @@
           toastMsg({ type: 'error', title: 'Database not loaded', message: 'Could not load the sponsor list. Refresh and try again.' });
           return;
         }
-        results = window.AdminMatcher.checkBatch(rows, matchCtx());
+        results = window.Matcher.checkBatch(rows, matchCtx());
         renderCheck();
         setCheckState('results');
         checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -339,7 +339,7 @@
     // Re-run the vet on the same rows against the (now-refreshed) live data.
     function revet() {
       if (!parsedRows.length) return;
-      results = window.AdminMatcher.checkBatch(parsedRows, matchCtx());
+      results = window.Matcher.checkBatch(parsedRows, matchCtx());
       renderCheck();
     }
 

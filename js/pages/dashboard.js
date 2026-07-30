@@ -3,6 +3,8 @@
    Renders the Sponsor Directory:
    - 15 industry category cards
    - Browseable banned / closed / alumni tables with search
+
+   Reads live from window.PublicData (Supabase, anon-readable).
    ============================================================ */
 
 (function () {
@@ -27,10 +29,21 @@
     other:                 { icon: 'bi-three-dots',            tone: 'navy',   examples: 'anything else, BIZCOM will reclassify' }
   };
 
+  // Live data (loaded from Supabase at boot).
+  let industries = [];
+  let sponsors = [];
+  let activeTab = 'banned';
+
+  function todayISO() {
+    const d = new Date();
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  const todayStr = todayISO();
+
   function renderIndustries() {
     const grid = document.getElementById('industries-grid');
     if (!grid) return;
-    const industries = window.MOCK_DATA.industries;
 
     grid.innerHTML = industries.map(function (ind) {
       const meta = INDUSTRY_META[ind.code] || { icon: 'bi-tag', tone: 'navy', examples: '' };
@@ -49,18 +62,21 @@
 
   // -- Restricted sponsors tabs and table --
 
-  let activeTab = 'banned';
-
   function getIndustryDisplay(code) {
-    const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
+    const ind = industries.find(function (i) { return i.code === code; });
     return ind ? ind.display_name : code;
   }
 
   function rowsForTab(tab) {
-    const all = window.MOCK_DATA.sponsors;
-    if (tab === 'banned') return all.filter(function (s) { return s.category === 'banned'; });
-    if (tab === 'closed') return all.filter(function (s) { return s.category === 'closed'; });
-    if (tab === 'alumni') return all.filter(function (s) { return s.category === 'alumni'; });
+    if (tab === 'banned') {
+      // Only ACTIVE bans — a lapsed Annex B partner (contract_ends in the past)
+      // is no longer restricted, so it drops out of the public directory.
+      return sponsors.filter(function (s) {
+        return s.category === 'banned' && (!s.contract_ends || String(s.contract_ends) >= todayStr);
+      });
+    }
+    if (tab === 'closed') return sponsors.filter(function (s) { return s.category === 'closed'; });
+    if (tab === 'alumni') return sponsors.filter(function (s) { return s.category === 'alumni'; });
     return [];
   }
 
@@ -151,18 +167,22 @@
       .replace(/'/g, '&#39;');
   }
 
-  // Boot when DOM ready and MOCK_DATA loaded
+  // Boot: wait for the client + data layer, load live data, then render.
   function boot() {
-    if (!window.MOCK_DATA) {
-      // mock-data.js loads with defer too; wait one frame
+    if (!window.sb || !window.PublicData) {
       requestAnimationFrame(boot);
       return;
     }
-    renderIndustries();
-    updateCounts();
-    updateReasonHeader();
-    renderRestricted();
-    bindTabs();
+    Promise.all([window.PublicData.listIndustries(), window.PublicData.allSponsors()])
+      .then(function (out) { industries = out[0] || []; sponsors = out[1] || []; })
+      .catch(function (e) { console.error('[dashboard] could not load directory', e); industries = []; sponsors = []; })
+      .then(function () {
+        renderIndustries();
+        updateCounts();
+        updateReasonHeader();
+        renderRestricted();
+        bindTabs();
+      });
   }
 
   if (document.readyState === 'loading') {

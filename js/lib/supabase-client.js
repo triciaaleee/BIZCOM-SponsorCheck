@@ -1,11 +1,11 @@
 /* ============================================================
-   js/admin/supabase-client.js
-   Creates the shared Supabase client for the admin console.
+   js/lib/supabase-client.js
+   Creates the shared Supabase client (window.sb), used by BOTH the
+   admin console and the public pages.
 
-   Loaded on every admin page AFTER the supabase-js UMD bundle
-   (the CDN <script> immediately above this one in each admin HTML).
-   That bundle exposes a global `supabase` with createClient(); we
-   build the project client from it and expose it as window.sb.
+   Loaded on every page AFTER the supabase-js UMD bundle (the CDN
+   <script> just above this one). That bundle exposes a global
+   `supabase` with createClient; we build the project client from it.
 
    SECURITY: the publishable key below is SAFE to ship in frontend
    code — it only grants the anon / authenticated roles, and Row
@@ -24,8 +24,8 @@
     return;
   }
 
-  // window.sb is the one client every admin page shares. The auth session is
-  // persisted (localStorage) so it survives navigation between admin pages.
+  // window.sb is the one client every page shares. The auth session is
+  // persisted (localStorage) so an admin login survives navigation.
   window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       persistSession: true,
