@@ -96,3 +96,6 @@
   font-weight: var(--font-weight-medium);
   border: 1px solid var(--border-subtle);
 }
+
+/* Fully-rounded variant, to sit alongside the rounded status chips. */
+.tag--rounded { border-radius: var(--radius-pill); padding: 3px 10px; }

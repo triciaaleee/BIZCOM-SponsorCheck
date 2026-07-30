@@ -429,7 +429,29 @@
       else saveEdit();
     });
 
+    // Label the event-size dropdown with the caps configured on the Settings
+    // page, so an admin picking a size sees the current per-size sponsor cap
+    // rather than a static label. Reads live from MOCK_DATA.settings (hydrated
+    // from localStorage on load).
+    function labelSizeOptions() {
+      const s = window.MOCK_DATA.settings || {};
+      const names  = { small: 'Small',  medium: 'Medium',  large: 'Large' };
+      const ranges = { small: '<50',    medium: '50-150',  large: '>150' };
+      const caps   = {
+        small:  s.event_cap_small,
+        medium: s.event_cap_medium,
+        large:  s.event_cap_large
+      };
+      Array.prototype.forEach.call(panelSizeInput.options, function (opt) {
+        const k = opt.value;
+        if (!names[k]) return;
+        const cap = (caps[k] != null) ? Number(caps[k]).toLocaleString() : '?';
+        opt.textContent = names[k] + ' (' + ranges[k] + ') · cap ' + cap;
+      });
+    }
+
     // ---------- boot ----------
+    labelSizeOptions();
     renderBanner();
     renderCalendar();
   }

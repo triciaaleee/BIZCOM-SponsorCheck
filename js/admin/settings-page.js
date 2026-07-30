@@ -341,6 +341,21 @@
       s.event_cap_medium = vals[3];
       s.event_cap_large = vals[4];
 
+      // Persist so the change survives navigation and reaches the other pages
+      // (admin home + public sponsor-check, same origin). mock-data.js hydrates
+      // MOCK_DATA.settings from this key on load. Swap for a Supabase update
+      // when the backend lands.
+      try {
+        const key = window.SETTINGS_STORAGE_KEY || 'sponsorcheck_settings';
+        localStorage.setItem(key, JSON.stringify({
+          outreach_cap: s.outreach_cap,
+          cooldown_days: s.cooldown_days,
+          event_cap_small: s.event_cap_small,
+          event_cap_medium: s.event_cap_medium,
+          event_cap_large: s.event_cap_large
+        }));
+      } catch (e) { /* storage unavailable — in-memory change still applies this session */ }
+
       window.AdminShell.logActivity('settings.updated', 'settings',
         'Outreach cap ' + s.outreach_cap + ', cooldown ' + s.cooldown_days + 'd');
       window.toast && window.toast({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });

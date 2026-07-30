@@ -60,7 +60,18 @@
   let activeFilter = 'all';
   let isFromSample = false;
 
-  const CAPS = { small: 300, medium: 600, large: 1000 };
+  // Per-size sponsor caps, read live from the admin-configured settings
+  // (hydrated from localStorage in mock-data.js). Falls back to the PRD
+  // defaults if settings are missing. Previously a hardcoded const, which is
+  // why changes on the admin Settings page never showed up here.
+  function eventCaps() {
+    const s = (window.MOCK_DATA && window.MOCK_DATA.settings) || {};
+    return {
+      small:  (s.event_cap_small  != null) ? s.event_cap_small  : 300,
+      medium: (s.event_cap_medium != null) ? s.event_cap_medium : 600,
+      large:  (s.event_cap_large  != null) ? s.event_cap_large  : 1000
+    };
+  }
   const SIZE_LABELS = {
     small:  'Small (under 50 attendees)',
     medium: 'Medium (50 to 150 attendees)',
@@ -99,7 +110,7 @@
       btn.setAttribute('aria-checked', 'true');
       eventSize = btn.getAttribute('data-event-size');
       if (previewCap) {
-        previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + CAPS[eventSize].toLocaleString();
+        previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + eventCaps()[eventSize].toLocaleString();
       }
       updateEmailButtonState();
     });
@@ -222,7 +233,7 @@
       throw new Error('No company names found in the file.');
     }
 
-    if (rows.length > CAPS[eventSize]) {
+    if (rows.length > eventCaps()[eventSize]) {
       showCapExceededModal(rows.length);
       return;
     }
@@ -246,7 +257,7 @@
 
   function showCapExceededModal(count) {
     document.getElementById('cap-modal-count').textContent = count.toLocaleString();
-    document.getElementById('cap-modal-cap').textContent   = CAPS[eventSize].toLocaleString();
+    document.getElementById('cap-modal-cap').textContent   = eventCaps()[eventSize].toLocaleString();
     document.getElementById('cap-modal-size').textContent  = SIZE_LABELS[eventSize];
     window.openModal('cap-modal');
     resetToUpload();
@@ -258,7 +269,7 @@
     previewState.classList.remove('d-none');
 
     previewTotal.textContent = parsedRows.length.toLocaleString();
-    previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + CAPS[eventSize].toLocaleString() + ' OK';
+    previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + eventCaps()[eventSize].toLocaleString() + ' OK';
 
     previewBody.innerHTML = parsedRows.slice(0, 10).map(function (r, i) {
       const indCell = r.industry
@@ -542,8 +553,23 @@
     isFromSample = true;
   };
 
-  // Run once at boot so the email button reflects the initial empty fields.
+  // Overwrite the static "Cap: N sponsors" text on each size tile with the
+  // admin-configured cap, so the public page matches the Settings page.
+  function syncTileCaps() {
+    const caps = eventCaps();
+    eventSizeBtns.forEach(function (btn) {
+      const size = btn.getAttribute('data-event-size');
+      const capEl = btn.querySelector('.size-tile__cap');
+      if (capEl && caps[size] != null) {
+        capEl.textContent = 'Cap: ' + caps[size].toLocaleString() + ' sponsors';
+      }
+    });
+  }
+
+  // Run once at boot so the email button reflects the initial empty fields
+  // and the size tiles show the current caps.
   updateEmailButtonState();
+  syncTileCaps();
 })();
 
 // Shake keyframe for invalid-drop feedback

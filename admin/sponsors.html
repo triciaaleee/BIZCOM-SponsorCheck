@@ -92,16 +92,23 @@
       <i class="bi bi-search search-field__icon"></i>
       <input type="search" class="form-input" id="sponsors-search-input" placeholder="Search by name..." aria-label="Search sponsors">
     </div>
-    <div class="status-filter" id="sponsors-status-filter" role="group" aria-label="Filter by status">
-      <button type="button" class="status-filter__pill status-filter__pill--all is-active" data-status="all" aria-pressed="true">All</button>
-      <button type="button" class="status-filter__pill status-filter__pill--master" data-status="master" aria-pressed="false"><i class="bi bi-check-circle-fill"></i> Approved</button>
-      <button type="button" class="status-filter__pill status-filter__pill--banned" data-status="banned" aria-pressed="false"><i class="bi bi-slash-circle-fill"></i> Banned</button>
-      <button type="button" class="status-filter__pill status-filter__pill--closed" data-status="closed" aria-pressed="false"><i class="bi bi-dash-circle-fill"></i> Closed</button>
-      <button type="button" class="status-filter__pill status-filter__pill--alumni" data-status="alumni" aria-pressed="false"><i class="bi bi-mortarboard-fill"></i> Alumni</button>
+    <div class="filter-bar">
+      <div class="status-filter" id="sponsors-status-filter" role="group" aria-label="Filter by status">
+        <button type="button" class="status-filter__pill status-filter__pill--all is-active" data-status="all" aria-pressed="true">All</button>
+        <button type="button" class="status-filter__pill status-filter__pill--master" data-status="master" aria-pressed="false"><i class="bi bi-check-circle-fill"></i> Approved</button>
+        <button type="button" class="status-filter__pill status-filter__pill--banned" data-status="banned" aria-pressed="false"><i class="bi bi-slash-circle-fill"></i> Banned</button>
+        <button type="button" class="status-filter__pill status-filter__pill--closed" data-status="closed" aria-pressed="false"><i class="bi bi-dash-circle-fill"></i> Closed</button>
+        <button type="button" class="status-filter__pill status-filter__pill--alumni" data-status="alumni" aria-pressed="false"><i class="bi bi-mortarboard-fill"></i> Alumni</button>
+      </div>
+      <div class="multiselect" id="sponsors-industry-filter">
+        <button type="button" class="multiselect__trigger" id="sponsors-industry-trigger" aria-haspopup="listbox" aria-expanded="false">
+          <i class="bi bi-funnel"></i>
+          <span class="multiselect__label" id="sponsors-industry-label">All industries</span>
+          <i class="bi bi-chevron-down multiselect__caret"></i>
+        </button>
+        <div class="multiselect__panel" id="sponsors-industry-panel" role="listbox" aria-multiselectable="true" aria-label="Filter by industry" hidden></div>
+      </div>
     </div>
-    <select class="form-input page-filters__select" id="sponsors-industry-filter" aria-label="Filter by industry">
-      <option value="all">All industries</option>
-    </select>
   </div>
 
   <div class="admin-table-wrap">
@@ -112,7 +119,7 @@
           <th>Status</th>
           <th>Industry</th>
           <th>Notes</th>
-          <th style="width: 64px"></th>
+          <th style="width: 96px"></th>
         </tr>
       </thead>
       <tbody id="sponsors-tbody"></tbody>
@@ -151,7 +158,7 @@
         <div class="form-group">
           <label class="form-label" for="annex-b-date">Contract end date <span class="form-label__required">*</span></label>
           <input type="date" class="form-input" id="annex-b-date">
-          <div class="form-helper">The company is blocked as a sponsor until this date, then automatically cleared. This is when the contract ends — not the date it was added.</div>
+          <div class="form-helper">The company is blocked as a sponsor until this date, then automatically flagged to clear.</div>
         </div>
         <div class="form-group">
           <label class="form-label" for="annex-b-industry">Industry</label>
@@ -169,6 +176,27 @@
         </button>
       </footer>
     </form>
+  </div>
+</div>
+
+<!-- Delete sponsor confirmation modal -->
+<div class="modal" id="delete-sponsor-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="delete-sponsor-title">
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <h2 class="modal__title" id="delete-sponsor-title">Delete sponsor</h2>
+      <button class="modal__close" data-modal-close aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </header>
+    <div class="modal__body">
+      <p>Delete <strong id="delete-sponsor-name">this sponsor</strong> from the database? This action is logged and can be reversed by re-adding the company.</p>
+    </div>
+    <footer class="modal__footer">
+      <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn--danger btn--sm" id="delete-sponsor-confirm">
+        <i class="bi bi-trash-fill"></i> Delete sponsor
+      </button>
+    </footer>
   </div>
 </div>
 

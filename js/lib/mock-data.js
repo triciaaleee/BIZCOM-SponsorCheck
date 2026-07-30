@@ -286,6 +286,28 @@ window.MOCK_DATA = {
 };
 
 // ============================================================
+// SETTINGS PERSISTENCE (mock bridge)
+// MOCK_DATA is rebuilt on every page load, so a change saved on the
+// admin Settings page would otherwise vanish on navigation. Hydrate the
+// settings object from localStorage here — same origin, so it also reaches
+// the public pages (sponsor-check.html). The Settings page writes the same
+// key. This runs BEFORE seedCooldowns() below so seeding uses the persisted
+// cooldown length. When Supabase lands, replace this with a query of the
+// `settings` row and drop the localStorage bridge.
+// ============================================================
+window.SETTINGS_STORAGE_KEY = 'sponsorcheck_settings';
+(function hydrateSettings() {
+  try {
+    var raw = localStorage.getItem(window.SETTINGS_STORAGE_KEY);
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (saved && typeof saved === 'object') {
+      Object.assign(window.MOCK_DATA.settings, saved);
+    }
+  } catch (e) { /* malformed / unavailable storage — fall back to defaults */ }
+})();
+
+// ============================================================
 // OUTREACH CAP + COOLDOWN — derivation helper (window.Caps)
 // Confirmed rule: each admin-logged outreach adds 1 to a company's running
 // count. At settings.outreach_cap a cooldown of settings.cooldown_days days

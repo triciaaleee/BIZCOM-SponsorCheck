@@ -22,9 +22,10 @@
     // ----------------- state -----------------
     const PAGE_SIZE = 50;
     let searchQuery = '';
-    let statusFilter = [];   // empty = all statuses; otherwise multi-select of categories
-    let industryFilter = 'all';
+    let statusFilter = [];     // empty = all statuses; otherwise multi-select of categories
+    let industryFilter = [];   // empty = all industries; otherwise multi-select of codes
     let currentPage = 1;
+    let pendingDeleteId = null;
 
     // ----------------- elements -----------------
     const tbody = document.getElementById('sponsors-tbody');
@@ -34,7 +35,12 @@
     const countEl = document.getElementById('sponsors-count');
     const searchInput = document.getElementById('sponsors-search-input');
     const statusFilterEl = document.getElementById('sponsors-status-filter');
-    const industryFilterEl = document.getElementById('sponsors-industry-filter');
+    const industryWrapEl = document.getElementById('sponsors-industry-filter');
+    const industryTriggerEl = document.getElementById('sponsors-industry-trigger');
+    const industryPanelEl = document.getElementById('sponsors-industry-panel');
+    const industryLabelEl = document.getElementById('sponsors-industry-label');
+    const deleteNameEl = document.getElementById('delete-sponsor-name');
+    const deleteConfirmEl = document.getElementById('delete-sponsor-confirm');
     const pager = document.getElementById('sponsors-pager');
     const pagerNav = document.getElementById('sponsors-pager-nav');
     const pagerRange = document.getElementById('sponsors-range');
@@ -77,8 +83,8 @@
     // scales the same at 50 rows or 50,000.
     function querySponsors(params) {
       const q = (params.search || '').trim().toLowerCase();
-      const statuses = params.status || [];   // array; empty = all
-      const industry = params.industry || 'all';
+      const statuses = params.status || [];       // array; empty = all
+      const industries = params.industry || [];   // array; empty = all
       const pageSize = params.pageSize || PAGE_SIZE;
 
       const matched = window.MOCK_DATA.sponsors.filter(function (s) {
@@ -87,7 +93,7 @@
         if (window.Bans.isExpired(s)) return false;
         if (q && s.name.toLowerCase().indexOf(q) === -1) return false;
         if (statuses.length && statuses.indexOf(s.category) === -1) return false;
-        if (industry !== 'all' && s.industry !== industry) return false;
+        if (industries.length && industries.indexOf(s.industry) === -1) return false;
         return true;
       }).sort(function (a, b) {
         return a.name.localeCompare(b.name);   // alphabetical default
@@ -104,7 +110,7 @@
     }
 
     function isFiltering() {
-      return searchQuery.trim() !== '' || statusFilter.length > 0 || industryFilter !== 'all';
+      return searchQuery.trim() !== '' || statusFilter.length > 0 || industryFilter.length > 0;
     }
 
     // Companies whose cooldown ends in the current calendar month — i.e. those
@@ -299,12 +305,17 @@
           '<tr>' +
             '<td><div class="table__cell-primary">' + mapsLink(s.name) + '</div></td>' +
             '<td>' + statusPill(s.category) + '</td>' +
-            '<td><span class="text-sm text-secondary">' + esc(industryDisplay(s.industry)) + '</span></td>' +
+            '<td><span class="tag tag--rounded">' + esc(industryDisplay(s.industry)) + '</span></td>' +
             '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
             '<td>' +
-              '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="table__action" title="Edit">' +
-                '<i class="bi bi-pencil-fill"></i>' +
-              '</a>' +
+              '<div class="table__actions">' +
+                '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="table__action" title="Edit ' + esc(s.name) + '" aria-label="Edit ' + esc(s.name) + '">' +
+                  '<i class="bi bi-pencil-fill"></i>' +
+                '</a>' +
+                '<button type="button" class="table__action table__action--danger" data-delete-id="' + esc(s.id) + '" title="Delete ' + esc(s.name) + '" aria-label="Delete ' + esc(s.name) + '">' +
+                  '<i class="bi bi-trash-fill"></i>' +
+                '</button>' +
+              '</div>' +
             '</td>' +
           '</tr>'
         );
@@ -391,21 +402,65 @@
       searchDebounce = setTimeout(render, 250);
     });
 
-    // Industry filter dropdown. Options come from the same canonical list used
-    // everywhere else, so codes stay in sync.
-    if (industryFilterEl) {
-      window.MOCK_DATA.industries.forEach(function (ind) {
-        const opt = document.createElement('option');
-        opt.value = ind.code;
-        opt.textContent = ind.display_name;
-        industryFilterEl.appendChild(opt);
-      });
-      industryFilterEl.addEventListener('change', function (e) {
-        industryFilter = e.target.value || 'all';
+    // Industry filter — multi-select dropdown (checkbox panel). 15 industries is
+    // too many for a pill row, so a compact trigger opens a checklist; the button
+    // label summarises the selection ("All industries" / a name / "N industries").
+    function updateIndustryLabel() {
+      if (!industryLabelEl) return;
+      const n = industryFilter.length;
+      if (n === 0) industryLabelEl.textContent = 'All industries';
+      else if (n === 1) industryLabelEl.textContent = industryDisplay(industryFilter[0]);
+      else industryLabelEl.textContent = n + ' industries';
+      if (industryWrapEl) industryWrapEl.classList.toggle('has-selection', n > 0);
+    }
+    function openIndustryPanel(open) {
+      if (!industryPanelEl || !industryTriggerEl) return;
+      industryPanelEl.hidden = !open;
+      industryTriggerEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (industryPanelEl) {
+      // Build the checklist (+ a Clear action).
+      const optsHtml = window.MOCK_DATA.industries.map(function (ind) {
+        return '<label class="multiselect__option">' +
+          '<input type="checkbox" value="' + ind.code + '"> ' + window.AdminShell.escapeHtml(ind.display_name) +
+        '</label>';
+      }).join('');
+      industryPanelEl.innerHTML = optsHtml +
+        '<div class="multiselect__panel-actions"><button type="button" class="btn btn--tertiary btn--sm" data-industry-clear>Clear</button></div>';
+
+      industryPanelEl.addEventListener('change', function (e) {
+        const cb = e.target.closest('input[type="checkbox"]');
+        if (!cb) return;
+        const code = cb.value;
+        const i = industryFilter.indexOf(code);
+        if (cb.checked && i === -1) industryFilter.push(code);
+        else if (!cb.checked && i !== -1) industryFilter.splice(i, 1);
         currentPage = 1;
+        updateIndustryLabel();
+        render();
+      });
+      industryPanelEl.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-industry-clear]')) return;
+        industryFilter = [];
+        industryPanelEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
+        currentPage = 1;
+        updateIndustryLabel();
         render();
       });
     }
+    if (industryTriggerEl) {
+      industryTriggerEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openIndustryPanel(industryPanelEl.hidden);
+      });
+    }
+    // Close the panel on outside click / Escape.
+    document.addEventListener('click', function (e) {
+      if (industryWrapEl && !industryWrapEl.contains(e.target)) openIndustryPanel(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') openIndustryPanel(false);
+    });
 
     // Status filter — multi-select pills. "All" clears the selection; clicking a
     // status toggles it in/out. With nothing selected the list shows every status.
@@ -434,6 +489,32 @@
         render();
       });
       syncStatusPills();
+    }
+
+    // Delete a sponsor straight from the table. Trash icon → confirmation modal →
+    // remove from the database. Available to all admins; the action is logged.
+    tbody.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-delete-id]');
+      if (!btn) return;
+      pendingDeleteId = btn.getAttribute('data-delete-id');
+      const sp = window.MOCK_DATA.sponsors.find(function (s) { return s.id === pendingDeleteId; });
+      if (deleteNameEl) deleteNameEl.textContent = sp ? sp.name : 'this sponsor';
+      window.openModal && window.openModal('delete-sponsor-modal');
+    });
+    if (deleteConfirmEl) {
+      deleteConfirmEl.addEventListener('click', function () {
+        if (!pendingDeleteId) return;
+        const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === pendingDeleteId; });
+        if (idx === -1) { window.closeModal && window.closeModal('delete-sponsor-modal'); return; }
+        const name = window.MOCK_DATA.sponsors[idx].name;
+        window.MOCK_DATA.sponsors.splice(idx, 1);
+        window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
+        window.toast && window.toast({ type: 'success', title: 'Deleted', message: name });
+        pendingDeleteId = null;
+        window.closeModal && window.closeModal('delete-sponsor-modal');
+        renderAnnexBList();   // in case the deleted row was an active Annex B partner
+        render();
+      });
     }
 
     // Annex B add-client modal (name + contract end date + industry + notes).
