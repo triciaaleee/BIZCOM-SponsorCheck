@@ -1,28 +1,22 @@
 /* ============================================================
    js/admin/vet-upload-page.js
-   Admin "Vet & upload" page. Two connected steps:
+   Admin "Vet & Upload" page. Two connected steps:
 
      1. Vet a list — upload a CSV of company names (company_name +
         optional industry_code, the same template the public checker
-        uses) and run it through the shared Matcher. Matched companies
-        are flagged by their database status (banned / approved /
-        closed / alumni); companies not on record are listed in a
-        separate panel for the admin to review one by one.
+        uses) and run it through AdminMatcher against the LIVE sponsor
+        list. Matched companies are flagged by their database status;
+        companies not on record are listed for individual review.
 
-     2. Add to database — an editable staging table. The
-        not-on-record companies flow in from step 1; the admin sets
-        each one's status (banned or approved, etc.) and industry and
-        adds them all at once. Also works standalone (Add row) for
-        manual bulk entry, on top of sponsor.html.
+     2. Add to database — an editable staging table. The admin sets
+        each company's status + industry and adds them all at once via
+        a bulk insert. Approved companies can log their first outreach.
 
-   MOCK MODE (today): writes push to window.MOCK_DATA.sponsors, so
-   additions are visible across admin pages within the session but
-   reset on reload — same contract as the single-add flow in
-   sponsor-page.js.
-
-   SUPABASE MODE (Phase 2): replace the push in commitStaging() with
-     await supabase.from('sponsors').insert(payloads);
-   The rest of the page (parse, match, staging UI) is unchanged.
+   Data layer (Supabase, no MOCK_DATA):
+     * Matching:      AdminMatcher.checkBatch(rows, ctx) over live data
+                      loaded by AdminAPI (reuses Matcher.normalise).
+     * Log outreach:  AdminAPI.logOutreach() -> log_outreach RPC.
+     * Bulk add:      AdminAPI.bulkAddSponsors() -> insert (skip dupes).
    ============================================================ */
 
 (function () {
@@ -37,13 +31,12 @@
   ];
 
   // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (master/closed/alumni) or ban_reason (banned)
-  // when the row is committed.
+  // detail column maps to notes (master/closed/alumni) or ban_reason (banned).
   const DETAIL_META = {
-    master: { placeholder: 'Notes (optional)',              required: false },
+    master: { placeholder: 'Notes (optional)',                 required: false },
     banned: { placeholder: 'Ban reason, e.g. Annex A, Gaming', required: true },
-    closed: { placeholder: 'Closed notes (optional)',       required: false },
-    alumni: { placeholder: 'Notes (optional)',              required: false }
+    closed: { placeholder: 'Closed notes (optional)',          required: false },
+    alumni: { placeholder: 'Notes (optional)',                 required: false }
   };
 
   const SAMPLE_TEXT =
@@ -56,8 +49,14 @@
     'Pixel Labs,tech_electronics\n' +
     'Northwind Traders,\n';
 
+  function todayISODate() {
+    const d = new Date();
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
   function init() {
-    if (!window.MOCK_DATA || !window.Matcher) {
+    if (!window.sb || !window.AdminAPI || !window.AdminMatcher || !window.Matcher) {
       requestAnimationFrame(init);
       return;
     }
@@ -114,21 +113,87 @@
     let stagingRows = [];       // [{ uid, name, category, industry, detail, include }]
     let uidSeq = 0;
 
+    // Live data (loaded from Supabase at boot / refreshed after writes).
+    let sponsors = [];
+    let industries = [];
+    let outreachMap = {};       // { sponsorId: { count, cooldown_started_at, in_cooldown } }
+    let settings = {};
+    let loadError = false;
+    const todayStr = todayISODate();
+    let readyPromise = null;
+
+    // ---------- helpers ----------
+    function toastMsg(o) { if (window.toast) window.toast(o); }
+    function toastError(title, e) {
+      console.error('[vet-upload]', title, e);
+      toastMsg({ type: 'error', title: title, message: (e && e.message) || 'Please try again.' });
+    }
+
+    // Live cap/cooldown state for a sponsor, mirroring the old window.Caps.state
+    // but reading the loaded outreach snapshot + settings (no globals).
+    const DAY_MS = 86400000;
+    function capState(sponsorId) {
+      const cap = (settings.outreach_cap != null) ? settings.outreach_cap : 10;
+      const cooldownDays = (settings.cooldown_days != null) ? settings.cooldown_days : 30;
+      const rec = outreachMap[sponsorId];
+      let count = rec ? (rec.count || 0) : 0;
+      let inCooldown = false, cooldownEndsAt = null;
+      if (rec && rec.cooldown_started_at) {
+        const end = new Date(rec.cooldown_started_at).getTime() + cooldownDays * DAY_MS;
+        if (Date.now() < end) { inCooldown = true; cooldownEndsAt = new Date(end); }
+        else { count = 0; }
+      }
+      const atCap = count >= cap;
+      return {
+        count: count, cap: cap, cooldownDays: cooldownDays,
+        inCooldown: inCooldown, cooldownEndsAt: cooldownEndsAt,
+        atCap: atCap, approaching: !inCooldown && !atCap && count >= cap - 2
+      };
+    }
+
+    function matchCtx() {
+      return { sponsors: sponsors, capState: capState, today: todayStr };
+    }
+
+    function loadData() {
+      return Promise.all([
+        window.AdminAPI.listIndustries(),
+        window.AdminAPI.allSponsors(),
+        window.AdminAPI.outreachSnapshot(),
+        window.AdminAPI.getSettings()
+      ]).then(function (out) {
+        industries = out[0] || [];
+        sponsors = out[1] || [];
+        outreachMap = out[2] || {};
+        settings = out[3] || {};
+        // Reuse the shared normalise for the lookup key so it can't drift.
+        sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+      }).catch(function (e) {
+        loadError = true;
+        toastError('Could not load the sponsor database', e);
+      });
+    }
+    function refreshOutreach() {
+      return window.AdminAPI.outreachSnapshot().then(function (map) { outreachMap = map || {}; }, function () {});
+    }
+    function refreshSponsors() {
+      return window.AdminAPI.allSponsors().then(function (rows) {
+        sponsors = rows || [];
+        sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+      }, function () {});
+    }
+
     // Bucket a Matcher result by the matched company's real DB category, so
-    // banned / approved / closed / alumni are distinguished (status alone
-    // collapses banned + closed into 'blocked'). 'review' = not on record.
+    // banned / approved / closed / alumni are distinguished. 'review' = not on
+    // record. Cap state is read live so a just-logged company re-buckets.
     function classify(r) {
       if (r.status === 'duplicate') return 'duplicate';
       switch (r.matchedCategory) {
         case 'banned': return 'banned';
         case 'closed': return 'closed';
         case 'alumni': return 'alumni';
-        // A capped, in-cooldown company is off-limits right now, so it is
-        // flagged as 'cooldown' rather than shown as plain 'approved'. Read the
-        // cap state live (not the snapshot in r.status) so the bucket updates
-        // the moment outreach is logged below.
         case 'master': {
-          const st = (r.matchedId && window.Caps) ? window.Caps.state(r.matchedId) : null;
+          const st = r.matchedId ? capState(r.matchedId) : null;
           return (st && st.inCooldown) ? 'cooldown' : 'approved';
         }
         default: return 'review';
@@ -182,19 +247,11 @@
 
     function handleFile(file) {
       if (!/\.csv$/i.test(file.name)) {
-        window.toast && window.toast({
-          type: 'error',
-          title: 'Wrong file type',
-          message: 'Only .csv is accepted. Save your Excel file as CSV first.'
-        });
+        toastMsg({ type: 'error', title: 'Wrong file type', message: 'Only .csv is accepted. Save your Excel file as CSV first.' });
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        window.toast && window.toast({
-          type: 'error',
-          title: 'File too large',
-          message: 'Maximum upload size is 5 MB.'
-        });
+        toastMsg({ type: 'error', title: 'File too large', message: 'Maximum upload size is 5 MB.' });
         return;
       }
 
@@ -213,16 +270,12 @@
         try {
           parseAndCheck(e.target.result);
         } catch (err) {
-          window.toast && window.toast({
-            type: 'error',
-            title: 'Could not parse file',
-            message: (err && err.message) || 'Check the file format and try again.'
-          });
+          toastMsg({ type: 'error', title: 'Could not parse file', message: (err && err.message) || 'Check the file format and try again.' });
           uploadStatus.innerHTML = '';
         }
       };
       reader.onerror = function () {
-        window.toast && window.toast({ type: 'error', title: 'Read failed', message: 'Could not read the file.' });
+        toastMsg({ type: 'error', title: 'Read failed', message: 'Could not read the file.' });
         uploadStatus.innerHTML = '';
       };
       reader.readAsText(file);
@@ -269,23 +322,25 @@
       const rows = parseRows(text);
       parsedRows = rows;
       setCheckState('loading');
-      window.Matcher.checkBatch(rows).then(function (data) {
-        results = data;
+      // Matching is synchronous, but wait for the live sponsor data to load first.
+      readyPromise.then(function () {
+        if (loadError) {
+          setCheckState('upload');
+          toastMsg({ type: 'error', title: 'Database not loaded', message: 'Could not load the sponsor list. Refresh and try again.' });
+          return;
+        }
+        results = window.AdminMatcher.checkBatch(rows, matchCtx());
         renderCheck();
         setCheckState('results');
         checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
 
-    // Re-run the vet on the same rows against the (now-mutated) database and
-    // re-render, so status, remarks, outreach and which panel a row sits in
-    // all stay consistent after outreach is logged. delay:0 makes it instant.
+    // Re-run the vet on the same rows against the (now-refreshed) live data.
     function revet() {
-      if (!parsedRows.length) return;   // nothing uploaded, so no panels to refresh
-      window.Matcher.checkBatch(parsedRows, { delay: 0 }).then(function (data) {
-        results = data;
-        renderCheck();
-      });
+      if (!parsedRows.length) return;
+      results = window.AdminMatcher.checkBatch(parsedRows, matchCtx());
+      renderCheck();
     }
 
     if (reuploadBtn) {
@@ -299,9 +354,6 @@
     }
 
     // ---- render step-1 results ----
-    // Companies not on record AND not already queued in the staging table.
-    // Staging a company removes it from here; removing it from staging (or
-    // clearing) brings it back — the two lists behave as one moving queue.
     function reviewCompanies() {
       const staged = new Set(stagingRows.map(function (r) {
         return window.Matcher.normalise(r.name);
@@ -314,8 +366,6 @@
     function renderCheck() {
       const counts = { approved: 0, cooldown: 0, banned: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
       results.forEach(function (r) { counts[classify(r)]++; });
-      // The "Not in database" tile counts only companies still shown in Panel B
-      // (staged ones are excluded, since they've moved to step 2).
       counts.review = reviewCompanies().length;
 
       const total = results.length;
@@ -370,8 +420,6 @@
         const idx = results.indexOf(r) + 1;         // original row number in the file
         const flaggedCls = (bucket === 'banned' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
-        // Only approved companies can receive outreach; everything else (banned,
-        // closed, alumni, already-in-cooldown) gets no tick-box.
         const canLog = bucket === 'approved' && r.matchedId;
         if (canLog) eligible++;
         const checkCell = canLog
@@ -398,7 +446,6 @@
       updateLogCount();
     }
 
-    // Keep the summary "Not in database" tile in step with what Panel B shows.
     function updateReviewTile(n) {
       const el = summaryEl.querySelector('.bulk-stat--review .bulk-stat__value');
       if (el) el.textContent = n;
@@ -413,7 +460,6 @@
         reviewTbody.innerHTML = '';
         reviewFoot.style.display = 'none';
         reviewEmpty.hidden = false;
-        // Distinguish "all handled" from "some queued in step 2".
         const totalReview = results.filter(function (r) { return classify(r) === 'review'; }).length;
         reviewEmpty.textContent = totalReview > 0
           ? 'All new companies are staged for adding in step 2.'
@@ -446,7 +492,6 @@
       updateReviewCount();
     }
 
-    // Selected review rows, resolved back to their Matcher result objects.
     function selectedReviewResults() {
       return Array.prototype.slice.call(reviewTbody.querySelectorAll('.vet-review-check:checked'))
         .map(function (b) { return results[parseInt(b.getAttribute('data-ri'), 10)]; })
@@ -471,8 +516,6 @@
       return '<span class="pill ' + m.cls + '"><i class="bi ' + m.icon + ' pill__icon"></i>' + m.label + '</span>';
     }
 
-    // The database record a row matched to. For fuzzy matches, append an
-    // "approx." badge with the score so the admin knows to eyeball it.
     function matchCell(r) {
       const name = r.matchedName || r.matched || '';
       if (!name) return '<span class="text-muted text-xs">-</span>';
@@ -482,26 +525,27 @@
       return '<span class="table__cell-primary">' + esc(name) + '</span>' + approx;
     }
 
-    // Outreach usage for a matched approved company (running count / cap).
-    // Not applicable to banned/closed/alumni, since those are not approached.
-    // A company in cooldown shows its full count and the date it frees up.
     function outreachCell(r) {
-      if (r.matchedCategory !== 'master' || !r.matchedId || !window.Caps) {
+      if (r.matchedCategory !== 'master' || !r.matchedId) {
         return '<span class="text-muted text-xs">n/a</span>';
       }
-      const st = window.Caps.state(r.matchedId);
+      const st = capState(r.matchedId);
       let cls = 'vet-cap';
       if (st.inCooldown) cls += ' vet-cap--over';
       else if (st.approaching) cls += ' vet-cap--near';
       let html = '<span class="' + cls + '">' + st.count + ' / ' + st.cap + '</span>';
       if (st.inCooldown && st.cooldownEndsAt) {
-        html += '<span class="vet-cap__note">until ' + esc(window.Caps.formatDate(st.cooldownEndsAt)) + '</span>';
+        html += '<span class="vet-cap__note">until ' + esc(formatDateShort(st.cooldownEndsAt)) + '</span>';
       }
       return html;
     }
 
-    // Closest near-miss record for a not-on-record company, so a real (but
-    // differently-named) sponsor isn't re-added as a duplicate.
+    function formatDateShort(d) {
+      if (!d) return '';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
     function suggestionCell(r) {
       if (!r.suggestion) return '<span class="text-muted text-xs">None found</span>';
       const s = r.suggestion;
@@ -519,32 +563,11 @@
     }
 
     // ---- outreach logging (Panel A) ----
-
     function updateLogCount() {
       if (!logBtn || !logCountEl) return;
       const n = matchedTbody.querySelectorAll('.vet-log-check:checked').length;
       logCountEl.textContent = n;
       logBtn.disabled = n === 0;
-    }
-
-    // Record one outreach against a sponsor: +1 to the running count, mirroring
-    // the rule in window.Caps. At the cap the company enters cooldown; an
-    // elapsed prior cooldown (count already reset) has its stale stamp cleared.
-    // In Supabase this becomes: insert into outreach_log (sponsor_id, ...).
-    function logOutreach(id) {
-      const o = window.MOCK_DATA.outreach || (window.MOCK_DATA.outreach = {});
-      const st = window.Caps.state(id);
-      if (st.inCooldown) return 'skipped';           // already capped; not selectable
-      const rec = o[id] || (o[id] = { count: 0, cooldown_started_at: null });
-      const next = st.count + 1;
-      if (next >= st.cap) {
-        rec.count = st.cap;
-        rec.cooldown_started_at = new Date().toISOString();
-        return 'capped';
-      }
-      rec.count = next;
-      rec.cooldown_started_at = null;
-      return 'logged';
     }
 
     // ---- Panel B: select-all + per-row sync ----
@@ -572,13 +595,13 @@
         let added = 0;
         sel.forEach(function (r) {
           const norm = window.Matcher.normalise(r.input);
-          if (staged.has(norm)) return; // already staged, skip
+          if (staged.has(norm)) return;
           staged.add(norm);
           stagingRows.push(makeRow({ name: r.input, industry: r.industry || 'other' }));
           added++;
         });
         renderStaging();
-        renderReview();   // staged companies leave Panel B
+        renderReview();
         document.getElementById('section-add').scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.toast) {
           window.toast(added > 0
@@ -605,28 +628,39 @@
     });
 
     if (logBtn) {
-      logBtn.addEventListener('click', function () {
+      logBtn.addEventListener('click', async function () {
         const boxes = Array.prototype.slice.call(matchedTbody.querySelectorAll('.vet-log-check:checked'));
         if (boxes.length === 0) return;
         const label = boxes.length === 1 ? '1 company' : boxes.length + ' companies';
         if (!confirm('Log an outreach for ' + label + '? This adds 1 to each running count and cannot be undone here.')) return;
 
-        let logged = 0, capped = 0;
-        boxes.forEach(function (b) {
-          const res = logOutreach(b.getAttribute('data-id'));
+        logBtn.disabled = true;
+        let logged = 0, capped = 0, skipped = 0, failed = 0;
+        for (const b of boxes) {
+          let res;
+          try {
+            res = await window.AdminAPI.logOutreach(b.getAttribute('data-id'));
+          } catch (e) {
+            failed++;
+            continue;
+          }
           if (res === 'logged') logged++;
           else if (res === 'capped') { logged++; capped++; }
-        });
+          else if (res === 'skipped') skipped++;
+        }
 
         window.AdminShell.logActivity('outreach.logged', logged + ' companies',
           'Logged outreach for ' + logged + ' companies' + (capped ? ' (' + capped + ' reached the cap)' : ''));
 
+        await refreshOutreach();
         revet();  // refresh status, remarks, outreach and panels consistently
 
         if (window.toast) {
           let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';
           if (capped) msg += ' ' + (capped === 1 ? '1 reached its cap and is now in cooldown.' : capped + ' reached their cap and are now in cooldown.');
-          window.toast({ type: 'success', title: 'Outreach logged', message: msg });
+          if (skipped) msg += ' ' + skipped + ' skipped (already in cooldown).';
+          if (failed) msg += ' ' + failed + ' failed.';
+          window.toast({ type: failed ? 'warning' : 'success', title: 'Outreach logged', message: msg });
         }
       });
     }
@@ -650,7 +684,7 @@
     }
 
     function industryOptions(selected) {
-      return window.MOCK_DATA.industries.map(function (ind) {
+      return industries.map(function (ind) {
         return '<option value="' + ind.code + '"' + (ind.code === selected ? ' selected' : '') + '>' +
           esc(ind.display_name) + '</option>';
       }).join('');
@@ -664,7 +698,7 @@
     }
 
     function industryDisplay(code) {
-      const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
+      const ind = industries.find(function (i) { return i.code === code; });
       return ind ? ind.display_name : code;
     }
 
@@ -699,23 +733,17 @@
       return stagingRows.find(function (r) { return r.uid === uid; });
     }
 
-    // Event delegation: one listener for the whole tbody. Field edits mutate the
-    // model in place (no re-render, so inputs keep focus); structural changes
-    // (remove) trigger a re-render.
     stagingTbody.addEventListener('input', function (e) {
       const tr = e.target.closest('tr');
       if (!tr) return;
       const row = rowByUid(tr.getAttribute('data-uid'));
       if (!row) return;
       const field = e.target.getAttribute('data-field');
-      if (field === 'name')     row.name = e.target.value;
-      if (field === 'detail')   row.detail = e.target.value;
+      if (field === 'name')   row.name = e.target.value;
+      if (field === 'detail') row.detail = e.target.value;
       e.target.classList.remove('is-invalid');
     });
 
-    // Sync a row's "Log outreach" checkbox to its state: only an INCLUDED,
-    // approved row can log outreach. Unticking the sponsor, or setting any
-    // status other than Approved, clears + disables the outreach box.
     function applyLogState(tr, row) {
       const logInput = tr.querySelector('[data-field="logOutreach"]');
       if (!logInput) return;
@@ -735,7 +763,7 @@
       if (field === 'include') {
         row.include = e.target.checked;
         tr.classList.toggle('is-excluded', !row.include);
-        applyLogState(tr, row);   // unticking the sponsor also clears its outreach box
+        applyLogState(tr, row);
         syncSelectAll();
         updateStagingCount();
       }
@@ -743,7 +771,6 @@
       if (field === 'logOutreach') row.logOutreach = e.target.checked;
       if (field === 'category') {
         row.category = e.target.value;
-        // Update the detail field's placeholder to match the new status.
         const detailInput = tr.querySelector('[data-field="detail"]');
         if (detailInput) {
           detailInput.placeholder = DETAIL_META[row.category].placeholder;
@@ -760,7 +787,7 @@
       const uid = tr.getAttribute('data-uid');
       stagingRows = stagingRows.filter(function (r) { return r.uid !== uid; });
       renderStaging();
-      renderReview();   // a removed company returns to Panel B if it came from there
+      renderReview();
     });
 
     function updateStagingCount() {
@@ -785,7 +812,7 @@
           const cb = tr.querySelector('[data-field="include"]');
           if (cb) cb.checked = on;
           tr.classList.toggle('is-excluded', !on);
-          applyLogState(tr, row);   // clear outreach boxes when unticking all
+          applyLogState(tr, row);
         });
         updateStagingCount();
       });
@@ -795,7 +822,6 @@
       addRowBtn.addEventListener('click', function () {
         stagingRows.push(makeRow());
         renderStaging();
-        // Focus the name field of the row just added.
         const rows = stagingTbody.querySelectorAll('tr');
         const last = rows[rows.length - 1];
         if (last) { const nm = last.querySelector('[data-field="name"]'); if (nm) nm.focus(); }
@@ -808,26 +834,25 @@
         if (!confirm('Clear all staged rows? This does not touch the database.')) return;
         stagingRows = [];
         renderStaging();
-        renderReview();   // cleared companies return to Panel B
+        renderReview();
       });
     }
 
-    // ---- commit: validate, dedupe, write to MOCK_DATA.sponsors ----
+    // ---- commit: validate, dedupe, bulk-insert, log first outreach ----
     if (saveBtn) {
       saveBtn.addEventListener('click', commitStaging);
     }
 
-    function commitStaging() {
+    async function commitStaging() {
       const included = stagingRows.filter(function (r) { return r.include; });
       if (included.length === 0) return;
 
-      // 1. Validate. Collect the first invalid field per problem and flag it.
+      // 1. Validate.
       let firstError = null;
       included.forEach(function (row) {
         const tr = stagingTbody.querySelector('[data-uid="' + row.uid + '"]');
         const nameInput = tr && tr.querySelector('[data-field="name"]');
         const detailInput = tr && tr.querySelector('[data-field="detail"]');
-
         if (!row.name.trim()) {
           if (nameInput) nameInput.classList.add('is-invalid');
           firstError = firstError || { el: nameInput, msg: 'Every included row needs a company name.' };
@@ -837,85 +862,100 @@
           firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a ban reason.' };
         }
       });
-
       if (firstError) {
-        window.toast && window.toast({ type: 'error', title: 'Check the highlighted rows', message: firstError.msg });
+        toastMsg({ type: 'error', title: 'Check the highlighted rows', message: firstError.msg });
         if (firstError.el) firstError.el.focus();
         return;
       }
 
-      // 2. Dedupe — within the batch and against existing sponsors, by
-      //    normalised name (the matcher's lookup key).
-      const existing = new Set(window.MOCK_DATA.sponsors.map(function (s) {
+      // 2. Dedupe within the batch and against the loaded sponsors, by normalised name.
+      const existing = new Set(sponsors.map(function (s) {
         return s.normalised || window.Matcher.normalise(s.name);
       }));
       const seen = new Set();
       const payloads = [];
-      const toLog = [];          // ids to record a first outreach against
+      const logFlags = [];       // parallel to payloads: whether to log first outreach
       const skipped = [];
-      const now = Date.now();
 
-      included.forEach(function (row, i) {
+      included.forEach(function (row) {
         const norm = window.Matcher.normalise(row.name);
         if (existing.has(norm) || seen.has(norm)) {
           skipped.push(row.name.trim());
           return;
         }
         seen.add(norm);
-
         const payload = {
-          id: 's-' + now.toString(36) + '-' + i,
           name: row.name.trim(),
           normalised: norm,
           industry: row.industry,
           category: row.category,
           notes: '',
-          ban_reason: undefined
+          ban_reason: null
         };
-        if (row.category === 'master') payload.notes = row.detail.trim();
-        if (row.category === 'closed') payload.notes = row.detail.trim();
-        if (row.category === 'banned') payload.ban_reason = row.detail.trim();
-        if (row.category === 'alumni') payload.notes = row.detail.trim();
+        if (row.category === 'master' || row.category === 'alumni') payload.notes = row.detail.trim();
+        else if (row.category === 'closed') payload.notes = row.detail.trim();
+        else if (row.category === 'banned') payload.ban_reason = row.detail.trim();
         payloads.push(payload);
-        if (row.category === 'master' && row.logOutreach) toLog.push(payload.id);
+        logFlags.push(row.category === 'master' && row.logOutreach);
       });
 
       if (payloads.length === 0) {
-        window.toast && window.toast({
-          type: 'info',
-          title: 'Nothing added',
-          message: 'All selected companies are already in the database.'
-        });
+        toastMsg({ type: 'info', title: 'Nothing added', message: 'All selected companies are already in the database.' });
         return;
       }
 
-      // 3. Write. In Supabase mode this becomes a single insert().
-      payloads.forEach(function (p) { window.MOCK_DATA.sponsors.push(p); });
+      // 3. Bulk insert (skips any that already exist by normalised).
+      saveBtn.disabled = true;
+      let inserted;
+      try {
+        inserted = await window.AdminAPI.bulkAddSponsors(payloads);
+      } catch (e) {
+        saveBtn.disabled = false;
+        toastError('Could not add sponsors', e);
+        return;
+      }
+      const added = inserted.length;
+      const dbSkipped = payloads.length - added;
 
-      // Record a first outreach for approved rows that opted in.
+      // 4. Refresh the local snapshot, then resolve ids for first-outreach logging.
+      await refreshSponsors();
+      const byNorm = {};
+      sponsors.forEach(function (s) { byNorm[s.normalised] = s; });
+      const toLogIds = [];
+      payloads.forEach(function (p, i) {
+        if (logFlags[i] && byNorm[p.normalised]) toLogIds.push(byNorm[p.normalised].id);
+      });
+
       let loggedCount = 0;
-      toLog.forEach(function (id) { if (logOutreach(id) !== 'skipped') loggedCount++; });
+      for (const id of toLogIds) {
+        try { const res = await window.AdminAPI.logOutreach(id); if (res !== 'skipped') loggedCount++; }
+        catch (e) { /* non-fatal: the sponsor is still added */ }
+      }
+      await refreshOutreach();
 
-      window.AdminShell.logActivity('sponsor.bulk_added', payloads.length + ' sponsors',
-        'Bulk add of ' + payloads.length + ' sponsors' + (loggedCount ? ', ' + loggedCount + ' with first outreach' : '') + (skipped.length ? ' (' + skipped.length + ' skipped as duplicates)' : ''));
+      window.AdminShell.logActivity('sponsor.bulk_added', added + ' sponsors',
+        'Bulk add of ' + added + ' sponsors' + (loggedCount ? ', ' + loggedCount + ' with first outreach' : '') +
+        (skipped.length + dbSkipped ? ' (' + (skipped.length + dbSkipped) + ' skipped as duplicates)' : ''));
 
-      // 4. Remove the committed + skipped rows; keep only unticked ones.
+      // 5. Remove the committed rows; keep only unticked ones.
       stagingRows = stagingRows.filter(function (r) { return !r.include; });
       renderStaging();
+      saveBtn.disabled = false;
 
-      const parts = ['Added ' + payloads.length + (payloads.length === 1 ? ' sponsor' : ' sponsors') + '.'];
+      const totalSkipped = skipped.length + dbSkipped;
+      const parts = ['Added ' + added + (added === 1 ? ' sponsor' : ' sponsors') + '.'];
       if (loggedCount) parts.push('First outreach recorded for ' + loggedCount + '.');
-      if (skipped.length) parts.push(skipped.length + ' skipped (already in the database).');
-      window.toast && window.toast({ type: 'success', title: 'Database updated', message: parts.join(' ') });
+      if (totalSkipped) parts.push(totalSkipped + ' skipped (already in the database).');
+      toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
 
-      // Re-vet the uploaded list so anything just added moves from the review
-      // panel up into "Found in the database", where its outreach can be logged.
+      // Re-vet so anything just added moves up into "Found in the database".
       revet();
     }
 
     // ---------- boot ----------
     setCheckState('upload');
     renderStaging();
+    readyPromise = loadData();
   }
 
   if (document.readyState === 'loading') {

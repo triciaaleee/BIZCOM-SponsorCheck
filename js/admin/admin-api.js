@@ -124,6 +124,35 @@
       ).then(function (res) { if (res.error) throw res.error; });
     },
 
+    getSponsor: function (id) {
+      return Promise.resolve(
+        sb().from('sponsors').select('*').eq('id', id).maybeSingle()
+      ).then(unwrap);
+    },
+
+    updateSponsor: function (id, patch) {
+      return Promise.resolve(
+        sb().from('sponsors').update(patch).eq('id', id).select().maybeSingle()
+      ).then(unwrap);
+    },
+
+    // All sponsors (incl. lapsed Annex B partners) for client-side matching on
+    // the Vet & Upload page. The caller recomputes `normalised` from the shared
+    // matcher on load so the lookup key can't drift.
+    allSponsors: function () {
+      return Promise.resolve(
+        sb().from('sponsors').select('id, name, normalised, category, industry, ban_reason, contract_ends').order('name')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    // Bulk insert new sponsors, skipping any whose normalised name already exists
+    // (ON CONFLICT DO NOTHING). Returns the rows actually inserted (with ids).
+    bulkAddSponsors: function (payloads) {
+      return Promise.resolve(
+        sb().from('sponsors').upsert(payloads, { onConflict: 'normalised', ignoreDuplicates: true }).select()
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
     // ---------- outreach: cooldowns ending this calendar month ----------
     // Reads the sponsor_outreach view for in-cooldown rows, derives each
     // cooldown's end date (started_at + cooldown_days) and keeps only those
@@ -156,6 +185,61 @@
           });
         });
       });
+    },
+
+    // Live cap/cooldown state for one sponsor, mirroring the old window.Caps.state
+    // shape. contact_count + in_cooldown come straight from the sponsor_outreach
+    // view (which already resets the count to 0 once a cooldown has elapsed).
+    getOutreachState: function (sponsorId) {
+      return this.getSettings().then(function (settings) {
+        var cap = settings.outreach_cap || 10;
+        var cooldownDays = settings.cooldown_days || 30;
+        return Promise.resolve(
+          sb().from('sponsor_outreach')
+            .select('contact_count, cooldown_started_at, in_cooldown')
+            .eq('sponsor_id', sponsorId).maybeSingle()
+        ).then(unwrap).then(function (row) {
+          var count = row ? (row.contact_count || 0) : 0;
+          var inCooldown = row ? !!row.in_cooldown : false;
+          var cooldownEndsAt = null;
+          if (row && row.cooldown_started_at && inCooldown) {
+            cooldownEndsAt = new Date(new Date(row.cooldown_started_at).getTime() + cooldownDays * 86400000);
+          }
+          var atCap = count >= cap;
+          return {
+            count: count, cap: cap, cooldownDays: cooldownDays,
+            inCooldown: inCooldown, cooldownEndsAt: cooldownEndsAt,
+            atCap: atCap, approaching: !inCooldown && !atCap && count >= cap - 2
+          };
+        });
+      });
+    },
+
+    // Outreach snapshot for every sponsor, keyed by id —
+    // { count, cooldown_started_at, in_cooldown } — used to derive live cap state
+    // on the Vet & Upload page.
+    outreachSnapshot: function () {
+      return Promise.resolve(
+        sb().from('sponsor_outreach').select('sponsor_id, contact_count, cooldown_started_at, in_cooldown')
+      ).then(unwrap).then(function (rows) {
+        var map = {};
+        (rows || []).forEach(function (r) {
+          map[r.sponsor_id] = {
+            count: r.contact_count || 0,
+            cooldown_started_at: r.cooldown_started_at,
+            in_cooldown: !!r.in_cooldown
+          };
+        });
+        return map;
+      });
+    },
+
+    // Record one outreach against a sponsor via the server-side rule (the single
+    // place the cap/cooldown logic lives). Returns 'logged' | 'capped' | 'skipped'.
+    logOutreach: function (sponsorId, note) {
+      return Promise.resolve(
+        sb().rpc('log_outreach', { p_sponsor_id: sponsorId, p_note: note || null })
+      ).then(unwrap);
     },
 
     // ---------- Annex A / Annex B reference ----------

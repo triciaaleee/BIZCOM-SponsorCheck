@@ -3,15 +3,14 @@
    Detail/edit form for a single sponsor. URL param ?id=X loads
    the record; no param means create-mode.
 
-   When Supabase lands, replace the MOCK_DATA reads/writes with
-   table queries. The form contract stays the same.
+   Reads/writes live via window.AdminAPI (Supabase). No MOCK_DATA.
    ============================================================ */
 
 (function () {
   'use strict';
 
   function init() {
-    if (!window.MOCK_DATA) {
+    if (!window.sb || !window.AdminAPI || !window.Matcher) {
       requestAnimationFrame(init);
       return;
     }
@@ -25,8 +24,6 @@
       pageTitle: isCreate ? 'Add sponsor' : 'Edit sponsor'
     });
     if (!session) return;
-
-    const esc = window.AdminShell.escapeHtml;
 
     // ---------- elements ----------
     const heading = document.getElementById('sponsor-form-heading');
@@ -44,17 +41,23 @@
 
     const dangerZone = document.getElementById('danger-zone');
     const deleteBtn = document.getElementById('sp-delete');
+    const saveBtn = document.getElementById('sp-save');
     const saveLabel = document.getElementById('sp-save-label');
 
-    // Populate industries
-    window.MOCK_DATA.industries.forEach(function (ind) {
-      const opt = document.createElement('option');
-      opt.value = ind.code;
-      opt.textContent = ind.display_name;
-      industryEl.appendChild(opt);
-    });
+    // ---------- helpers ----------
+    function toastMsg(o) { if (window.toast) window.toast(o); }
+    function toastError(title, e) {
+      console.error('[sponsor]', title, e);
+      toastMsg({ type: 'error', title: title, message: (e && e.message) || 'Please try again.' });
+    }
+    function formatDate(d) {
+      if (!d) return '';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
 
     let currentStatus = 'master';
+    let original = null;   // the loaded sponsor row (edit mode), for change detection
 
     function setStatus(s) {
       currentStatus = s;
@@ -65,9 +68,9 @@
       });
       // Show only the relevant status-specific field. Alumni reuses the general
       // (optional) notes field — there is no dedicated alumni-owner field.
-      grpNotes.style.display     = (s === 'master' || s === 'alumni') ? '' : 'none';
-      grpBan.style.display       = (s === 'banned')  ? '' : 'none';
-      grpClosed.style.display    = (s === 'closed')  ? '' : 'none';
+      grpNotes.style.display  = (s === 'master' || s === 'alumni') ? '' : 'none';
+      grpBan.style.display    = (s === 'banned') ? '' : 'none';
+      grpClosed.style.display = (s === 'closed') ? '' : 'none';
     }
 
     statusBtns.forEach(function (btn) {
@@ -76,25 +79,153 @@
       });
     });
 
-    // ---------- load existing or set defaults ----------
-    let original = null;
+    // Build the row values from the form. normalised uses the shared matcher key
+    // so a saved sponsor is found by the same lookup the checker uses.
+    // Leaving 'banned' clears ban_reason + contract_ends to satisfy the DB check
+    // constraint (contract_ends only allowed when banned).
+    function buildValues() {
+      const name = nameEl.value.trim();
+      const values = {
+        name: name,
+        normalised: window.Matcher.normalise(name),
+        industry: industryEl.value,
+        category: currentStatus,
+        notes: '',
+        ban_reason: null
+      };
+      if (currentStatus === 'master' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
+      else if (currentStatus === 'closed') values.notes = closedNotesEl.value.trim();
+      else if (currentStatus === 'banned') values.ban_reason = banReasonEl.value.trim();
+      if (currentStatus !== 'banned') values.contract_ends = null;
+      return values;
+    }
 
-    if (isCreate) {
-      heading.textContent = 'Add sponsor';
-      saveLabel.textContent = 'Create sponsor';
-      setStatus('master');
-      industryEl.value = 'other';
-      // Hide side panel content for new sponsor
-      document.getElementById('sponsor-side').style.display = 'none';
-    } else {
-      const sponsor = window.MOCK_DATA.sponsors.find(function (s) { return s.id === sponsorId; });
+    function describeDiff(a, b) {
+      const out = [];
+      if (a.name !== b.name) out.push('Name: "' + a.name + '" → "' + b.name + '"');
+      if (a.industry !== b.industry) out.push('Industry: ' + a.industry + ' → ' + b.industry);
+      if (a.category !== b.category) out.push('Status: ' + a.category + ' → ' + b.category);
+      if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
+      if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Ban reason updated');
+      return out;
+    }
+
+    // ---------- save ----------
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const name = nameEl.value.trim();
+      if (!name) {
+        toastMsg({ type: 'error', title: 'Name required', message: 'Enter a company name.' });
+        return;
+      }
+      if (currentStatus === 'banned' && !banReasonEl.value.trim()) {
+        toastMsg({ type: 'error', title: 'Ban reason required', message: 'Add the Annex reference.' });
+        return;
+      }
+
+      const values = buildValues();
+
+      // Edit with no actual change — skip the write.
+      if (!isCreate && original) {
+        const diffs = describeDiff(original, values);
+        if (diffs.length === 0) {
+          toastMsg({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
+          return;
+        }
+      }
+
+      saveBtn.disabled = true;
+      try {
+        if (isCreate) {
+          await window.AdminAPI.addSponsor(values);
+          window.AdminShell.logActivity('sponsor.created', name,
+            'Added as ' + currentStatus + ', industry ' + values.industry);
+          toastMsg({ type: 'success', title: 'Sponsor created', message: name });
+        } else {
+          await window.AdminAPI.updateSponsor(sponsorId, values);
+          if (original.category !== values.category) {
+            window.AdminShell.logActivity('sponsor.status_changed', name,
+              'Status changed from "' + original.category + '" to "' + values.category + '"');
+          } else {
+            window.AdminShell.logActivity('sponsor.updated', name, describeDiff(original, values).join('; '));
+          }
+          toastMsg({ type: 'success', title: 'Saved', message: name });
+        }
+      } catch (err) {
+        saveBtn.disabled = false;
+        if (window.AdminAPI.isUniqueViolation(err)) {
+          toastMsg({ type: 'error', title: 'Duplicate name', message: 'A sponsor with that name already exists.' });
+        } else {
+          toastError('Could not save sponsor', err);
+        }
+        return;
+      }
+
+      // Redirect back (short delay so the success toast is visible first).
+      setTimeout(function () { window.location.href = 'sponsors.html'; }, 600);
+    });
+
+    // ---------- delete (super-admin only; danger zone) ----------
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async function () {
+        if (!confirm('Delete this sponsor? This is logged but reversible by re-adding it.')) return;
+        const name = original ? original.name : nameEl.value.trim();
+        deleteBtn.disabled = true;
+        try {
+          await window.AdminAPI.deleteSponsor(sponsorId);
+        } catch (err) {
+          deleteBtn.disabled = false;
+          toastError('Could not delete sponsor', err);
+          return;
+        }
+        window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
+        toastMsg({ type: 'success', title: 'Deleted', message: name });
+        setTimeout(function () { window.location.href = 'sponsors.html'; }, 600);
+      });
+    }
+
+    // ---------- boot ----------
+    (async function boot() {
+      // Populate industries
+      let industries;
+      try {
+        industries = await window.AdminAPI.listIndustries();
+      } catch (e) {
+        toastError('Could not load industries', e);
+        industries = [];
+      }
+      industries.forEach(function (ind) {
+        const opt = document.createElement('option');
+        opt.value = ind.code;
+        opt.textContent = ind.display_name;
+        industryEl.appendChild(opt);
+      });
+
+      if (isCreate) {
+        heading.textContent = 'Add sponsor';
+        saveLabel.textContent = 'Create sponsor';
+        setStatus('master');
+        industryEl.value = 'other';
+        document.getElementById('sponsor-side').style.display = 'none';
+        return;
+      }
+
+      // Edit: load the existing record.
+      let sponsor;
+      try {
+        sponsor = await window.AdminAPI.getSponsor(sponsorId);
+      } catch (e) {
+        toastError('Could not load sponsor', e);
+        return;
+      }
       if (!sponsor) {
         heading.textContent = 'Sponsor not found';
         form.style.display = 'none';
         document.getElementById('sponsor-side').style.display = 'none';
         return;
       }
-      original = JSON.parse(JSON.stringify(sponsor));
+
+      original = sponsor;
       heading.innerHTML = 'Edit ' + window.AdminShell.mapsLink(sponsor.name);
       saveLabel.textContent = 'Save changes';
       nameEl.value = sponsor.name;
@@ -104,110 +235,24 @@
       banReasonEl.value = sponsor.ban_reason || '';
       closedNotesEl.value = sponsor.notes || '';  // closed uses notes field
 
-      // Populate side panel
+      // Side panel
       document.getElementById('meta-id').textContent = sponsor.id;
-
-      const st = window.Caps.state(sponsor.id);
-      document.getElementById('meta-outreach').textContent = st.count + ' / ' + st.cap;
-      if (st.inCooldown) {
-        document.getElementById('meta-cooldown-row').hidden = false;
-        document.getElementById('meta-cooldown').textContent = 'Until ' + window.Caps.formatDate(st.cooldownEndsAt);
+      try {
+        const st = await window.AdminAPI.getOutreachState(sponsor.id);
+        document.getElementById('meta-outreach').textContent = st.count + ' / ' + st.cap;
+        if (st.inCooldown && st.cooldownEndsAt) {
+          document.getElementById('meta-cooldown-row').hidden = false;
+          document.getElementById('meta-cooldown').textContent = 'Until ' + formatDate(st.cooldownEndsAt);
+        }
+      } catch (e) {
+        document.getElementById('meta-outreach').textContent = '—';
       }
 
-      // Show danger zone for super-admin
+      // Danger zone (delete) is super-admin only.
       if (session.role === 'super_admin') {
         dangerZone.style.display = '';
       }
-    }
-
-    // ---------- save ----------
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const name = nameEl.value.trim();
-      if (!name) {
-        window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter a company name.' });
-        return;
-      }
-      // Validate status-specific fields
-      if (currentStatus === 'banned' && !banReasonEl.value.trim()) {
-        window.toast && window.toast({ type: 'error', title: 'Ban reason required', message: 'Add the Annex reference.' });
-        return;
-      }
-
-      const payload = {
-        id: isCreate ? generateId() : sponsorId,
-        name: name,
-        normalised: normalise(name),
-        industry: industryEl.value,
-        category: currentStatus,
-        notes: '',
-        ban_reason: undefined
-      };
-
-      if (currentStatus === 'master') payload.notes = notesEl.value.trim();
-      if (currentStatus === 'banned') payload.ban_reason = banReasonEl.value.trim();
-      if (currentStatus === 'closed') payload.notes = closedNotesEl.value.trim();
-      if (currentStatus === 'alumni') payload.notes = notesEl.value.trim();
-
-      if (isCreate) {
-        window.MOCK_DATA.sponsors.push(payload);
-        window.AdminShell.logActivity('sponsor.created', name,
-          'Added as ' + currentStatus + ', industry ' + payload.industry);
-        window.toast && window.toast({ type: 'success', title: 'Sponsor created', message: name });
-      } else {
-        const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === sponsorId; });
-        if (idx === -1) return;
-        const diffs = describeDiff(original, payload);
-        window.MOCK_DATA.sponsors[idx] = payload;
-        if (diffs.length === 0) {
-          window.toast && window.toast({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
-          return;
-        }
-        // Pick the most material change for the log entry
-        if (original.category !== payload.category) {
-          window.AdminShell.logActivity('sponsor.status_changed', name,
-            'Status changed from "' + original.category + '" to "' + payload.category + '"');
-        } else {
-          window.AdminShell.logActivity('sponsor.updated', name, diffs.join('; '));
-        }
-        window.toast && window.toast({ type: 'success', title: 'Saved', message: name });
-      }
-
-      // Redirect back
-      setTimeout(function () { window.location.href = 'sponsors.html'; }, 600);
-    });
-
-    // ---------- delete ----------
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', function () {
-        if (!confirm('Delete this sponsor? This is logged but reversible by re-adding it.')) return;
-        const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === sponsorId; });
-        if (idx === -1) return;
-        const name = window.MOCK_DATA.sponsors[idx].name;
-        window.MOCK_DATA.sponsors.splice(idx, 1);
-        window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
-        window.toast && window.toast({ type: 'success', title: 'Deleted', message: name });
-        setTimeout(function () { window.location.href = 'sponsors.html'; }, 600);
-      });
-    }
-
-    function describeDiff(a, b) {
-      const out = [];
-      if (a.name !== b.name) out.push('Name: "' + a.name + '" \u2192 "' + b.name + '"');
-      if (a.industry !== b.industry) out.push('Industry: ' + a.industry + ' \u2192 ' + b.industry);
-      if (a.category !== b.category) out.push('Status: ' + a.category + ' \u2192 ' + b.category);
-      if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
-      if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Ban reason updated');
-      return out;
-    }
-
-    function generateId() {
-      return 's-' + Date.now().toString(36);
-    }
-
-    function normalise(name) {
-      return String(name).toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    }
+    })();
   }
 
   if (document.readyState === 'loading') {
