@@ -9,8 +9,10 @@
    3. Render top-bar with signed-in email + role badge + sign out.
    4. Mock action helpers: logActivity, signOut.
 
-   When Supabase lands, the session check becomes a Supabase
-   auth.getUser() call and logActivity becomes a Supabase insert.
+   Auth is now wired to Supabase: the guard verifies the live auth
+   session (window.sb) and sign-out calls supabase.auth.signOut().
+   The sessionStorage cache (email/name/role) drives the immediate,
+   synchronous guard + UI; RLS enforces real security on every query.
    ============================================================ */
 
 (function () {
@@ -40,10 +42,21 @@
 
   // ---------- Activity log ----------
 
-  // The Activity page and its mock data were removed. logActivity is kept as a
-  // no-op so existing call sites stay valid; wire a Supabase audit insert here
-  // if a server-side audit trail is reintroduced later.
-  function logActivity(/* action, entity, details */) {}
+  // Append an entry to the activity_log audit trail. Best-effort and
+  // fire-and-forget: a logging failure must never block the user's action, so
+  // errors are only warned to the console. RLS lets any signed-in admin insert.
+  function logActivity(action, entity, details) {
+    if (!window.sb || !action) return;
+    const s = getSession();
+    window.sb.from('activity_log').insert({
+      actor_email: s ? s.email : null,
+      action: action,
+      entity: entity != null ? String(entity) : null,
+      details: details != null ? String(details) : null
+    }).then(function (res) {
+      if (res && res.error) console.warn('[logActivity] ' + res.error.message);
+    }, function () { /* swallow */ });
+  }
 
   // ---------- Sidebar ----------
 
@@ -176,10 +189,31 @@
     opts = opts || {};
     const session = getSession();
 
-    // Auth guard (skipped only on login page)
+    // Auth guard (skipped only on login page). The sessionStorage cache gives
+    // an instant, synchronous decision; the live Supabase session is verified
+    // just below to catch a stale cache.
     if (!opts.skipAuth && !session) {
       window.location.href = 'login.html';
       return null;
+    }
+
+    // Background verification of the real Supabase session: bounces to login if
+    // the cache is stale (token expired, or signed out in another tab). Security
+    // itself is enforced server-side by RLS on every query, not by this check.
+    if (session && !opts.skipAuth && window.sb) {
+      window.sb.auth.getSession().then(function (res) {
+        const live = res && res.data ? res.data.session : null;
+        if (!live) {
+          clearSession();
+          window.location.href = 'login.html';
+        }
+      });
+      window.sb.auth.onAuthStateChange(function (event) {
+        if (event === 'SIGNED_OUT') {
+          clearSession();
+          window.location.href = 'login.html';
+        }
+      });
     }
 
     // Super-admin guard: bounce non-super-admins to sponsors list.
@@ -224,10 +258,14 @@
       const signOutBtn = document.getElementById('admin-sign-out');
       if (signOutBtn) {
         signOutBtn.addEventListener('click', function () {
-          if (confirm('Sign out?')) {
+          if (!confirm('Sign out?')) return;
+          const finish = function () {
             clearSession();
             window.location.href = 'login.html';
-          }
+          };
+          // End the real Supabase session first, then clear the local cache.
+          if (window.sb) window.sb.auth.signOut().then(finish, finish);
+          else finish();
         });
       }
     }

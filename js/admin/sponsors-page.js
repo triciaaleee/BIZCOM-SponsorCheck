@@ -1,13 +1,15 @@
 /* ============================================================
    js/admin/sponsors-page.js
-   Main sponsors list. Reads from window.MOCK_DATA.sponsors.
+   Main sponsors list. Reads/writes live via window.AdminAPI
+   (Supabase). No MOCK_DATA on this page.
    ============================================================ */
 
 (function () {
   'use strict';
 
   function init() {
-    if (!window.MOCK_DATA) {
+    // Wait for the client + data layer + canonical normalise() to be ready.
+    if (!window.sb || !window.AdminAPI || !window.Matcher) {
       requestAnimationFrame(init);
       return;
     }
@@ -19,6 +21,9 @@
     });
     if (!session) return; // redirected away
 
+    const esc = window.AdminShell.escapeHtml;
+    const mapsLink = window.AdminShell.mapsLink;
+
     // ----------------- state -----------------
     const PAGE_SIZE = 50;
     let searchQuery = '';
@@ -26,6 +31,11 @@
     let industryFilter = [];   // empty = all industries; otherwise multi-select of codes
     let currentPage = 1;
     let pendingDeleteId = null;
+    let pendingDeleteName = '';
+
+    let industries = [];             // fetched once at boot
+    let currentRows = [];            // the sponsors on the page currently shown
+    let contractPartnersCache = [];  // Annex B partners currently rendered
 
     // ----------------- elements -----------------
     const tbody = document.getElementById('sponsors-tbody');
@@ -46,13 +56,33 @@
     const pagerRange = document.getElementById('sponsors-range');
 
     // ----------------- helpers -----------------
+    function toastMsg(opts) { if (window.toast) window.toast(opts); }
+    function toastError(title, e) {
+      console.error('[sponsors]', title, e);
+      toastMsg({ type: 'error', title: title, message: (e && e.message) || 'Please try again.' });
+    }
+
     function industryDisplay(code) {
-      const ind = window.MOCK_DATA.industries.find(function (i) { return i.code === code; });
+      const ind = industries.find(function (i) { return i.code === code; });
       return ind ? ind.display_name : code;
     }
 
-    // Status shown as a coloured tag (icon + label) — same data as before, just
-    // presented as a chip so the list reads less flat.
+    // Date only — "8 May 2026".
+    function formatDate(d) {
+      if (!d) return '';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    // Annex B partner whose contract has lapsed (date-only comparison).
+    function partnerIsExpired(s) {
+      if (!s || !s.contract_ends) return false;
+      const end = new Date(s.contract_ends); end.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      return end < today;
+    }
+
+    // Status shown as a coloured tag (icon + label).
     function statusPill(category) {
       const meta = {
         master: { label: 'Approved', icon: 'bi-check-circle-fill' },
@@ -70,85 +100,35 @@
       return sponsor.notes || '';
     }
 
-    // ----------------- render -----------------
-    // Search-only: the list is driven purely by the name search box. Status and
-    // industry filters were removed — at thousands of rows, browsing the whole
-    // list isn't useful, so the admin searches for the company they need.
-    // Query layer — mirrors a server-side paged query. Today it filters, sorts
-    // and slices the in-memory MOCK_DATA. When Supabase is wired this becomes a
-    // single .select(count).ilike().eq().range() call with the same inputs and
-    // the same { rows, total, page } output, so render() doesn't have to change.
-    // The point: the UI only ever holds one page, never the whole table — so it
-    // scales the same at 50 rows or 50,000.
-    function querySponsors(params) {
-      const q = (params.search || '').trim().toLowerCase();
-      const statuses = params.status || [];       // array; empty = all
-      const industries = params.industry || [];   // array; empty = all
-      const pageSize = params.pageSize || PAGE_SIZE;
-
-      const matched = window.MOCK_DATA.sponsors.filter(function (s) {
-        // Lapsed Annex B partners are dormant history — they live only in the
-        // Annex B panel (for removal), not the active sponsor list.
-        if (window.Bans.isExpired(s)) return false;
-        if (q && s.name.toLowerCase().indexOf(q) === -1) return false;
-        if (statuses.length && statuses.indexOf(s.category) === -1) return false;
-        if (industries.length && industries.indexOf(s.industry) === -1) return false;
-        return true;
-      }).sort(function (a, b) {
-        return a.name.localeCompare(b.name);   // alphabetical default
-      });
-
-      const total = matched.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
-      const page = Math.min(Math.max(1, params.page || 1), totalPages);
-      const start = (page - 1) * pageSize;
-      return {
-        rows: matched.slice(start, start + pageSize),
-        total: total, page: page, totalPages: totalPages, start: start
-      };
-    }
-
     function isFiltering() {
       return searchQuery.trim() !== '' || statusFilter.length > 0 || industryFilter.length > 0;
     }
 
+    // ----------------- cap alert -----------------
     // Companies whose cooldown ends in the current calendar month — i.e. those
-    // that free up for outreach again this month. Always
-    // visible at the top of the page (independent of the search box), so the
-    // team can see which sponsors are maxed out before reaching out again.
-    function renderCapAlert() {
+    // that free up for outreach again this month. Always visible at the top,
+    // independent of the search box.
+    async function renderCapAlert() {
       const capList = document.getElementById('cap-list');
       const capEmpty = document.getElementById('cap-empty');
-      const capSub = document.getElementById('cap-alert-sub');
       if (!capList) return;
 
-      const esc = window.AdminShell.escapeHtml;
-      const outreach = window.MOCK_DATA.outreach || {};
-      const now = new Date();
-      const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-      if (capSub) capSub.textContent = 'Free to approach again in ' + MONTHS[now.getMonth()];
-
-      const rows = Object.keys(outreach)
-        .map(function (id) {
-          const sp = window.MOCK_DATA.sponsors.find(function (s) { return s.id === id; });
-          if (!sp) return null;
-          const st = window.Caps.state(id);
-          // Only companies whose cooldown ends in the current calendar month.
-          if (!st.inCooldown || !st.cooldownEndsAt) return null;
-          const ends = st.cooldownEndsAt;
-          if (ends.getFullYear() !== now.getFullYear() || ends.getMonth() !== now.getMonth()) return null;
-          return { id: id, name: sp.name, ends: ends };
-        })
-        .filter(Boolean)
-        .sort(function (a, b) { return a.ends - b.ends; }); // soonest to free up first
+      let rows;
+      try {
+        rows = await window.AdminAPI.cooldownsEndingThisMonth();
+      } catch (e) {
+        toastError('Could not load cooldowns', e);
+        capList.innerHTML = '';
+        if (capEmpty) capEmpty.hidden = false;
+        return;
+      }
 
       if (!rows.length) {
         capList.innerHTML = '';
-        capEmpty.hidden = false;
+        if (capEmpty) capEmpty.hidden = false;
         return;
       }
-      capEmpty.hidden = true;
+      if (capEmpty) capEmpty.hidden = true;
 
       capList.innerHTML = rows.map(function (r) {
         return (
@@ -156,56 +136,67 @@
             '<a class="cap-item__link" href="sponsor.html?id=' + encodeURIComponent(r.id) + '">' +
               '<span class="cap-item__name">' + esc(r.name) + '</span>' +
               '<span class="cap-item__meter"><span class="cap-item__bar cap-item__bar--over" style="width:100%"></span></span>' +
-              '<span class="cap-item__count cap-item__count--over">Ends ' + esc(window.Caps.formatDate(r.ends)) + '</span>' +
+              '<span class="cap-item__count cap-item__count--over">Ends ' + esc(formatDate(r.ends)) + '</span>' +
             '</a>' +
           '</li>'
         );
       }).join('');
     }
 
-    // Annex A reference (static policy from MOCK_DATA.annexA). Only the Board of
-    // Trustees enumerates companies; everything else is a list of category names.
-    function renderAnnexA() {
-      const esc = window.AdminShell.escapeHtml;
-      const a = window.MOCK_DATA.annexA;
+    // ----------------- Annex A / B -----------------
+    // Annex A reference: Board-of-Trustees companies (banned sponsors) + the
+    // prohibited category types (annex_a_categories).
+    async function renderAnnexA() {
       const aEl = document.getElementById('annex-a-body');
-      if (!aEl || !a) return;
+      if (!aEl) return;
+      let ref;
+      try {
+        ref = await window.AdminAPI.annexAReference();
+      } catch (e) {
+        toastError('Could not load Annex A', e);
+        return;
+      }
       aEl.innerHTML =
-        '<div class="annex-group__label">' + esc(a.trustees.label) + ' <span class="annex-group__kind">companies</span></div>' +
+        '<div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>' +
         '<ul class="annex-list">' +
-          a.trustees.companies.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') +
+          ref.trustees.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') +
         '</ul>' +
         '<div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>' +
         '<div class="annex-tags">' +
-          a.categories.map(function (c) { return '<span class="annex-tag">' + esc(c) + '</span>'; }).join('') +
+          ref.categories.map(function (c) { return '<span class="annex-tag">' + esc(c) + '</span>'; }).join('') +
         '</div>';
     }
 
-    // Annex B partner list — BIZCOM partners are banned sponsors carrying a
-    // contract_ends date. Active partners show normally; lapsed ones are muted
-    // with a Remove button so the team can clear them from the database.
-    function renderAnnexBList() {
-      const esc = window.AdminShell.escapeHtml;
+    // Annex B partner list — active partners show normally; lapsed ones are
+    // muted with a Remove button so the team can clear them from the database.
+    async function renderAnnexBList() {
       const listEl = document.getElementById('annex-b-list');
       if (!listEl) return;
 
-      const partners = window.MOCK_DATA.sponsors.filter(function (s) {
-        return window.Bans.isContractPartner(s);
-      }).sort(function (x, y) {
-        const ex = window.Bans.isExpired(x), ey = window.Bans.isExpired(y);
-        if (ex !== ey) return ex ? 1 : -1;                       // active first
+      let partners;
+      try {
+        partners = await window.AdminAPI.listContractPartners();
+      } catch (e) {
+        toastError('Could not load Annex B partners', e);
+        return;
+      }
+
+      partners = partners.slice().sort(function (x, y) {
+        const ex = partnerIsExpired(x), ey = partnerIsExpired(y);
+        if (ex !== ey) return ex ? 1 : -1;                        // active first
         return new Date(x.contract_ends) - new Date(y.contract_ends); // soonest to end first
       });
+      contractPartnersCache = partners;
 
       if (!partners.length) {
-        listEl.innerHTML = '<div class="annex-empty">No partner companies yet. Use “Add” to add one with its contract end date.</div>';
+        listEl.innerHTML = '<div class="annex-empty">No partner companies yet. Use "Add" to add one with its contract end date.</div>';
         return;
       }
 
       listEl.innerHTML = '<ul class="annex-partners">' + partners.map(function (p) {
-        const expired = window.Bans.isExpired(p);
+        const expired = partnerIsExpired(p);
         const ends = new Date(p.contract_ends);
-        const dateText = (expired ? 'Ended ' : 'Ends ') + window.Caps.formatDate(ends);
+        const dateText = (expired ? 'Ended ' : 'Ends ') + formatDate(ends);
         return '<li class="annex-partner' + (expired ? ' is-expired' : '') + '">' +
           '<span class="annex-partner__main">' +
             '<span class="annex-partner__name">' + esc(p.name) + '</span>' +
@@ -231,52 +222,72 @@
     }
 
     // ---- Annex B add / remove ----
-    function normaliseName(name) {
-      return String(name).toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-    function addAnnexBPartner(name, dateStr, industry, notes) {
-      const sponsor = {
-        id: 'b-' + Date.now().toString(36),
+    async function addAnnexBPartner(name, dateStr, industry, notes) {
+      const payload = {
         name: name,
-        normalised: normaliseName(name),
+        normalised: window.Matcher.normalise(name),
         industry: industry || 'other',
         category: 'banned',
         ban_reason: 'Annex B, BIZCOM partner',
         notes: notes || '',
         contract_ends: dateStr
       };
-      window.MOCK_DATA.sponsors.push(sponsor);
+      try {
+        await window.AdminAPI.addSponsor(payload);
+      } catch (e) {
+        if (window.AdminAPI.isUniqueViolation(e)) {
+          toastMsg({ type: 'error', title: 'Already exists', message: name + ' is already in the database.' });
+        } else {
+          toastError('Could not add partner', e);
+        }
+        return;
+      }
       window.AdminShell.logActivity('sponsor.created', name, 'Added to Annex B, contract ends ' + dateStr);
-      window.toast && window.toast({ type: 'success', title: 'Partner added', message: name });
+      toastMsg({ type: 'success', title: 'Partner added', message: name });
       renderAnnexBList();
       render();
     }
 
-    function removeAnnexBPartner(id) {
-      const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === id; });
-      if (idx === -1) return;
-      const name = window.MOCK_DATA.sponsors[idx].name;
+    async function removeAnnexBPartner(id) {
+      const partner = contractPartnersCache.find(function (s) { return s.id === id; });
+      const name = partner ? partner.name : 'this partner';
       if (!confirm('Remove ' + name + ' from the database? This cannot be undone.')) return;
-      window.MOCK_DATA.sponsors.splice(idx, 1);
+      try {
+        await window.AdminAPI.deleteSponsor(id);
+      } catch (e) {
+        toastError('Could not remove partner', e);
+        return;
+      }
       window.AdminShell.logActivity('sponsor.deleted', name, 'Removed from Annex B');
-      window.toast && window.toast({ type: 'success', title: 'Removed', message: name });
+      toastMsg({ type: 'success', title: 'Removed', message: name });
       renderAnnexBList();
       render();
     }
 
-    // The list shows page 1 (alphabetical) on load — not an empty screen — and
-    // narrows as the admin searches or filters. Only ever one page is rendered,
-    // so it stays fast no matter how large the underlying table grows.
-    function render() {
-      const res = querySponsors({
-        page: currentPage,
-        pageSize: PAGE_SIZE,
-        search: searchQuery,
-        status: statusFilter,
-        industry: industryFilter
-      });
+    // ----------------- list render -----------------
+    async function render() {
+      let res;
+      try {
+        res = await window.AdminAPI.querySponsors({
+          page: currentPage,
+          pageSize: PAGE_SIZE,
+          search: searchQuery,
+          status: statusFilter,
+          industry: industryFilter
+        });
+      } catch (e) {
+        toastError('Could not load sponsors', e);
+        tbody.innerHTML = '';
+        empty.style.display = '';
+        emptyTitle.textContent = 'Could not load sponsors';
+        emptySub.textContent = (e && e.message) || 'Check your connection and try again.';
+        pager.hidden = true;
+        countEl.textContent = '0';
+        return;
+      }
+
       currentPage = res.page;
+      currentRows = res.rows;
       countEl.textContent = res.total;
 
       if (res.total === 0) {
@@ -294,9 +305,6 @@
       }
 
       empty.style.display = 'none';
-
-      const esc = window.AdminShell.escapeHtml;
-      const mapsLink = window.AdminShell.mapsLink;
 
       tbody.innerHTML = res.rows.map(function (s) {
         const notes = notesFor(s);
@@ -324,8 +332,6 @@
     }
 
     function pageList(current, total) {
-      // Returns the list of page numbers + ellipsis markers to show.
-      // Shape: 1, ..., current-1, current, current+1, ..., total
       if (total <= 7) {
         const out = [];
         for (let i = 1; i <= total; i++) out.push(i);
@@ -383,7 +389,6 @@
           else if (target === 'next') currentPage++;
           else currentPage = parseInt(target, 10);
           render();
-          // Scroll the table back into view after page change.
           const wrap = document.querySelector('.admin-table-wrap');
           if (wrap) wrap.scrollIntoView({ block: 'start', behavior: 'smooth' });
         });
@@ -391,8 +396,7 @@
     }
 
     // ----------------- wire events -----------------
-    // Debounce typing so we only re-query after the admin pauses (~250ms) —
-    // matches the cadence you'd want against a real backend, not on every keystroke.
+    // Debounce typing so we only re-query after the admin pauses (~250ms).
     let searchDebounce;
     searchInput.addEventListener('input', function (e) {
       searchQuery = e.target.value || '';
@@ -401,9 +405,7 @@
       searchDebounce = setTimeout(render, 250);
     });
 
-    // Industry filter — multi-select dropdown (checkbox panel). 15 industries is
-    // too many for a pill row, so a compact trigger opens a checklist; the button
-    // label summarises the selection ("All industries" / a name / "N industries").
+    // Industry filter — multi-select dropdown (checkbox panel).
     function updateIndustryLabel() {
       if (!industryLabelEl) return;
       const n = industryFilter.length;
@@ -417,11 +419,12 @@
       industryPanelEl.hidden = !open;
       industryTriggerEl.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
-    if (industryPanelEl) {
-      // Build the checklist (+ a Clear action).
-      const optsHtml = window.MOCK_DATA.industries.map(function (ind) {
+    // Build the industry checklist from the fetched industries (+ Clear action).
+    function buildIndustryPanel() {
+      if (!industryPanelEl) return;
+      const optsHtml = industries.map(function (ind) {
         return '<label class="multiselect__option">' +
-          '<input type="checkbox" value="' + ind.code + '"> ' + window.AdminShell.escapeHtml(ind.display_name) +
+          '<input type="checkbox" value="' + ind.code + '"> ' + esc(ind.display_name) +
         '</label>';
       }).join('');
       industryPanelEl.innerHTML = optsHtml +
@@ -453,7 +456,6 @@
         openIndustryPanel(industryPanelEl.hidden);
       });
     }
-    // Close the panel on outside click / Escape.
     document.addEventListener('click', function (e) {
       if (industryWrapEl && !industryWrapEl.contains(e.target)) openIndustryPanel(false);
     });
@@ -461,8 +463,7 @@
       if (e.key === 'Escape') openIndustryPanel(false);
     });
 
-    // Status filter — multi-select pills. "All" clears the selection; clicking a
-    // status toggles it in/out. With nothing selected the list shows every status.
+    // Status filter — multi-select pills.
     function syncStatusPills() {
       if (!statusFilterEl) return;
       statusFilterEl.querySelectorAll('[data-status]').forEach(function (btn) {
@@ -490,26 +491,34 @@
       syncStatusPills();
     }
 
-    // Delete a sponsor straight from the table. Trash icon → confirmation modal →
-    // remove from the database. Available to all admins; the action is logged.
+    // Delete a sponsor straight from the table.
     tbody.addEventListener('click', function (e) {
       const btn = e.target.closest('[data-delete-id]');
       if (!btn) return;
       pendingDeleteId = btn.getAttribute('data-delete-id');
-      const sp = window.MOCK_DATA.sponsors.find(function (s) { return s.id === pendingDeleteId; });
-      if (deleteNameEl) deleteNameEl.textContent = sp ? sp.name : 'this sponsor';
+      const sp = currentRows.find(function (s) { return s.id === pendingDeleteId; });
+      pendingDeleteName = sp ? sp.name : 'this sponsor';
+      if (deleteNameEl) deleteNameEl.textContent = pendingDeleteName;
       window.openModal && window.openModal('delete-sponsor-modal');
     });
     if (deleteConfirmEl) {
-      deleteConfirmEl.addEventListener('click', function () {
+      deleteConfirmEl.addEventListener('click', async function () {
         if (!pendingDeleteId) return;
-        const idx = window.MOCK_DATA.sponsors.findIndex(function (s) { return s.id === pendingDeleteId; });
-        if (idx === -1) { window.closeModal && window.closeModal('delete-sponsor-modal'); return; }
-        const name = window.MOCK_DATA.sponsors[idx].name;
-        window.MOCK_DATA.sponsors.splice(idx, 1);
+        const id = pendingDeleteId;
+        const name = pendingDeleteName;
+        deleteConfirmEl.disabled = true;
+        try {
+          await window.AdminAPI.deleteSponsor(id);
+        } catch (e) {
+          deleteConfirmEl.disabled = false;
+          toastError('Could not delete sponsor', e);
+          return;
+        }
+        deleteConfirmEl.disabled = false;
         window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
-        window.toast && window.toast({ type: 'success', title: 'Deleted', message: name });
+        toastMsg({ type: 'success', title: 'Deleted', message: name });
         pendingDeleteId = null;
+        pendingDeleteName = '';
         window.closeModal && window.closeModal('delete-sponsor-modal');
         renderAnnexBList();   // in case the deleted row was an active Annex B partner
         render();
@@ -524,15 +533,11 @@
     const annexIndustry = document.getElementById('annex-b-industry');
     const annexNotes = document.getElementById('annex-b-notes');
 
-    // Populate the industry dropdown from the canonical list, defaulting to
-    // "Other" — the same source the sponsor form uses, so codes stay in sync.
-    if (annexIndustry) {
-      window.MOCK_DATA.industries.forEach(function (ind) {
-        const opt = document.createElement('option');
-        opt.value = ind.code;
-        opt.textContent = ind.display_name;
-        annexIndustry.appendChild(opt);
-      });
+    function populateAnnexIndustry() {
+      if (!annexIndustry) return;
+      annexIndustry.innerHTML = industries.map(function (ind) {
+        return '<option value="' + ind.code + '">' + esc(ind.display_name) + '</option>';
+      }).join('');
       annexIndustry.value = 'other';
     }
 
@@ -548,12 +553,12 @@
         const name = annexName.value.trim();
         const date = annexDate.value;
         if (!name) {
-          window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter the company name.' });
+          toastMsg({ type: 'error', title: 'Name required', message: 'Enter the company name.' });
           annexName.focus();
           return;
         }
         if (!date) {
-          window.toast && window.toast({ type: 'error', title: 'Contract end date required', message: 'Pick when the contract ends.' });
+          toastMsg({ type: 'error', title: 'Contract end date required', message: 'Pick when the contract ends.' });
           annexDate.focus();
           return;
         }
@@ -563,9 +568,20 @@
     }
 
     // ----------------- boot -----------------
-    renderCapAlert();
-    renderAnnexes();
-    render();
+    (async function boot() {
+      try {
+        industries = await window.AdminAPI.listIndustries();
+      } catch (e) {
+        toastError('Could not load industries', e);
+        industries = [];
+      }
+      buildIndustryPanel();
+      populateAnnexIndustry();
+
+      renderCapAlert();
+      renderAnnexes();
+      render();
+    })();
   }
 
   if (document.readyState === 'loading') {
