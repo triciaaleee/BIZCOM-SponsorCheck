@@ -1,17 +1,25 @@
 /* ============================================================
    js/admin/settings-page.js
    Super-admin-only Settings page. Two sections:
-     1. Team members — list, invite, promote, demote, remove, and
-        transfer the super-admin role.
+     1. Team members — list, invite, rename, remove, and transfer
+        the super-admin role.
      2. Cooldown & event limits — outreach cap, cooldown days, and
         per-event sponsor caps.
+
+   Reads/writes live via window.AdminAPI (Supabase). Team writes and
+   settings updates are super-admin only (enforced by RLS). No MOCK_DATA.
+
+   NOTE on invite: inserting the `admins` row is the whitelist half.
+   The actual Supabase Auth account (so the person can sign in) is
+   created separately in the dashboard / a server-side invite — the
+   publishable key can't create auth users. The toast says as much.
    ============================================================ */
 
 (function () {
   'use strict';
 
   function init() {
-    if (!window.MOCK_DATA) {
+    if (!window.sb || !window.AdminAPI) {
       requestAnimationFrame(init);
       return;
     }
@@ -25,6 +33,10 @@
 
     const esc = window.AdminShell.escapeHtml;
 
+    // ---------- state ----------
+    let admins = [];
+    let settings = {};
+
     // ---------- elements ----------
     const tbody = document.getElementById('team-tbody');
     const countEl = document.getElementById('team-count');
@@ -37,7 +49,6 @@
     const transferTargetEl = document.getElementById('transfer-target-email');
     const transferConfirm = document.getElementById('transfer-confirm');
 
-    // Settings section
     const setCap = document.getElementById('set-cap');
     const setCooldown = document.getElementById('set-cooldown');
     const setEventSmall = document.getElementById('set-event-small');
@@ -46,46 +57,46 @@
     const settingsSave = document.getElementById('settings-save');
 
     // ---------- helpers ----------
+    function toastMsg(o) { if (window.toast) window.toast(o); }
+    function toastError(title, e) {
+      console.error('[settings]', title, e);
+      toastMsg({ type: 'error', title: title, message: (e && e.message) || 'Please try again.' });
+    }
+
     function roleBadge(role) {
-      if (role === 'super_admin') {
-        return '<span class="role-badge role-badge--super">Super-admin</span>';
-      }
+      if (role === 'super_admin') return '<span class="role-badge role-badge--super">Super-admin</span>';
       return '<span class="role-badge role-badge--admin">Admin</span>';
     }
 
     function emailLooksValid(s) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
-
-    function isSelf(admin) {
-      return admin.email === session.email;
+    // The admins table CHECK requires the SMU staff domain.
+    function isSmuEmail(s) {
+      return /@sa\.smu\.edu\.sg$/i.test(s);
     }
 
-    function findAdmin(email) {
-      return window.MOCK_DATA.admins.find(function (a) { return a.email === email; });
-    }
+    function isSelf(admin) { return admin.email === session.email; }
+    function findAdmin(email) { return admins.find(function (a) { return a.email === email; }); }
 
     // ---------- render ----------
     function render() {
-      const admins = window.MOCK_DATA.admins.slice().sort(function (a, b) {
-        // Super-admin pinned first, then alphabetical by email.
+      const sorted = admins.slice().sort(function (a, b) {
         if (a.role !== b.role) return a.role === 'super_admin' ? -1 : 1;
         return a.email.localeCompare(b.email);
       });
 
       countEl.textContent = admins.length;
 
-      tbody.innerHTML = admins.map(function (a) {
+      tbody.innerHTML = sorted.map(function (a) {
         const self = isSelf(a);
         const isSuper = a.role === 'super_admin';
         const youTag = self ? ' <span class="text-xs text-muted">(you)</span>' : '';
 
         let actions = '';
         if (self && isSuper) {
-          // Acting super-admin: no destructive actions on yourself.
           actions = '<span class="text-xs text-muted">Use Transfer on another admin</span>';
         } else if (isSuper) {
-          // Should never happen unless data has multiple super-admins.
           actions = '<span class="text-xs text-muted">-</span>';
         } else {
           actions =
@@ -155,26 +166,32 @@
       wrap.querySelector('[data-name-cancel]').addEventListener('click', function () { render(); });
     }
 
-    function saveName(email, value) {
+    async function saveName(email, value) {
       const admin = findAdmin(email);
       if (!admin) return;
       const name = value.trim();
       if (!name) {
-        window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter a name.' });
+        toastMsg({ type: 'error', title: 'Name required', message: 'Enter a name.' });
         return;
       }
       if (name === admin.name) { render(); return; }
 
+      try {
+        await window.AdminAPI.updateAdminName(email, name);
+      } catch (e) {
+        toastError('Could not update name', e);
+        return;
+      }
+
       admin.name = name;
-      // If editing your own record, keep the live session name in sync so the
-      // top-bar greeting and home page reflect the change immediately.
+      // Keep the live session name in sync if editing your own record.
       if (email === session.email) {
         session.name = name;
         window.AdminShell.setSession(session);
       }
 
       window.AdminShell.logActivity('admin.updated', email, 'Name changed to "' + name + '"');
-      window.toast && window.toast({ type: 'success', title: 'Name updated', message: name });
+      toastMsg({ type: 'success', title: 'Name updated', message: name });
       render();
     }
 
@@ -185,51 +202,52 @@
       inviteRole.value = 'admin';
     }
 
-    function submitInvite() {
+    async function submitInvite() {
       const name = inviteName.value.trim();
       const email = inviteEmail.value.trim().toLowerCase();
       const role = inviteRole.value;
 
       if (!name) {
-        window.toast && window.toast({ type: 'error', title: 'Name required', message: 'Enter the admin’s name.' });
+        toastMsg({ type: 'error', title: 'Name required', message: 'Enter the admin’s name.' });
         return;
       }
-      if (!emailLooksValid(email)) {
-        window.toast && window.toast({ type: 'error', title: 'Invalid email', message: 'Enter a valid email address.' });
+      if (!emailLooksValid(email) || !isSmuEmail(email)) {
+        toastMsg({ type: 'error', title: 'Invalid email', message: 'Admin emails must end with @sa.smu.edu.sg.' });
         return;
       }
       if (findAdmin(email)) {
-        window.toast && window.toast({ type: 'error', title: 'Already an admin', message: email + ' is already on the team.' });
+        toastMsg({ type: 'error', title: 'Already an admin', message: email + ' is already on the team.' });
         return;
       }
-
-      // If inviting a super-admin, demote the current one (transfer semantics).
-      // Be loud about it: require confirmation via the transfer flow instead.
+      // One super-admin at a time — invite as admin, then Transfer.
       if (role === 'super_admin') {
-        window.toast && window.toast({
-          type: 'warning',
-          title: 'Use transfer instead',
-          message: 'Invite as Admin first, then use Transfer super-admin.'
-        });
+        toastMsg({ type: 'warning', title: 'Use transfer instead', message: 'Invite as Admin first, then use Transfer super-admin.' });
         inviteRole.value = 'admin';
         return;
       }
 
-      const newAdmin = {
-        email: email,
-        name: name,
-        role: role
-      };
-      window.MOCK_DATA.admins.push(newAdmin);
-
-      window.AdminShell.logActivity('admin.added', email, name + ' invited as ' + role);
-
-      // Fire the invite email (mock now, Supabase later).
-      if (window.AdminShell.sendInviteEmail) {
-        window.AdminShell.sendInviteEmail(newAdmin);
-      } else {
-        window.toast && window.toast({ type: 'success', title: 'Admin added', message: email });
+      inviteSubmit.disabled = true;
+      let created;
+      try {
+        created = await window.AdminAPI.inviteAdmin({ email: email, name: name, role: role });
+      } catch (e) {
+        inviteSubmit.disabled = false;
+        if (window.AdminAPI.isUniqueViolation(e)) {
+          toastMsg({ type: 'error', title: 'Already an admin', message: email + ' is already on the team.' });
+        } else {
+          toastError('Could not add admin', e);
+        }
+        return;
       }
+      inviteSubmit.disabled = false;
+
+      admins.push(created || { email: email, name: name, role: role });
+      window.AdminShell.logActivity('admin.added', email, name + ' invited as ' + role);
+      toastMsg({
+        type: 'success',
+        title: 'Admin added',
+        message: name + ' is on the team. Create their login in Supabase Auth so they can sign in.'
+      });
 
       resetInviteForm();
       window.closeModal && window.closeModal('invite-modal');
@@ -237,24 +255,31 @@
     }
 
     // ---------- remove ----------
-    function removeAdmin(email) {
+    async function removeAdmin(email) {
       const admin = findAdmin(email);
       if (!admin) return;
       if (admin.role === 'super_admin') {
-        window.toast && window.toast({ type: 'error', title: 'Cannot remove super-admin', message: 'Transfer the role first.' });
+        toastMsg({ type: 'error', title: 'Cannot remove super-admin', message: 'Transfer the role first.' });
         return;
       }
       if (isSelf(admin)) {
-        window.toast && window.toast({ type: 'error', title: 'Cannot remove yourself', message: 'Ask another super-admin to remove you.' });
+        toastMsg({ type: 'error', title: 'Cannot remove yourself', message: 'Ask another super-admin to remove you.' });
         return;
       }
       if (!confirm('Remove ' + email + ' from the team? This cannot be undone.')) return;
 
-      const idx = window.MOCK_DATA.admins.indexOf(admin);
-      if (idx >= 0) window.MOCK_DATA.admins.splice(idx, 1);
+      try {
+        await window.AdminAPI.removeAdmin(email);
+      } catch (e) {
+        toastError('Could not remove admin', e);
+        return;
+      }
+
+      const idx = admins.indexOf(admin);
+      if (idx >= 0) admins.splice(idx, 1);
 
       window.AdminShell.logActivity('admin.removed', email, 'Removed by ' + session.email);
-      window.toast && window.toast({ type: 'success', title: 'Admin removed', message: email });
+      toastMsg({ type: 'success', title: 'Admin removed', message: email });
       render();
     }
 
@@ -265,7 +290,7 @@
       const target = findAdmin(email);
       if (!target) return;
       if (target.role === 'super_admin') {
-        window.toast && window.toast({ type: 'info', title: 'Already super-admin', message: email });
+        toastMsg({ type: 'info', title: 'Already super-admin', message: email });
         return;
       }
       transferTarget = email;
@@ -273,45 +298,49 @@
       window.openModal && window.openModal('transfer-modal');
     }
 
-    function doTransfer() {
+    async function doTransfer() {
       if (!transferTarget) return;
       const target = findAdmin(transferTarget);
       const me = findAdmin(session.email);
       if (!target || !me) return;
+
+      transferConfirm.disabled = true;
+      try {
+        await window.AdminAPI.transferSuperAdmin(transferTarget);
+      } catch (e) {
+        transferConfirm.disabled = false;
+        toastError('Could not transfer role', e);
+        return;
+      }
 
       target.role = 'super_admin';
       me.role = 'admin';
 
       window.AdminShell.logActivity('admin.role_changed', target.email, 'Promoted to super-admin');
       window.AdminShell.logActivity('admin.role_changed', me.email, 'Demoted to admin (transferred role)');
-      window.toast && window.toast({ type: 'success', title: 'Role transferred', message: target.email + ' is now super-admin.' });
+      toastMsg({ type: 'success', title: 'Role transferred', message: target.email + ' is now super-admin.' });
 
-      // Update local session role so the rest of the SPA reflects the change.
+      // This page is super-admin only; update the session and bounce.
       session.role = 'admin';
       window.AdminShell.setSession(session);
 
       transferTarget = null;
       window.closeModal && window.closeModal('transfer-modal');
-
-      // After transfer, this page is no longer accessible. Bounce.
       window.location.href = 'sponsors.html';
     }
 
     // ---------- settings ----------
-    function num(v, fallback) {
-      return (v != null) ? v : fallback;
-    }
+    function num(v, fallback) { return (v != null) ? v : fallback; }
 
     function loadSettings() {
-      const s = window.MOCK_DATA.settings || {};
-      setCap.value = num(s.outreach_cap, 10);
-      setCooldown.value = num(s.cooldown_days, 30);
-      setEventSmall.value = num(s.event_cap_small, 300);
-      setEventMedium.value = num(s.event_cap_medium, 600);
-      setEventLarge.value = num(s.event_cap_large, 1000);
+      setCap.value = num(settings.outreach_cap, 10);
+      setCooldown.value = num(settings.cooldown_days, 30);
+      setEventSmall.value = num(settings.event_cap_small, 300);
+      setEventMedium.value = num(settings.event_cap_medium, 600);
+      setEventLarge.value = num(settings.event_cap_large, 1000);
     }
 
-    function saveSettings() {
+    async function saveSettings() {
       const fields = [
         { el: setCap,         label: 'Outreach cap' },
         { el: setCooldown,    label: 'Cooldown period' },
@@ -323,42 +352,45 @@
       for (let i = 0; i < fields.length; i++) {
         const n = parseInt(fields[i].el.value, 10);
         if (!Number.isInteger(n) || n < 1) {
-          window.toast && window.toast({
-            type: 'error',
-            title: 'Invalid value',
-            message: fields[i].label + ' must be a whole number of at least 1.'
-          });
+          toastMsg({ type: 'error', title: 'Invalid value', message: fields[i].label + ' must be a whole number of at least 1.' });
           fields[i].el.focus();
           return;
         }
         vals[i] = n;
       }
 
-      const s = window.MOCK_DATA.settings;
-      s.outreach_cap = vals[0];
-      s.cooldown_days = vals[1];
-      s.event_cap_small = vals[2];
-      s.event_cap_medium = vals[3];
-      s.event_cap_large = vals[4];
+      const patch = {
+        outreach_cap: vals[0],
+        cooldown_days: vals[1],
+        event_cap_small: vals[2],
+        event_cap_medium: vals[3],
+        event_cap_large: vals[4]
+      };
 
-      // Persist so the change survives navigation and reaches the other pages
-      // (admin home + public sponsor-check, same origin). mock-data.js hydrates
-      // MOCK_DATA.settings from this key on load. Swap for a Supabase update
-      // when the backend lands.
+      settingsSave.disabled = true;
+      let updated;
+      try {
+        updated = await window.AdminAPI.updateSettings(patch);
+      } catch (e) {
+        settingsSave.disabled = false;
+        toastError('Could not save settings', e);
+        return;
+      }
+      settingsSave.disabled = false;
+
+      settings = updated || Object.assign(settings, patch);
+
+      // Bridge: also mirror to localStorage so the not-yet-wired public checker
+      // (which reads settings via mock-data.js) reflects the change. Drop this
+      // once the public pages read settings from Supabase directly.
       try {
         const key = window.SETTINGS_STORAGE_KEY || 'sponsorcheck_settings';
-        localStorage.setItem(key, JSON.stringify({
-          outreach_cap: s.outreach_cap,
-          cooldown_days: s.cooldown_days,
-          event_cap_small: s.event_cap_small,
-          event_cap_medium: s.event_cap_medium,
-          event_cap_large: s.event_cap_large
-        }));
-      } catch (e) { /* storage unavailable — in-memory change still applies this session */ }
+        localStorage.setItem(key, JSON.stringify(patch));
+      } catch (e) { /* storage unavailable — DB is still the source of truth */ }
 
       window.AdminShell.logActivity('settings.updated', 'settings',
-        'Outreach cap ' + s.outreach_cap + ', cooldown ' + s.cooldown_days + 'd');
-      window.toast && window.toast({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
+        'Outreach cap ' + patch.outreach_cap + ', cooldown ' + patch.cooldown_days + 'd');
+      toastMsg({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
     }
 
     // ---------- wire ----------
@@ -367,8 +399,19 @@
     settingsSave.addEventListener('click', saveSettings);
 
     // ---------- boot ----------
-    render();
-    loadSettings();
+    (async function boot() {
+      try {
+        const out = await Promise.all([window.AdminAPI.listAdmins(), window.AdminAPI.getSettings()]);
+        admins = out[0] || [];
+        settings = out[1] || {};
+      } catch (e) {
+        toastError('Could not load settings', e);
+        admins = [];
+        settings = {};
+      }
+      render();
+      loadSettings();
+    })();
   }
 
   if (document.readyState === 'loading') {

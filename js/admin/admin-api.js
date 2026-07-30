@@ -252,6 +252,66 @@
           .not('contract_ends', 'is', null)
           .order('contract_ends', { ascending: true })
       ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    // ---------- submissions (admin Home calendar) ----------
+    // Admin-only under RLS (the public checker emails BIZCOM; it doesn't insert).
+    listSubmissions: function () {
+      return Promise.resolve(
+        sb().from('submissions').select('*').order('submitted_at', { ascending: false })
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    createSubmission: function (payload) {
+      return Promise.resolve(
+        sb().from('submissions').insert(payload).select().maybeSingle()
+      ).then(unwrap);
+    },
+
+    updateSubmission: function (id, patch) {
+      return Promise.resolve(
+        sb().from('submissions').update(patch).eq('id', id).select().maybeSingle()
+      ).then(unwrap);
+    },
+
+    // ---------- admins (team) — read: any admin; write: super-admin (RLS) ----------
+    listAdmins: function () {
+      return Promise.resolve(
+        sb().from('admins').select('email, name, role').order('email')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    inviteAdmin: function (payload) {
+      return Promise.resolve(
+        sb().from('admins').insert(payload).select().maybeSingle()
+      ).then(unwrap);
+    },
+
+    updateAdminName: function (email, name) {
+      return Promise.resolve(
+        sb().from('admins').update({ name: name }).eq('email', email).select().maybeSingle()
+      ).then(unwrap);
+    },
+
+    removeAdmin: function (email) {
+      return Promise.resolve(
+        sb().from('admins').delete().eq('email', email)
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
+    // Atomically moves the single super-admin seat (server-side RPC — demotes the
+    // current holder first, so the one-super-admin index is never violated).
+    transferSuperAdmin: function (targetEmail) {
+      return Promise.resolve(
+        sb().rpc('transfer_super_admin', { p_target_email: targetEmail })
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
+    // ---------- settings — read: public; update: super-admin (RLS) ----------
+    updateSettings: function (patch) {
+      return Promise.resolve(
+        sb().from('settings').update(patch).eq('id', true).select().maybeSingle()
+      ).then(unwrap);
     }
   };
 

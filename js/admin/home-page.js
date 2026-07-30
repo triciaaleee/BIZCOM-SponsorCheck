@@ -1,15 +1,14 @@
 /* ============================================================
    js/admin/home-page.js
    Admin landing page:
-     1. Welcome card + KPI tiles (queue at a glance).
+     1. Welcome card + pending list (queue at a glance).
      2. Submissions calendar — 12 months (3x4) for a year, grouped
         by the date each submission was submitted. Past months are
         greyed out but stay fully editable. Click + on a month to
         add a submission to it; click a submission to edit it.
 
-   Create/edit uses the same side-panel that the old submissions
-   page used. When Supabase lands, swap the MOCK_DATA reads/writes
-   for table queries; the panel contract stays the same.
+   Reads/writes live via window.AdminAPI (the `submissions` table).
+   Submissions are admin-only under RLS. No MOCK_DATA on this page.
    ============================================================ */
 
 (function () {
@@ -20,7 +19,7 @@
                        'July','August','September','October','November','December'];
 
   function init() {
-    if (!window.MOCK_DATA) {
+    if (!window.sb || !window.AdminAPI) {
       requestAnimationFrame(init);
       return;
     }
@@ -34,6 +33,8 @@
     const esc = window.AdminShell.escapeHtml;
 
     // ---------- state ----------
+    let submissions = [];         // loaded from Supabase at boot
+    let settings = {};            // for the event-size cap labels
     let currentYear = new Date().getFullYear();
     let mode = 'edit';            // 'edit' or 'create'
     let openSubmissionId = null;
@@ -72,6 +73,12 @@
     const panelStatusBtns = document.querySelectorAll('[data-panel-status]');
 
     // ---------- helpers ----------
+    function toastMsg(o) { if (window.toast) window.toast(o); }
+    function toastError(title, e) {
+      console.error('[home]', title, e);
+      toastMsg({ type: 'error', title: title, message: (e && e.message) || 'Please try again.' });
+    }
+
     // Date only (no time) — e.g. "8 May 2026".
     function formatDate(iso) {
       const d = new Date(iso);
@@ -79,9 +86,7 @@
       return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear();
     }
 
-    // ISO stamp used when creating a submission into a given month. If the
-    // month is the current one, use "now"; otherwise pin to mid-month noon so
-    // the submission buckets into that month regardless of timezone.
+    // ISO stamp used when creating a submission into a given month.
     function monthIso(year, month) {
       const now = new Date();
       if (year === now.getFullYear() && month === now.getMonth()) {
@@ -91,7 +96,7 @@
     }
 
     function submissionsInMonth(year, month) {
-      return window.MOCK_DATA.submissions
+      return submissions
         .filter(function (s) {
           const d = new Date(s.submitted_at);
           return d.getFullYear() === year && d.getMonth() === month;
@@ -112,7 +117,6 @@
       return Math.round((target.getTime() - startOfToday().getTime()) / 86400000);
     }
 
-    // Due-date chip: red if overdue, amber if due within 3 days, plain otherwise.
     function dueChipHtml(sub) {
       if (!sub.complete_by) return '<span class="due-chip">No due date</span>';
       const n = daysUntil(sub.complete_by);
@@ -125,8 +129,7 @@
     function renderBanner() {
       welcomeName.textContent = session.name || session.email.split('@')[0];
 
-      // Not-completed submissions, soonest due date first; undated fall last.
-      const pending = window.MOCK_DATA.submissions
+      const pending = submissions
         .filter(function (s) { return s.status !== 'completed'; })
         .sort(function (a, b) {
           if (!a.complete_by && !b.complete_by) return 0;
@@ -158,7 +161,6 @@
       }).join('');
     }
 
-    // Clicking a pending row opens that submission for editing.
     pendingList.addEventListener('click', function (e) {
       const row = e.target.closest('.pending-item');
       if (row) openPanel(row.getAttribute('data-sub-id'));
@@ -223,7 +225,6 @@
       grid.innerHTML = html;
     }
 
-    // Single delegated handler (grid is re-rendered but the node is stable).
     grid.addEventListener('click', function (e) {
       const addBtn = e.target.closest('[data-add]');
       if (addBtn) {
@@ -251,7 +252,7 @@
     }
 
     function openPanel(submissionId) {
-      const sub = window.MOCK_DATA.submissions.find(function (s) { return s.id === submissionId; });
+      const sub = submissions.find(function (s) { return s.id === submissionId; });
       if (!sub) return;
 
       mode = 'edit';
@@ -312,6 +313,7 @@
       pendingStatus = null;
       pendingSubmittedAt = null;
       mode = 'edit';
+      saveBtn.disabled = false;
     }
 
     function readPanelForm() {
@@ -335,13 +337,13 @@
       return null;
     }
 
-    function saveEdit() {
-      const sub = window.MOCK_DATA.submissions.find(function (s) { return s.id === openSubmissionId; });
+    async function saveEdit() {
+      const sub = submissions.find(function (s) { return s.id === openSubmissionId; });
       if (!sub) return;
       const form = readPanelForm();
       const err = validateForm(form);
       if (err) {
-        window.toast && window.toast({ type: 'error', title: 'Missing field', message: err });
+        toastMsg({ type: 'error', title: 'Missing field', message: err });
         return;
       }
 
@@ -353,13 +355,25 @@
       });
 
       if (!anyChanged) {
-        window.toast && window.toast({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
+        toastMsg({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
         return;
       }
 
-      Object.assign(sub, form);
-      sub.reviewed_by = session.email;
-      sub.reviewed_at = new Date().toISOString();
+      const patch = Object.assign({}, form, {
+        reviewed_by: session.email,
+        reviewed_at: new Date().toISOString()
+      });
+
+      saveBtn.disabled = true;
+      let updated;
+      try {
+        updated = await window.AdminAPI.updateSubmission(openSubmissionId, patch);
+      } catch (e) {
+        saveBtn.disabled = false;
+        toastError('Could not save submission', e);
+        return;
+      }
+      Object.assign(sub, updated || patch);
 
       if (statusChanged) {
         window.AdminShell.logActivity('submission.status_changed', sub.event_name,
@@ -368,23 +382,21 @@
         window.AdminShell.logActivity('submission.updated', sub.event_name, 'Submission details updated');
       }
 
-      window.toast && window.toast({ type: 'success', title: 'Saved', message: sub.event_name });
+      toastMsg({ type: 'success', title: 'Saved', message: sub.event_name });
       renderBanner();
       renderCalendar();
       closePanel();
     }
 
-    function saveCreate() {
+    async function saveCreate() {
       const form = readPanelForm();
       const err = validateForm(form);
       if (err) {
-        window.toast && window.toast({ type: 'error', title: 'Missing field', message: err });
+        toastMsg({ type: 'error', title: 'Missing field', message: err });
         return;
       }
 
-      const newId = 'sub-' + Date.now().toString(36);
-      const newSub = {
-        id: newId,
+      const payload = {
         event_name: form.event_name,
         club: form.club,
         contact_email: form.contact_email,
@@ -393,16 +405,23 @@
         submitted_at: pendingSubmittedAt || new Date().toISOString(),
         complete_by: form.complete_by,
         status: form.status,
-        reviewed_by: null,
-        reviewed_at: null,
-        notes: form.notes,
-        sponsor_list: []
+        notes: form.notes
       };
-      window.MOCK_DATA.submissions.unshift(newSub);
 
-      window.AdminShell.logActivity('submission.received', newSub.event_name,
-        'Added by admin, club "' + newSub.club + '"');
-      window.toast && window.toast({ type: 'success', title: 'Submission created', message: newSub.event_name });
+      saveBtn.disabled = true;
+      let created;
+      try {
+        created = await window.AdminAPI.createSubmission(payload);
+      } catch (e) {
+        saveBtn.disabled = false;
+        toastError('Could not create submission', e);
+        return;
+      }
+      if (created) submissions.unshift(created);
+
+      window.AdminShell.logActivity('submission.received', created ? created.event_name : form.event_name,
+        'Added by admin, club "' + form.club + '"');
+      toastMsg({ type: 'success', title: 'Submission created', message: form.event_name });
 
       renderBanner();
       renderCalendar();
@@ -429,12 +448,9 @@
       else saveEdit();
     });
 
-    // Label the event-size dropdown with the caps configured on the Settings
-    // page, so an admin picking a size sees the current per-size sponsor cap
-    // rather than a static label. Reads live from MOCK_DATA.settings (hydrated
-    // from localStorage on load).
+    // Label the event-size dropdown with the caps configured on Settings.
     function labelSizeOptions() {
-      const s = window.MOCK_DATA.settings || {};
+      const s = settings || {};
       const names  = { small: 'Small',  medium: 'Medium',  large: 'Large' };
       const ranges = { small: '<50',    medium: '50-150',  large: '>150' };
       const caps   = {
@@ -451,9 +467,21 @@
     }
 
     // ---------- boot ----------
-    labelSizeOptions();
-    renderBanner();
-    renderCalendar();
+    welcomeName.textContent = session.name || session.email.split('@')[0];
+    (async function boot() {
+      try {
+        const out = await Promise.all([window.AdminAPI.listSubmissions(), window.AdminAPI.getSettings()]);
+        submissions = out[0] || [];
+        settings = out[1] || {};
+      } catch (e) {
+        toastError('Could not load submissions', e);
+        submissions = [];
+        settings = {};
+      }
+      labelSizeOptions();
+      renderBanner();
+      renderCalendar();
+    })();
   }
 
   if (document.readyState === 'loading') {
