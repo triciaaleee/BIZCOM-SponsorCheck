@@ -136,7 +136,7 @@
           status = 'alumni';
           reason = 'Alumni-affiliated, requires OAR clearance';
           break;
-        case 'master':
+        case 'approved':
           if (capSt.inCooldown) {
             status = 'cooldown';
             reason = 'Outreach cap reached (' + capSt.cap + ' of ' + capSt.cap +

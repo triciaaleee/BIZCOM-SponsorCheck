@@ -34,7 +34,7 @@ installs from `0001` already have the final shape and can skip it.
 | Table | Purpose |
 | ----- | ------- |
 | `industries` | 15 canonical industry codes |
-| `sponsors` | every company — name, normalised key, industry, category (`master`/`banned`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
+| `sponsors` | every company — name, normalised key, industry, category (`approved`/`banned`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
 | `outreach_log` | append-only contact events; the running count is derived from this |
 | `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |

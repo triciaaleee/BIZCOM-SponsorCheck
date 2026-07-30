@@ -25,8 +25,8 @@ There are **two surfaces**:
 
 | Surface | Who uses it | What they do |
 | ------- | ----------- | ------------ |
-| **Public site** | Any SMU student / club | Browse the sponsor directory, upload a CSV of prospective sponsors, and get each one auto-checked against the master list. Then email the annotated list to BIZCOM. |
-| **Admin console** | BIZCOM EXCO (the committee) | Maintain the master sponsor list, vet incoming lists, log outreach, track club submissions, and manage settings + team. |
+| **Public site** | Any SMU student / club | Browse the sponsor directory, upload a CSV of prospective sponsors, and get each one auto-checked against the approved list. Then email the annotated list to BIZCOM. |
+| **Admin console** | BIZCOM EXCO (the committee) | Maintain the approved sponsor list, vet incoming lists, log outreach, track club submissions, and manage settings + team. |
 
 The database is the single source of truth behind both.
 
@@ -41,7 +41,7 @@ Every company in the system has exactly one **category** (its vetting status):
 
 | Category | Meaning |
 | -------- | ------- |
-| `master` | **Approved.** On the master list, previously cleared by BIZCOM. |
+| `approved` | **Approved.** On the approved list, previously cleared by BIZCOM. |
 | `banned` | **Prohibited/restricted.** Must not be approached (see the ban model below). |
 | `closed` | Company has ceased operations / brand discontinued. |
 | `alumni` | Alumni-affiliated — needs OAR (alumni office) clearance before outreach. |
@@ -120,9 +120,9 @@ are also the allowed values of `submission_sponsors.status`:
 
 | Status | Means |
 | ------ | ----- |
-| `clear` | On the master list, comfortably below the outreach cap. Good to go. |
-| `caution` | On the master list but **approaching** the cap (within 2, e.g. 8–9 of 10). |
-| `cooldown` | On the master list but the cap is reached — in its cooldown window. |
+| `clear` | On the approved list, comfortably below the outreach cap. Good to go. |
+| `caution` | On the approved list but **approaching** the cap (within 2, e.g. 8–9 of 10). |
+| `cooldown` | On the approved list but the cap is reached — in its cooldown window. |
 | `alumni` | Alumni-affiliated — needs OAR clearance. |
 | `blocked` | Banned (Annex A/B) **or** closed. Do not approach. |
 | `unverified` | Not on any list — a new company BIZCOM hasn't vetted yet. |
@@ -156,8 +156,8 @@ erDiagram
         text name
         text normalised UK
         text industry FK
-        text category "master|banned|closed|alumni"
-        text notes "master/closed/alumni"
+        text category "approved|banned|closed|alumni"
+        text notes "approved/closed/alumni"
         text ban_reason "when banned"
         date contract_ends "Annex B only"
         timestamptz cooldown_started_at
@@ -265,7 +265,7 @@ Reference/lookup table. Read by everyone; written by admins.
 | `display_name` | text | Human label, e.g. "Food & Beverage". |
 | `sort_order` | int | Display order. |
 
-### `sponsors` — every company (the master list)
+### `sponsors` — every company (the approved list)
 The heart of the system. Holds approved, banned, closed, and alumni companies.
 
 | Column | Type | Notes |
@@ -274,8 +274,8 @@ The heart of the system. Holds approved, banned, closed, and alumni companies.
 | `name` | text | Display name. |
 | `normalised` | text | **Unique.** Lookup key for matching (lower-cased, suffix-stripped). Supplied by the app. |
 | `industry` | text | **FK → industries.code.** |
-| `category` | text | `master` \| `banned` \| `closed` \| `alumni`. |
-| `notes` | text | General notes (used by `master`, `closed`, and `alumni`). Default `''`. |
+| `category` | text | `approved` \| `banned` \| `closed` \| `alumni`. |
+| `notes` | text | General notes (used by `approved`, `closed`, and `alumni`). Default `''`. |
 | `ban_reason` | text | **Required when `banned`.** Annex reference. |
 | `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = permanent ban. |
 | `cooldown_started_at` | timestamptz | Stamped when the outreach cap is hit. |
@@ -454,7 +454,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 
 - **BIZCOM** — the SMU student body managing corporate sponsorships (runs this tool).
 - **EXCO** — the executive committee; the admins.
-- **Master list** — the approved sponsors (`category = 'master'`).
+- **Approved list** — the approved sponsors (`category = 'approved'`).
 - **Annex A / Annex B** — sections of the SMUSA Sponsorship Standing Order listing prohibited (A, permanent) and restricted (B, includes time-boxed BIZCOM partners) sponsors. Both stored as `banned` sponsors.
 - **OAR / OA** — the alumni office; must sign off before approaching alumni-owned companies.
 - **Outreach** — a logged contact with a company for sponsorship.

@@ -26,22 +26,22 @@ window.MOCK_DATA = {
 
   // Sample sponsors covering each status category
   sponsors: [
-    // master (approved)
-    { id: 's1',  name: 'KOI',               normalised: 'koi',              industry: 'food_beverage',         category: 'master',    notes: '' },
-    { id: 's2',  name: 'LiHO',              normalised: 'liho',             industry: 'food_beverage',         category: 'master',    notes: '' },
-    { id: 's3',  name: 'Starbucks',         normalised: 'starbucks',        industry: 'food_beverage',         category: 'master',    notes: '' },
-    { id: 's4',  name: 'Subway',            normalised: 'subway',           industry: 'food_beverage',         category: 'master',    notes: '' },
-    { id: 's5',  name: 'Uniqlo',            normalised: 'uniqlo',           industry: 'apparel_accessories',   category: 'master',    notes: '' },
-    { id: 's6',  name: 'Charles & Keith',   normalised: 'charles and keith',industry: 'apparel_accessories',   category: 'master',    notes: '' },
-    { id: 's7',  name: 'Watsons',           normalised: 'watsons',          industry: 'beauty_personal_care',  category: 'master',    notes: '' },
-    { id: 's8',  name: 'Sephora',           normalised: 'sephora',          industry: 'beauty_personal_care',  category: 'master',    notes: '' },
-    { id: 's9',  name: 'Razer',             normalised: 'razer',            industry: 'tech_electronics',      category: 'master',    notes: '' },
-    { id: 's10', name: 'Logitech',          normalised: 'logitech',         industry: 'tech_electronics',      category: 'master',    notes: '' },
-    { id: 's11', name: 'Grab',              normalised: 'grab',             industry: 'transport_mobility',    category: 'master',    notes: '' },
-    { id: 's12', name: 'MUJI',              normalised: 'muji',             industry: 'home_lifestyle',        category: 'master',    notes: '' },
-    { id: 's13', name: 'Climb Central',     normalised: 'climb central',    industry: 'activities_experiences',category: 'master',    notes: '' },
-    { id: 's14', name: 'BoulderPlus',       normalised: 'boulderplus',      industry: 'activities_experiences',category: 'master',    notes: '' },
-    { id: 's15', name: 'Cathay Cineplexes', normalised: 'cathay cineplexes',industry: 'entertainment_leisure', category: 'master',    notes: '' },
+    // approved
+    { id: 's1',  name: 'KOI',               normalised: 'koi',              industry: 'food_beverage',         category: 'approved',  notes: '' },
+    { id: 's2',  name: 'LiHO',              normalised: 'liho',             industry: 'food_beverage',         category: 'approved',    notes: '' },
+    { id: 's3',  name: 'Starbucks',         normalised: 'starbucks',        industry: 'food_beverage',         category: 'approved',    notes: '' },
+    { id: 's4',  name: 'Subway',            normalised: 'subway',           industry: 'food_beverage',         category: 'approved',    notes: '' },
+    { id: 's5',  name: 'Uniqlo',            normalised: 'uniqlo',           industry: 'apparel_accessories',   category: 'approved',    notes: '' },
+    { id: 's6',  name: 'Charles & Keith',   normalised: 'charles and keith',industry: 'apparel_accessories',   category: 'approved',    notes: '' },
+    { id: 's7',  name: 'Watsons',           normalised: 'watsons',          industry: 'beauty_personal_care',  category: 'approved',    notes: '' },
+    { id: 's8',  name: 'Sephora',           normalised: 'sephora',          industry: 'beauty_personal_care',  category: 'approved',    notes: '' },
+    { id: 's9',  name: 'Razer',             normalised: 'razer',            industry: 'tech_electronics',      category: 'approved',    notes: '' },
+    { id: 's10', name: 'Logitech',          normalised: 'logitech',         industry: 'tech_electronics',      category: 'approved',    notes: '' },
+    { id: 's11', name: 'Grab',              normalised: 'grab',             industry: 'transport_mobility',    category: 'approved',    notes: '' },
+    { id: 's12', name: 'MUJI',              normalised: 'muji',             industry: 'home_lifestyle',        category: 'approved',    notes: '' },
+    { id: 's13', name: 'Climb Central',     normalised: 'climb central',    industry: 'activities_experiences',category: 'approved',    notes: '' },
+    { id: 's14', name: 'BoulderPlus',       normalised: 'boulderplus',      industry: 'activities_experiences',category: 'approved',    notes: '' },
+    { id: 's15', name: 'Cathay Cineplexes', normalised: 'cathay cineplexes',industry: 'entertainment_leisure', category: 'approved',    notes: '' },
 
     // banned per Annex A / B
     { id: 's20', name: 'Singapore Pools',    normalised: 'singapore pools',  industry: 'entertainment_leisure', category: 'banned',    ban_reason: 'Annex A, Gaming & Betting' },
@@ -125,7 +125,7 @@ window.MOCK_DATA = {
   // Public dashboard placeholders
   dashboardStats: {
     total: 12403,
-    master: 8821,
+    approved: 8821,
     banned: 218,
     alumni: 47,
     submissionsThisMonth: 142,

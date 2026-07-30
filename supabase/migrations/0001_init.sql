@@ -54,8 +54,8 @@ create table if not exists public.sponsors (
   name         text not null,
   normalised   text not null unique,
   industry     text not null references public.industries(code),
-  category     text not null check (category in ('master','banned','closed','alumni')),
-  notes        text not null default '',        -- used by master, closed, and alumni notes
+  category     text not null check (category in ('approved','banned','closed','alumni')),
+  notes        text not null default '',        -- used by approved, closed, and alumni notes
   ban_reason   text,                             -- required when category='banned'
   -- Annex B (time-boxed BIZCOM partner). NULL = permanent ban. A partner whose
   -- contract has lapsed drops out of the active banned set automatically.

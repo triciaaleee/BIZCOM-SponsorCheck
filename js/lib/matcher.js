@@ -176,7 +176,7 @@
           status = 'alumni';
           reason = 'Alumni-affiliated, requires OAR clearance';
           break;
-        case 'master':
+        case 'approved':
           if (capState.inCooldown) {
             status = 'cooldown';
             reason = 'Outreach cap reached (' + capState.cap + ' of ' + capState.cap +
@@ -203,7 +203,7 @@
       status: status,
       matched: matched ? matched.name : (fuzzy ? fuzzy.name + ' (similar)' : null),
       // Underlying DB record of the match, if any. Lets callers bucket by the
-      // real category (master/banned/closed/alumni) instead of inferring it
+      // real category (approved/banned/closed/alumni) instead of inferring it
       // from `status` (which collapses banned + closed into 'blocked').
       // null when nothing matched. Extra fields; safe for existing callers.
       matchedId: effectiveMatch ? effectiveMatch.id : null,

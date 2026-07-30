@@ -85,7 +85,7 @@
     // Status shown as a coloured tag (icon + label).
     function statusPill(category) {
       const meta = {
-        master: { label: 'Approved', icon: 'bi-check-circle-fill' },
+        approved: { label: 'Approved', icon: 'bi-check-circle-fill' },
         banned: { label: 'Banned',   icon: 'bi-slash-circle-fill' },
         closed: { label: 'Closed',   icon: 'bi-dash-circle-fill' },
         alumni: { label: 'Alumni',   icon: 'bi-mortarboard-fill' }

@@ -24,16 +24,16 @@
 
   // Sponsor categories, mirroring sponsor-page.js / the DB check constraint.
   const STATUS_OPTIONS = [
-    { value: 'master', label: 'Approved' },
+    { value: 'approved', label: 'Approved' },
     { value: 'banned', label: 'Banned'   },
     { value: 'closed', label: 'Closed'   },
     { value: 'alumni', label: 'Alumni'   }
   ];
 
   // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (master/closed/alumni) or ban_reason (banned).
+  // detail column maps to notes (approved/closed/alumni) or ban_reason (banned).
   const DETAIL_META = {
-    master: { placeholder: 'Notes (optional)',                 required: false },
+    approved: { placeholder: 'Notes (optional)',                 required: false },
     banned: { placeholder: 'Ban reason, e.g. Annex A, Gaming', required: true },
     closed: { placeholder: 'Closed notes (optional)',          required: false },
     alumni: { placeholder: 'Notes (optional)',                 required: false }
@@ -192,7 +192,7 @@
         case 'banned': return 'banned';
         case 'closed': return 'closed';
         case 'alumni': return 'alumni';
-        case 'master': {
+        case 'approved': {
           const st = r.matchedId ? capState(r.matchedId) : null;
           return (st && st.inCooldown) ? 'cooldown' : 'approved';
         }
@@ -526,7 +526,7 @@
     }
 
     function outreachCell(r) {
-      if (r.matchedCategory !== 'master' || !r.matchedId) {
+      if (r.matchedCategory !== 'approved' || !r.matchedId) {
         return '<span class="text-muted text-xs">n/a</span>';
       }
       const st = capState(r.matchedId);
@@ -558,7 +558,7 @@
     }
 
     function catPill(cat) {
-      const labels = { master: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
+      const labels = { approved: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
       return '<span class="status-pill status-pill--' + cat + '">' + (labels[cat] || cat) + '</span>';
     }
 
@@ -671,7 +671,7 @@
 
     function makeRow(seed) {
       seed = seed || {};
-      const category = seed.category || 'master';
+      const category = seed.category || 'approved';
       return {
         uid: 'r' + (uidSeq++),
         name: seed.name || '',
@@ -679,7 +679,7 @@
         industry: seed.industry || 'other',
         detail: seed.detail || '',
         include: true,
-        logOutreach: category === 'master'   // default on for approved companies only
+        logOutreach: category === 'approved'   // default on for approved companies only
       };
     }
 
@@ -717,8 +717,8 @@
               '<td><input type="text" class="form-input" data-field="name" value="' + esc(row.name) + '" placeholder="Company name"></td>' +
               '<td><select class="form-input" data-field="category">' + statusOptions(row.category) + '</select></td>' +
               '<td class="bulk-staging__log"><input type="checkbox" class="bulk-staging__check" data-field="logOutreach"' +
-                (row.include && row.category === 'master' && row.logOutreach ? ' checked' : '') +
-                (row.include && row.category === 'master' ? '' : ' disabled') + ' aria-label="Log first outreach"></td>' +
+                (row.include && row.category === 'approved' && row.logOutreach ? ' checked' : '') +
+                (row.include && row.category === 'approved' ? '' : ' disabled') + ' aria-label="Log first outreach"></td>' +
               '<td><select class="form-input" data-field="industry">' + industryOptions(row.industry) + '</select></td>' +
               '<td><input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) + '" placeholder="' + esc(meta.placeholder) + '"></td>' +
               '<td><button type="button" class="bulk-staging__remove" data-field="remove" title="Remove row"><i class="bi bi-trash"></i></button></td>' +
@@ -747,7 +747,7 @@
     function applyLogState(tr, row) {
       const logInput = tr.querySelector('[data-field="logOutreach"]');
       if (!logInput) return;
-      const canLog = row.include && row.category === 'master';
+      const canLog = row.include && row.category === 'approved';
       row.logOutreach = canLog;
       logInput.checked = canLog;
       logInput.disabled = !canLog;
@@ -892,11 +892,11 @@
           notes: '',
           ban_reason: null
         };
-        if (row.category === 'master' || row.category === 'alumni') payload.notes = row.detail.trim();
+        if (row.category === 'approved' || row.category === 'alumni') payload.notes = row.detail.trim();
         else if (row.category === 'closed') payload.notes = row.detail.trim();
         else if (row.category === 'banned') payload.ban_reason = row.detail.trim();
         payloads.push(payload);
-        logFlags.push(row.category === 'master' && row.logOutreach);
+        logFlags.push(row.category === 'approved' && row.logOutreach);
       });
 
       if (payloads.length === 0) {

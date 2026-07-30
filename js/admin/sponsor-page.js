@@ -56,7 +56,7 @@
       return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
     }
 
-    let currentStatus = 'master';
+    let currentStatus = 'approved';
     let original = null;   // the loaded sponsor row (edit mode), for change detection
 
     function setStatus(s) {
@@ -68,7 +68,7 @@
       });
       // Show only the relevant status-specific field. Alumni reuses the general
       // (optional) notes field — there is no dedicated alumni-owner field.
-      grpNotes.style.display  = (s === 'master' || s === 'alumni') ? '' : 'none';
+      grpNotes.style.display  = (s === 'approved' || s === 'alumni') ? '' : 'none';
       grpBan.style.display    = (s === 'banned') ? '' : 'none';
       grpClosed.style.display = (s === 'closed') ? '' : 'none';
     }
@@ -93,7 +93,7 @@
         notes: '',
         ban_reason: null
       };
-      if (currentStatus === 'master' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
+      if (currentStatus === 'approved' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
       else if (currentStatus === 'closed') values.notes = closedNotesEl.value.trim();
       else if (currentStatus === 'banned') values.ban_reason = banReasonEl.value.trim();
       if (currentStatus !== 'banned') values.contract_ends = null;
@@ -204,7 +204,7 @@
       if (isCreate) {
         heading.textContent = 'Add sponsor';
         saveLabel.textContent = 'Create sponsor';
-        setStatus('master');
+        setStatus('approved');
         industryEl.value = 'other';
         document.getElementById('sponsor-side').style.display = 'none';
         return;
@@ -231,7 +231,7 @@
       nameEl.value = sponsor.name;
       industryEl.value = sponsor.industry;
       setStatus(sponsor.category);
-      notesEl.value = sponsor.notes || '';        // master + alumni notes
+      notesEl.value = sponsor.notes || '';        // approved + alumni notes
       banReasonEl.value = sponsor.ban_reason || '';
       closedNotesEl.value = sponsor.notes || '';  // closed uses notes field
 

@@ -52,24 +52,24 @@ insert into public.annex_a_categories (label, sort_order) values
 on conflict (label) do nothing;
 
 -- ---------- sponsors ---------------------------------------------------------
--- master (approved) / banned examples / closed / alumni
+-- approved / banned examples / closed / alumni
 insert into public.sponsors (name, normalised, industry, category, notes, ban_reason) values
-  -- master (approved)
-  ('KOI',                'koi',                    'food_beverage',          'master', '', null),
-  ('LiHO',               'liho',                   'food_beverage',          'master', '', null),
-  ('Starbucks',          'starbucks',              'food_beverage',          'master', '', null),
-  ('Subway',             'subway',                 'food_beverage',          'master', '', null),
-  ('Uniqlo',             'uniqlo',                 'apparel_accessories',    'master', '', null),
-  ('Charles & Keith',    'charles and keith',      'apparel_accessories',    'master', '', null),
-  ('Watsons',            'watsons',                'beauty_personal_care',   'master', '', null),
-  ('Sephora',            'sephora',                'beauty_personal_care',   'master', '', null),
-  ('Razer',              'razer',                  'tech_electronics',       'master', '', null),
-  ('Logitech',           'logitech',               'tech_electronics',       'master', '', null),
-  ('Grab',               'grab',                   'transport_mobility',     'master', '', null),
-  ('MUJI',               'muji',                   'home_lifestyle',         'master', '', null),
-  ('Climb Central',      'climb central',          'activities_experiences', 'master', '', null),
-  ('BoulderPlus',        'boulderplus',            'activities_experiences', 'master', '', null),
-  ('Cathay Cineplexes',  'cathay cineplexes',      'entertainment_leisure',  'master', '', null),
+  -- approved
+  ('KOI',                'koi',                    'food_beverage',          'approved', '', null),
+  ('LiHO',               'liho',                   'food_beverage',          'approved', '', null),
+  ('Starbucks',          'starbucks',              'food_beverage',          'approved', '', null),
+  ('Subway',             'subway',                 'food_beverage',          'approved', '', null),
+  ('Uniqlo',             'uniqlo',                 'apparel_accessories',    'approved', '', null),
+  ('Charles & Keith',    'charles and keith',      'apparel_accessories',    'approved', '', null),
+  ('Watsons',            'watsons',                'beauty_personal_care',   'approved', '', null),
+  ('Sephora',            'sephora',                'beauty_personal_care',   'approved', '', null),
+  ('Razer',              'razer',                  'tech_electronics',       'approved', '', null),
+  ('Logitech',           'logitech',               'tech_electronics',       'approved', '', null),
+  ('Grab',               'grab',                   'transport_mobility',     'approved', '', null),
+  ('MUJI',               'muji',                   'home_lifestyle',         'approved', '', null),
+  ('Climb Central',      'climb central',          'activities_experiences', 'approved', '', null),
+  ('BoulderPlus',        'boulderplus',            'activities_experiences', 'approved', '', null),
+  ('Cathay Cineplexes',  'cathay cineplexes',      'entertainment_leisure',  'approved', '', null),
   -- banned (Annex A example companies)
   ('Singapore Pools',        'singapore pools',        'entertainment_leisure',  'banned', '', 'Annex A, Gaming & Betting'),
   ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products'),
