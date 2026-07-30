@@ -55,9 +55,8 @@ create table if not exists public.sponsors (
   normalised   text not null unique,
   industry     text not null references public.industries(code),
   category     text not null check (category in ('master','banned','closed','alumni')),
-  notes        text not null default '',        -- used by master (notes) and closed (closed notes)
+  notes        text not null default '',        -- used by master, closed, and alumni notes
   ban_reason   text,                             -- required when category='banned'
-  alumni_owner text,                             -- required when category='alumni'
   -- Annex B (time-boxed BIZCOM partner). NULL = permanent ban. A partner whose
   -- contract has lapsed drops out of the active banned set automatically.
   contract_ends date,
@@ -69,11 +68,9 @@ create table if not exists public.sponsors (
   cooldown_started_at timestamptz,
   count_reset_at      timestamptz,
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now(),
   -- Field requirements mirror the sponsor form's validation.
   constraint sponsors_category_fields check (
-    (category <> 'banned' or ban_reason   is not null) and
-    (category <> 'alumni' or alumni_owner is not null) and
+    (category <> 'banned' or ban_reason is not null) and
     (contract_ends is null or category = 'banned')
   )
 );
@@ -134,8 +131,7 @@ create table if not exists public.admins (
   email      text not null unique check (email like '%@sa.smu.edu.sg'),
   name       text not null,
   role       text not null default 'admin' check (role in ('super_admin','admin')),
-  user_id    uuid references auth.users(id) on delete set null,  -- linked on first sign-in
-  created_at timestamptz not null default now()
+  user_id    uuid references auth.users(id) on delete set null   -- linked on first sign-in
 );
 
 -- Exactly one super-admin at a time (transfer semantics). See transfer_super_admin().
@@ -149,8 +145,7 @@ create table if not exists public.settings (
   cooldown_days     int not null default 30,
   event_cap_small   int not null default 300,
   event_cap_medium  int not null default 600,
-  event_cap_large   int not null default 1000,
-  updated_at        timestamptz not null default now()
+  event_cap_large   int not null default 1000
 );
 
 -- Append-only audit trail. The app already calls AdminShell.logActivity() at
@@ -194,22 +189,14 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
--- Keep updated_at fresh on row changes.
+-- Keep updated_at fresh on row changes. (Only `submissions` carries updated_at.)
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end;
 $$;
 
-drop trigger if exists trg_sponsors_updated on public.sponsors;
-create trigger trg_sponsors_updated before update on public.sponsors
-  for each row execute function public.set_updated_at();
-
 drop trigger if exists trg_submissions_updated on public.submissions;
 create trigger trg_submissions_updated before update on public.submissions
-  for each row execute function public.set_updated_at();
-
-drop trigger if exists trg_settings_updated on public.settings;
-create trigger trg_settings_updated before update on public.settings
   for each row execute function public.set_updated_at();
 
 -- ============================================================

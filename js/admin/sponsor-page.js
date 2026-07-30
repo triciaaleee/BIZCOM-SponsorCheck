@@ -36,12 +36,10 @@
     const industryEl = document.getElementById('sp-industry');
     const notesEl = document.getElementById('sp-notes');
     const banReasonEl = document.getElementById('sp-ban-reason');
-    const alumniOwnerEl = document.getElementById('sp-alumni-owner');
     const closedNotesEl = document.getElementById('sp-closed-notes');
 
     const grpNotes = document.getElementById('grp-notes');
     const grpBan = document.getElementById('grp-ban-reason');
-    const grpAlumni = document.getElementById('grp-alumni-owner');
     const grpClosed = document.getElementById('grp-closed-notes');
 
     const dangerZone = document.getElementById('danger-zone');
@@ -65,11 +63,11 @@
         b.classList.toggle('is-active', on);
         b.setAttribute('aria-checked', String(on));
       });
-      // Show only the relevant status-specific field
-      grpNotes.style.display     = (s === 'master')  ? '' : 'none';
+      // Show only the relevant status-specific field. Alumni reuses the general
+      // (optional) notes field — there is no dedicated alumni-owner field.
+      grpNotes.style.display     = (s === 'master' || s === 'alumni') ? '' : 'none';
       grpBan.style.display       = (s === 'banned')  ? '' : 'none';
       grpClosed.style.display    = (s === 'closed')  ? '' : 'none';
-      grpAlumni.style.display    = (s === 'alumni')  ? '' : 'none';
     }
 
     statusBtns.forEach(function (btn) {
@@ -102,9 +100,8 @@
       nameEl.value = sponsor.name;
       industryEl.value = sponsor.industry;
       setStatus(sponsor.category);
-      notesEl.value = sponsor.notes || '';
+      notesEl.value = sponsor.notes || '';        // master + alumni notes
       banReasonEl.value = sponsor.ban_reason || '';
-      alumniOwnerEl.value = sponsor.alumni_owner || '';
       closedNotesEl.value = sponsor.notes || '';  // closed uses notes field
 
       // Populate side panel
@@ -136,10 +133,6 @@
         window.toast && window.toast({ type: 'error', title: 'Ban reason required', message: 'Add the Annex reference.' });
         return;
       }
-      if (currentStatus === 'alumni' && !alumniOwnerEl.value.trim()) {
-        window.toast && window.toast({ type: 'error', title: 'Alumni owner required', message: 'Add the owner name.' });
-        return;
-      }
 
       const payload = {
         id: isCreate ? generateId() : sponsorId,
@@ -148,14 +141,13 @@
         industry: industryEl.value,
         category: currentStatus,
         notes: '',
-        ban_reason: undefined,
-        alumni_owner: undefined
+        ban_reason: undefined
       };
 
       if (currentStatus === 'master') payload.notes = notesEl.value.trim();
       if (currentStatus === 'banned') payload.ban_reason = banReasonEl.value.trim();
       if (currentStatus === 'closed') payload.notes = closedNotesEl.value.trim();
-      if (currentStatus === 'alumni') payload.alumni_owner = alumniOwnerEl.value.trim();
+      if (currentStatus === 'alumni') payload.notes = notesEl.value.trim();
 
       if (isCreate) {
         window.MOCK_DATA.sponsors.push(payload);
@@ -206,7 +198,6 @@
       if (a.category !== b.category) out.push('Status: ' + a.category + ' \u2192 ' + b.category);
       if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
       if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Ban reason updated');
-      if ((a.alumni_owner || '') !== (b.alumni_owner || '')) out.push('Alumni owner updated');
       return out;
     }
 

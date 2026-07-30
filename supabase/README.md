@@ -21,6 +21,12 @@ is the source of truth for the backend build.
 Both scripts are safe to re-run — `0001` uses `IF NOT EXISTS` / `CREATE OR
 REPLACE`, and `0002` guards every insert so it won't create duplicates.
 
+**Already deployed an earlier version?** `0001`/`0002` won't alter existing
+tables, so run [`migrations/0003_drop_unused_columns.sql`](migrations/0003_drop_unused_columns.sql)
+once to bring a live project in line (it drops `sponsors.updated_at`,
+`sponsors.alumni_owner`, `admins.created_at`, `settings.updated_at`). Fresh
+installs from `0001` already have the final shape and can skip it.
+
 ## What gets created
 
 **Tables**
@@ -28,7 +34,7 @@ REPLACE`, and `0002` guards every insert so it won't create duplicates.
 | Table | Purpose |
 | ----- | ------- |
 | `industries` | 15 canonical industry codes |
-| `sponsors` | every company — name, normalised key, industry, category (`master`/`banned`/`closed`/`alumni`), notes, ban_reason, alumni_owner, contract_ends, cooldown state |
+| `sponsors` | every company — name, normalised key, industry, category (`master`/`banned`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
 | `outreach_log` | append-only contact events; the running count is derived from this |
 | `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
@@ -117,7 +123,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 - `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
 - Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).
 - Dropped the unused `dashboard_stats` view (no page reads it; the public dashboard counts client-side, and the admin list uses a paged `count`).
-- Field-integrity `CHECK`s mirror the sponsor form (banned⇒ban_reason, alumni⇒alumni_owner, contract_ends only when banned).
+- Field-integrity `CHECK`s mirror the sponsor form (banned⇒ban_reason, contract_ends only when banned).
 
 ## Next step (not done yet)
 Wire the frontend to these tables: add the `supabase-js` client + config, then

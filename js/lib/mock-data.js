@@ -28,7 +28,7 @@ window.MOCK_DATA = {
   sponsors: [
     // master (approved)
     { id: 's1',  name: 'KOI',               normalised: 'koi',              industry: 'food_beverage',         category: 'master',    notes: '' },
-    { id: 's2',  name: 'LiHO TEA',          normalised: 'liho tea',         industry: 'food_beverage',         category: 'master',    notes: '' },
+    { id: 's2',  name: 'LiHO',              normalised: 'liho',             industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's3',  name: 'Starbucks',         normalised: 'starbucks',        industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's4',  name: 'Subway',            normalised: 'subway',           industry: 'food_beverage',         category: 'master',    notes: '' },
     { id: 's5',  name: 'Uniqlo',            normalised: 'uniqlo',           industry: 'apparel_accessories',   category: 'master',    notes: '' },
@@ -60,9 +60,9 @@ window.MOCK_DATA = {
     { id: 's41', name: 'Crystal Jade Express',normalised:'crystal jade express',industry:'food_beverage',       category: 'closed',    notes: 'Brand discontinued 2023' },
 
     // alumni
-    { id: 's50', name: 'Tea Tribe',          normalised: 'tea tribe',        industry: 'food_beverage',         category: 'alumni',    alumni_owner: 'Wong YJ, BBM 2019' },
-    { id: 's51', name: 'Crave Bakery',       normalised: 'crave bakery',     industry: 'food_beverage',         category: 'alumni',    alumni_owner: 'Tan ML, ACCT 2017' },
-    { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    alumni_owner: 'Kumar A, ISIT 2020' },
+    { id: 's50', name: 'Tea Tribe',          normalised: 'tea tribe',        industry: 'food_beverage',         category: 'alumni',    notes: '' },
+    { id: 's51', name: 'Crave Bakery',       normalised: 'crave bakery',     industry: 'food_beverage',         category: 'alumni',    notes: '' },
+    { id: 's52', name: 'Loop Studio',        normalised: 'loop studio',      industry: 'activities_experiences',category: 'alumni',    notes: '' },
 
     // Annex B — BIZCOM collaboration partners. Modelled as banned sponsors with a
     // contract_ends date (permanent bans have contract_ends = null). Blocked while
@@ -165,7 +165,7 @@ window.MOCK_DATA = {
       notes: '',
       sponsor_list: [
         { name: 'KOI',               status: 'caution',    industry: 'food_beverage' },
-        { name: 'LiHO TEA',         status: 'cooldown',   industry: 'food_beverage' },
+        { name: 'LiHO',             status: 'cooldown',   industry: 'food_beverage' },
         { name: 'Uniqlo',           status: 'clear',      industry: 'apparel_accessories' },
         { name: 'Tea Tribe',        status: 'alumni',     industry: 'food_beverage' },
         { name: 'Singapore Pools',  status: 'blocked',    industry: 'entertainment_leisure' },

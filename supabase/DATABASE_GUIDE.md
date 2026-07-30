@@ -157,14 +157,12 @@ erDiagram
         text normalised UK
         text industry FK
         text category "master|banned|closed|alumni"
-        text notes
+        text notes "master/closed/alumni"
         text ban_reason "when banned"
-        text alumni_owner "when alumni"
         date contract_ends "Annex B only"
         timestamptz cooldown_started_at
         timestamptz count_reset_at
         timestamptz created_at
-        timestamptz updated_at
     }
     outreach_log {
         uuid id PK
@@ -204,7 +202,6 @@ erDiagram
         text name
         text role "super_admin|admin"
         uuid user_id FK "auth.users"
-        timestamptz created_at
     }
     settings {
         bool id PK "always true (single row)"
@@ -213,7 +210,6 @@ erDiagram
         int  event_cap_small
         int  event_cap_medium
         int  event_cap_large
-        timestamptz updated_at
     }
     annex_a_categories {
         uuid id PK
@@ -279,16 +275,16 @@ The heart of the system. Holds approved, banned, closed, and alumni companies.
 | `normalised` | text | **Unique.** Lookup key for matching (lower-cased, suffix-stripped). Supplied by the app. |
 | `industry` | text | **FK → industries.code.** |
 | `category` | text | `master` \| `banned` \| `closed` \| `alumni`. |
-| `notes` | text | General notes (used by `master` and `closed`). Default `''`. |
+| `notes` | text | General notes (used by `master`, `closed`, and `alumni`). Default `''`. |
 | `ban_reason` | text | **Required when `banned`.** Annex reference. |
-| `alumni_owner` | text | **Required when `alumni`.** e.g. "Wong YJ, BBM 2019". |
 | `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = permanent ban. |
 | `cooldown_started_at` | timestamptz | Stamped when the outreach cap is hit. |
 | `count_reset_at` | timestamptz | Marks the start of the current outreach cycle. |
-| `created_at` / `updated_at` | timestamptz | Audit timestamps (`updated_at` auto-maintained). |
+| `created_at` | timestamptz | Row creation timestamp. |
 
-**Constraints:** `banned` ⇒ `ban_reason` present; `alumni` ⇒ `alumni_owner`
-present; `contract_ends` only allowed when `banned`.
+**Constraints:** `banned` ⇒ `ban_reason` present; `contract_ends` only allowed
+when `banned`. (Alumni companies have no required extra field — an optional
+`notes` entry is all.)
 
 ### `outreach_log` — append-only contact history
 One row per logged outreach. The running count is derived from this.
@@ -357,7 +353,6 @@ person must exist **both** here and in `auth.users` (matched by email).
 | `name` | text | Display name. |
 | `role` | text | `super_admin` \| `admin`. |
 | `user_id` | uuid | **FK → auth.users.id** (set null; linked on first sign-in). |
-| `created_at` | timestamptz | — |
 
 **Constraint:** a partial unique index enforces **at most one** `super_admin`.
 
@@ -370,7 +365,6 @@ One row, pinned by a boolean PK. Public-readable (students see the caps).
 | `outreach_cap` | int | Contacts before cooldown (default 10). |
 | `cooldown_days` | int | Cooldown length (default 30). |
 | `event_cap_small/medium/large` | int | Max sponsors per event size. |
-| `updated_at` | timestamptz | Auto-maintained. |
 
 ### `activity_log` — audit trail
 Append-only record of admin actions. Ready for the app's existing logging hooks.

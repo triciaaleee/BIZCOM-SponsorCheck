@@ -67,7 +67,7 @@
   function reasonFor(sponsor, tab) {
     if (tab === 'banned') return sponsor.ban_reason || 'On the banned list';
     if (tab === 'closed') return sponsor.notes || 'Ceased operations';
-    if (tab === 'alumni') return sponsor.alumni_owner ? ('Owned by ' + sponsor.alumni_owner) : 'Alumni-affiliated, OAR clearance needed';
+    if (tab === 'alumni') return sponsor.notes || 'Alumni-affiliated, OAR clearance needed';
     return '';
   }
 

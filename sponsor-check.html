@@ -436,7 +436,7 @@
 
 <script>
   function loadSample() {
-    const sampleCsv = 'company_name,industry_code\nKOI,food_beverage\nLiHO TEA,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\nGrab,transport_mobility\nSingapore Pools,\nAIA Insurance,\nDBS Bank,\nTea Tribe,food_beverage\nCrave Bakery,food_beverage\nClimb Central,activities_experiences\nCathay Cineplexes,entertainment_leisure\n';
+    const sampleCsv = 'company_name,industry_code\nKOI,food_beverage\nLiHO,food_beverage\nUniqlo,apparel_accessories\nLogitech,tech_electronics\nGrab,transport_mobility\nSingapore Pools,\nAIA Insurance,\nDBS Bank,\nTea Tribe,food_beverage\nCrave Bakery,food_beverage\nClimb Central,activities_experiences\nCathay Cineplexes,entertainment_leisure\n';
     const blob = new Blob([sampleCsv], { type: 'text/csv' });
     const file = new File([blob], 'sample-sponsors.csv', { type: 'text/csv' });
     const dt = new DataTransfer();

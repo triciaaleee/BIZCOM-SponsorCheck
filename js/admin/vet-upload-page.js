@@ -37,13 +37,13 @@
   ];
 
   // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (master/closed), ban_reason (banned) or
-  // alumni_owner (alumni) when the row is committed.
+  // detail column maps to notes (master/closed/alumni) or ban_reason (banned)
+  // when the row is committed.
   const DETAIL_META = {
     master: { placeholder: 'Notes (optional)',              required: false },
     banned: { placeholder: 'Ban reason, e.g. Annex A, Gaming', required: true },
     closed: { placeholder: 'Closed notes (optional)',       required: false },
-    alumni: { placeholder: 'Alumni owner, e.g. Wong YJ, BBM 2019', required: true }
+    alumni: { placeholder: 'Notes (optional)',              required: false }
   };
 
   const SAMPLE_TEXT =
@@ -834,8 +834,7 @@
         }
         if (DETAIL_META[row.category].required && !row.detail.trim()) {
           if (detailInput) detailInput.classList.add('is-invalid');
-          const what = row.category === 'banned' ? 'a ban reason' : 'an alumni owner';
-          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs ' + what + '.' };
+          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a ban reason.' };
         }
       });
 
@@ -871,13 +870,12 @@
           industry: row.industry,
           category: row.category,
           notes: '',
-          ban_reason: undefined,
-          alumni_owner: undefined
+          ban_reason: undefined
         };
         if (row.category === 'master') payload.notes = row.detail.trim();
         if (row.category === 'closed') payload.notes = row.detail.trim();
         if (row.category === 'banned') payload.ban_reason = row.detail.trim();
-        if (row.category === 'alumni') payload.alumni_owner = row.detail.trim();
+        if (row.category === 'alumni') payload.notes = row.detail.trim();
         payloads.push(payload);
         if (row.category === 'master' && row.logOutreach) toLog.push(payload.id);
       });

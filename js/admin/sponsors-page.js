@@ -67,7 +67,6 @@
 
     function notesFor(sponsor) {
       if (sponsor.category === 'banned' && sponsor.ban_reason) return sponsor.ban_reason;
-      if (sponsor.category === 'alumni' && sponsor.alumni_owner) return sponsor.alumni_owner;
       return sponsor.notes || '';
     }
 

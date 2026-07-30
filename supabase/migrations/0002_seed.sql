@@ -36,9 +36,7 @@ on conflict (id) do nothing;
 
 -- ---------- admins -----------------------------------------------------------
 insert into public.admins (email, name, role) values
-  ('biz@sa.smu.edu.sg',          'Tricia',  'super_admin'),
-  ('biz.deputy@sa.smu.edu.sg',   'Wei Jie', 'admin'),
-  ('biz.outreach@sa.smu.edu.sg', 'Arjun',   'admin')
+  ('biz@sa.smu.edu.sg',          'Tricia',  'super_admin')
 on conflict (email) do nothing;
 
 -- ---------- annex_a_categories (prohibited *types*, not companies) ----------
@@ -55,41 +53,41 @@ on conflict (label) do nothing;
 
 -- ---------- sponsors ---------------------------------------------------------
 -- master (approved) / banned examples / closed / alumni
-insert into public.sponsors (name, normalised, industry, category, notes, ban_reason, alumni_owner) values
+insert into public.sponsors (name, normalised, industry, category, notes, ban_reason) values
   -- master (approved)
-  ('KOI',                'koi',                    'food_beverage',          'master', '', null, null),
-  ('LiHO TEA',           'liho tea',               'food_beverage',          'master', '', null, null),
-  ('Starbucks',          'starbucks',              'food_beverage',          'master', '', null, null),
-  ('Subway',             'subway',                 'food_beverage',          'master', '', null, null),
-  ('Uniqlo',             'uniqlo',                 'apparel_accessories',    'master', '', null, null),
-  ('Charles & Keith',    'charles and keith',      'apparel_accessories',    'master', '', null, null),
-  ('Watsons',            'watsons',                'beauty_personal_care',   'master', '', null, null),
-  ('Sephora',            'sephora',                'beauty_personal_care',   'master', '', null, null),
-  ('Razer',              'razer',                  'tech_electronics',       'master', '', null, null),
-  ('Logitech',           'logitech',               'tech_electronics',       'master', '', null, null),
-  ('Grab',               'grab',                   'transport_mobility',     'master', '', null, null),
-  ('MUJI',               'muji',                   'home_lifestyle',         'master', '', null, null),
-  ('Climb Central',      'climb central',          'activities_experiences', 'master', '', null, null),
-  ('BoulderPlus',        'boulderplus',            'activities_experiences', 'master', '', null, null),
-  ('Cathay Cineplexes',  'cathay cineplexes',      'entertainment_leisure',  'master', '', null, null),
+  ('KOI',                'koi',                    'food_beverage',          'master', '', null),
+  ('LiHO',               'liho',                   'food_beverage',          'master', '', null),
+  ('Starbucks',          'starbucks',              'food_beverage',          'master', '', null),
+  ('Subway',             'subway',                 'food_beverage',          'master', '', null),
+  ('Uniqlo',             'uniqlo',                 'apparel_accessories',    'master', '', null),
+  ('Charles & Keith',    'charles and keith',      'apparel_accessories',    'master', '', null),
+  ('Watsons',            'watsons',                'beauty_personal_care',   'master', '', null),
+  ('Sephora',            'sephora',                'beauty_personal_care',   'master', '', null),
+  ('Razer',              'razer',                  'tech_electronics',       'master', '', null),
+  ('Logitech',           'logitech',               'tech_electronics',       'master', '', null),
+  ('Grab',               'grab',                   'transport_mobility',     'master', '', null),
+  ('MUJI',               'muji',                   'home_lifestyle',         'master', '', null),
+  ('Climb Central',      'climb central',          'activities_experiences', 'master', '', null),
+  ('BoulderPlus',        'boulderplus',            'activities_experiences', 'master', '', null),
+  ('Cathay Cineplexes',  'cathay cineplexes',      'entertainment_leisure',  'master', '', null),
   -- banned (Annex A example companies)
-  ('Singapore Pools',        'singapore pools',        'entertainment_leisure',  'banned', '', 'Annex A, Gaming & Betting',    null),
-  ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products',  null),
-  ('Marlboro',               'marlboro',               'retail_general',         'banned', '', 'Annex A, Tobacco Products',    null),
-  ('Durex',                  'durex',                  'beauty_personal_care',   'banned', '', 'Annex A, Sexual Products',     null),
-  ('AIA Insurance',          'aia insurance',          'professional_services',  'banned', '', 'Annex A, Insurance Companies', null),
-  ('Prudential',             'prudential',             'professional_services',  'banned', '', 'Annex A, Insurance Companies', null),
-  ('Shaw Foundation',        'shaw foundation',        'non_profit_government',  'banned', '', 'Annex A, Foundations',         null),
-  ('Lee Foundation',         'lee foundation',         'non_profit_government',  'banned', '', 'Annex A, Foundations',         null),
-  ('DBS Bank',               'dbs bank',               'professional_services',  'banned', '', 'Annex B, Banks & Financial',   null),
-  ('OCBC Bank',              'ocbc bank',              'professional_services',  'banned', '', 'Annex B, Banks & Financial',   null),
+  ('Singapore Pools',        'singapore pools',        'entertainment_leisure',  'banned', '', 'Annex A, Gaming & Betting'),
+  ('Asia Pacific Breweries', 'asia pacific breweries', 'food_beverage',          'banned', '', 'Annex A, Alcoholic Products'),
+  ('Marlboro',               'marlboro',               'retail_general',         'banned', '', 'Annex A, Tobacco Products'),
+  ('Durex',                  'durex',                  'beauty_personal_care',   'banned', '', 'Annex A, Sexual Products'),
+  ('AIA Insurance',          'aia insurance',          'professional_services',  'banned', '', 'Annex A, Insurance Companies'),
+  ('Prudential',             'prudential',             'professional_services',  'banned', '', 'Annex A, Insurance Companies'),
+  ('Shaw Foundation',        'shaw foundation',        'non_profit_government',  'banned', '', 'Annex A, Foundations'),
+  ('Lee Foundation',         'lee foundation',         'non_profit_government',  'banned', '', 'Annex A, Foundations'),
+  ('DBS Bank',               'dbs bank',               'professional_services',  'banned', '', 'Annex B, Banks & Financial'),
+  ('OCBC Bank',              'ocbc bank',              'professional_services',  'banned', '', 'Annex B, Banks & Financial'),
   -- closed / defunct
-  ('Robinsons',            'robinsons',             'retail_general', 'closed', 'Ceased operations 2020',  null, null),
-  ('Crystal Jade Express', 'crystal jade express',  'food_beverage',  'closed', 'Brand discontinued 2023', null, null),
+  ('Robinsons',            'robinsons',             'retail_general', 'closed', 'Ceased operations 2020',  null),
+  ('Crystal Jade Express', 'crystal jade express',  'food_beverage',  'closed', 'Brand discontinued 2023', null),
   -- alumni-affiliated
-  ('Tea Tribe',    'tea tribe',    'food_beverage',          'alumni', '', null, 'Wong YJ, BBM 2019'),
-  ('Crave Bakery', 'crave bakery', 'food_beverage',          'alumni', '', null, 'Tan ML, ACCT 2017'),
-  ('Loop Studio',  'loop studio',  'activities_experiences', 'alumni', '', null, 'Kumar A, ISIT 2020')
+  ('Tea Tribe',    'tea tribe',    'food_beverage',          'alumni', '', null),
+  ('Crave Bakery', 'crave bakery', 'food_beverage',          'alumni', '', null),
+  ('Loop Studio',  'loop studio',  'activities_experiences', 'alumni', '', null)
 on conflict (normalised) do nothing;
 
 -- Board of Trustees & associated companies (Annex A). Seeded as banned sponsors
@@ -126,14 +124,14 @@ on conflict (normalised) do nothing;
 -- ---------- outreach_log -----------------------------------------------------
 -- One row per contact; counts are cumulative and map straight to
 -- sponsor_outreach.contact_count:
---   KOI 9, LiHO TEA 10 (at cap), Starbucks 3, Subway 1, Uniqlo 4,
+--   KOI 9, LiHO 10 (at cap), Starbucks 3, Subway 1, Uniqlo 4,
 --   Grab 10 (at cap), Cathay Cineplexes 2
 insert into public.outreach_log (sponsor_id, contacted_at)
 select s.id,
        now() - ((g.i % 28) || ' days')::interval - (g.i || ' hours')::interval
 from (values
   ('koi',               9),
-  ('liho tea',          10),
+  ('liho',              10),
   ('starbucks',         3),
   ('subway',            1),
   ('uniqlo',            4),
@@ -146,7 +144,7 @@ where not exists (select 1 from public.outreach_log);
 
 -- Sponsors at the cap are in cooldown: stamp cooldown_started_at so
 -- sponsor_outreach reports in_cooldown (LiHO 8 days in, Grab 18).
-update public.sponsors set cooldown_started_at = now() - interval '8 days'  where normalised = 'liho tea';
+update public.sponsors set cooldown_started_at = now() - interval '8 days'  where normalised = 'liho';
 update public.sponsors set cooldown_started_at = now() - interval '18 days' where normalised = 'grab';
 
 -- ---------- submissions ------------------------------------------------------
@@ -187,7 +185,7 @@ insert into public.submission_sponsors (submission_id, position, name, status, i
 select sub.id, x.position, x.name, x.status, x.industry
 from (values
   ('Bizad Charity Run 2026', 1, 'KOI',               'caution',    'food_beverage'),
-  ('Bizad Charity Run 2026', 2, 'LiHO TEA',         'cooldown',   'food_beverage'),
+  ('Bizad Charity Run 2026', 2, 'LiHO',             'cooldown',   'food_beverage'),
   ('Bizad Charity Run 2026', 3, 'Uniqlo',           'clear',      'apparel_accessories'),
   ('Bizad Charity Run 2026', 4, 'Tea Tribe',        'alumni',     'food_beverage'),
   ('Bizad Charity Run 2026', 5, 'Singapore Pools',  'blocked',    'entertainment_leisure'),
