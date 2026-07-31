@@ -380,14 +380,6 @@
 
       settings = updated || Object.assign(settings, patch);
 
-      // Bridge: also mirror to localStorage so the not-yet-wired public checker
-      // (which reads settings via mock-data.js) reflects the change. Drop this
-      // once the public pages read settings from Supabase directly.
-      try {
-        const key = window.SETTINGS_STORAGE_KEY || 'sponsorcheck_settings';
-        localStorage.setItem(key, JSON.stringify(patch));
-      } catch (e) { /* storage unavailable — DB is still the source of truth */ }
-
       window.AdminShell.logActivity('settings.updated', 'settings',
         'Outreach cap ' + patch.outreach_cap + ', cooldown ' + patch.cooldown_days + 'd');
       toastMsg({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });

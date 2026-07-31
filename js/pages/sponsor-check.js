@@ -113,10 +113,8 @@
   }
   function matchCtx() { return { sponsors: sponsors, capState: capState, today: todayStr }; }
 
-  // Per-size sponsor caps, read live from the admin-configured settings
-  // (hydrated from localStorage in mock-data.js). Falls back to the PRD
-  // defaults if settings are missing. Previously a hardcoded const, which is
-  // why changes on the admin Settings page never showed up here.
+  // Per-size sponsor caps, read from the live settings row loaded at boot.
+  // Falls back to the PRD defaults if settings are missing.
   function eventCaps() {
     const s = settings || {};
     return {

@@ -143,36 +143,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  /*
-   * Send the invite email to a newly added admin.
-   *
-   * MOCK MODE (today): logs to console, shows a success toast so the
-   * inviting admin sees confirmation.
-   *
-   * SUPABASE MODE (Phase 2): swap the body for:
-   *
-   *   await supabase.auth.admin.inviteUserByEmail(admin.email, {
-   *     data: { name: admin.name, role: admin.role },
-   *     redirectTo: 'https://your-domain.tld/admin/login.html'
-   *   });
-   *
-   * Supabase emails a magic-link signup automatically. The {data} payload
-   * lands in user_metadata on the new auth.user row so you can read name
-   * and role after they sign in.
-   */
-  function sendInviteEmail(admin) {
-    if (!admin || !admin.email) return;
-    console.log('[sendInviteEmail] would email', admin.email,
-      'with name="' + (admin.name || '') + '" role="' + (admin.role || 'admin') + '"');
-    if (window.toast) {
-      window.toast({
-        type: 'success',
-        title: 'Invite sent',
-        message: (admin.name || admin.email) + ' will receive a signup link.'
-      });
-    }
-  }
-
   // Sponsor name wrapped in a Google Maps search link. Appended " Singapore"
   // narrows results to local hits since most SG sponsor names are chains.
   function mapsLink(name) {
@@ -280,7 +250,6 @@
     setSession: setSession,
     clearSession: clearSession,
     logActivity: logActivity,
-    sendInviteEmail: sendInviteEmail,
     escapeHtml: escapeHtml,
     mapsLink: mapsLink
   };
