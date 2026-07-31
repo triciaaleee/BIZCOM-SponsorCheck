@@ -7,7 +7,7 @@
    1. Auth guard: if no session, redirect to login.
    2. Render sidebar nav with active-page highlight.
    3. Render top-bar with signed-in email + role badge + sign out.
-   4. Mock action helpers: logActivity, signOut.
+   4. Action helpers: logActivity (audit-log insert), signOut.
 
    Auth is now wired to Supabase: the guard verifies the live auth
    session (window.sb) and sign-out calls supabase.auth.signOut().
