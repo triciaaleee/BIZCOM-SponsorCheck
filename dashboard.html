@@ -88,37 +88,98 @@
           </div>
         </div>
 
-        <div class="restricted-tabs" role="tablist">
-          <button class="restricted-tab is-active" data-tab="banned" role="tab" aria-selected="true">
-            <i class="bi bi-x-octagon-fill"></i> Banned
-            <span class="restricted-tab__count" id="count-banned">0</span>
-          </button>
-          <button class="restricted-tab" data-tab="closed" role="tab" aria-selected="false">
-            <i class="bi bi-slash-circle-fill"></i> Closed
-            <span class="restricted-tab__count" id="count-closed">0</span>
-          </button>
-          <button class="restricted-tab" data-tab="alumni" role="tab" aria-selected="false">
-            <i class="bi bi-mortarboard-fill"></i> Alumni
-            <span class="restricted-tab__count" id="count-alumni">0</span>
-          </button>
+        <div class="annex-panel">
+          <!-- Annex A — Prohibited. Static: mirrors the public Sponsorship
+               Standing Order, so naming the Board of Trustees companies is fine. -->
+          <div class="annex-card annex-card--prohibited">
+            <div class="annex-card__head">
+              <span class="annex-card__title"><i class="bi bi-slash-circle-fill"></i> Annex A — Prohibited</span>
+            </div>
+            <div class="annex-card__body">
+              <div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>
+              <ul class="annex-list">
+                <li>Banyan Tree Group</li>
+                <li>Global Business Integrators</li>
+                <li>Reed Exhibitions</li>
+                <li>Hup Soon Global Corporation</li>
+                <li>Singapore Telecommunications (Singtel)</li>
+                <li>Chinatrust Commercial Bank</li>
+                <li>Kuok (S)</li>
+                <li>Raffles Medical Corp</li>
+                <li>Phoenix Advisers</li>
+                <li>Infosys Technologies</li>
+                <li>WongPartnership LLP</li>
+                <li>SMRT</li>
+                <li>Bangkok Bank</li>
+                <li>Symphony Asia Holdings</li>
+                <li>Dane Court</li>
+              </ul>
+              <div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>
+              <div class="annex-tags">
+                <span class="annex-tag">Foundations</span>
+                <span class="annex-tag">Alcohol</span>
+                <span class="annex-tag">Tobacco</span>
+                <span class="annex-tag">Gaming &amp; betting</span>
+                <span class="annex-tag">Sexual products</span>
+                <span class="annex-tag">Insurance</span>
+                <span class="annex-tag">Multi-level marketing</span>
+                <span class="annex-tag">SMU Commencement sponsors</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Annex B — Restricted. Partner names only (no contract dates),
+               read-only: no add/remove on the public site. -->
+          <div class="annex-card annex-card--restricted">
+            <div class="annex-card__head">
+              <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
+            </div>
+            <div class="annex-card__body">
+              <div class="annex-group__label">BIZCOM clients <span class="annex-group__kind">companies</span></div>
+              <div id="public-annex-b-list">
+                <!-- Rendered by dashboard.js -->
+              </div>
+              <div class="annex-restricted-types">
+                <div class="annex-group__label">Other restricted types <span class="annex-group__kind">types</span></div>
+                <div class="annex-tags">
+                  <span class="annex-tag">Government entities</span>
+                  <span class="annex-tag">Banks &amp; financial institutions</span>
+                  <span class="annex-tag">SMU alumni</span>
+                </div>
+                <div class="annex-callout" role="note">
+                  <i class="bi bi-exclamation-triangle-fill annex-callout__icon"></i>
+                  <div class="annex-callout__text">
+                    <strong>SMU alumni companies</strong> require OAR / OA approval before you solicit them. Confirm sign-off first.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="restricted-table-wrap">
-          <table class="restricted-table" id="restricted-table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Industry</th>
-                <th id="reason-col-header">Reason</th>
-              </tr>
-            </thead>
-            <tbody id="restricted-tbody">
-              <!-- Rendered by dashboard.js -->
-            </tbody>
-          </table>
-          <div class="restricted-empty" id="restricted-empty" hidden>
-            <i class="bi bi-search"></i>
-            <p>No matches in this view.</p>
+        <div class="annex-panel">
+          <!-- Closed — companies that have ceased operations. -->
+          <div class="annex-card annex-card--closed">
+            <div class="annex-card__head">
+              <span class="annex-card__title"><i class="bi bi-slash-circle-fill"></i> Closed</span>
+            </div>
+            <div class="annex-card__body">
+              <p class="annex-note">
+                Some companies from past sponsor lists have since ceased operations and can no longer be approached. If you're unsure whether a company is still trading, check with BIZCOM before adding it to your list.
+              </p>
+            </div>
+          </div>
+
+          <!-- Alumni-affiliated — need OAR clearance before soliciting. -->
+          <div class="annex-card annex-card--alumni">
+            <div class="annex-card__head">
+              <span class="annex-card__title"><i class="bi bi-mortarboard-fill"></i> Alumni-affiliated</span>
+            </div>
+            <div class="annex-card__body">
+              <p class="annex-note">
+                Businesses founded or run by SMU alumni need OAR / OA clearance before you solicit them. If you think a company may be alumni-affiliated, confirm sign-off with BIZCOM first.
+              </p>
+            </div>
           </div>
         </div>
       </section>

@@ -29,10 +29,29 @@
     other:                 { icon: 'bi-three-dots',            tone: 'navy',   examples: 'anything else, BIZCOM will reclassify' }
   };
 
+  // The 15 sponsor categories are fixed reference data, so they are hardcoded
+  // here (mirrors supabase/migrations/0002_seed.sql) instead of fetched at boot.
+  // The category cards then render instantly without a Supabase round-trip.
+  const industries = [
+    { code: 'food_beverage',          display_name: 'Food & Beverage',          sort_order: 1 },
+    { code: 'apparel_accessories',    display_name: 'Apparel & Accessories',    sort_order: 2 },
+    { code: 'beauty_personal_care',   display_name: 'Beauty & Personal Care',   sort_order: 3 },
+    { code: 'entertainment_leisure',  display_name: 'Entertainment & Leisure',  sort_order: 4 },
+    { code: 'activities_experiences', display_name: 'Activities & Experiences', sort_order: 5 },
+    { code: 'tech_electronics',       display_name: 'Tech & Electronics',       sort_order: 6 },
+    { code: 'education_services',     display_name: 'Education & Services',      sort_order: 7 },
+    { code: 'health_wellness',        display_name: 'Health & Wellness',         sort_order: 8 },
+    { code: 'transport_mobility',     display_name: 'Transport & Mobility',      sort_order: 9 },
+    { code: 'home_lifestyle',         display_name: 'Home & Lifestyle',         sort_order: 10 },
+    { code: 'professional_services',  display_name: 'Professional Services',    sort_order: 11 },
+    { code: 'media_publishing',       display_name: 'Media & Publishing',       sort_order: 12 },
+    { code: 'non_profit_government',  display_name: 'Non-profit & Government',  sort_order: 13 },
+    { code: 'retail_general',         display_name: 'Retail (General)',         sort_order: 14 },
+    { code: 'other',                  display_name: 'Other / Uncategorised',    sort_order: 15 }
+  ];
+
   // Live data (loaded from Supabase at boot).
-  let industries = [];
   let sponsors = [];
-  let activeTab = 'banned';
 
   function todayISO() {
     const d = new Date();
@@ -60,101 +79,37 @@
     }).join('');
   }
 
-  // -- Restricted sponsors tabs and table --
+  // -- Annex B / Closed / Alumni reference cards --
+  // The public page names companies as a plain reference list only. It never
+  // labels them "banned" and never shows contract dates — just the company
+  // names, so an external reader can't infer anything negative from the page.
 
-  function getIndustryDisplay(code) {
-    const ind = industries.find(function (i) { return i.code === code; });
-    return ind ? ind.display_name : code;
+  // Annex B partners = banned sponsors that carry a contract_ends date. Only
+  // ACTIVE contracts are shown; a lapsed partner is no longer restricted.
+  function annexBPartners() {
+    return sponsors.filter(function (s) {
+      return s.category === 'banned' && s.contract_ends && String(s.contract_ends) >= todayStr;
+    });
   }
 
-  function rowsForTab(tab) {
-    if (tab === 'banned') {
-      // Only ACTIVE bans — a lapsed Annex B partner (contract_ends in the past)
-      // is no longer restricted, so it drops out of the public directory.
-      return sponsors.filter(function (s) {
-        return s.category === 'banned' && (!s.contract_ends || String(s.contract_ends) >= todayStr);
-      });
-    }
-    if (tab === 'closed') return sponsors.filter(function (s) { return s.category === 'closed'; });
-    if (tab === 'alumni') return sponsors.filter(function (s) { return s.category === 'alumni'; });
-    return [];
-  }
-
-  function reasonFor(sponsor, tab) {
-    if (tab === 'banned') return sponsor.ban_reason || 'On the banned list';
-    if (tab === 'closed') return sponsor.notes || 'Ceased operations';
-    if (tab === 'alumni') return sponsor.notes || 'Alumni-affiliated, OAR clearance needed';
-    return '';
-  }
-
-  function updateCounts() {
-    const elBanned = document.getElementById('count-banned');
-    const elClosed = document.getElementById('count-closed');
-    const elAlumni = document.getElementById('count-alumni');
-    if (elBanned) elBanned.textContent = rowsForTab('banned').length;
-    if (elClosed) elClosed.textContent = rowsForTab('closed').length;
-    if (elAlumni) elAlumni.textContent = rowsForTab('alumni').length;
-  }
-
-  function updateReasonHeader() {
-    const h = document.getElementById('reason-col-header');
-    if (!h) return;
-    if (activeTab === 'banned') h.textContent = 'Reason';
-    else if (activeTab === 'closed') h.textContent = 'Status';
-    else if (activeTab === 'alumni') h.textContent = 'Affiliation';
-  }
-
-  function renderRestricted() {
-    const tbody = document.getElementById('restricted-tbody');
-    const empty = document.getElementById('restricted-empty');
-    if (!tbody) return;
-
-    const rows = rowsForTab(activeTab);
-
+  function renderNameList(containerId, rows, emptyMsg) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
     if (!rows.length) {
-      tbody.innerHTML = '';
-      if (empty) empty.hidden = false;
+      el.innerHTML = '<div class="annex-empty">' + escapeHtml(emptyMsg) + '</div>';
       return;
     }
-    if (empty) empty.hidden = true;
-
-    tbody.innerHTML = rows.map(function (s) {
-      const pill = pillFor(activeTab);
-      return (
-        '<tr>' +
-          '<td>' +
-            '<div class="restricted-table__name">' + escapeHtml(s.name) + '</div>' +
-            '<div class="restricted-table__pill">' + pill + '</div>' +
-          '</td>' +
-          '<td class="restricted-table__industry">' + escapeHtml(getIndustryDisplay(s.industry)) + '</td>' +
-          '<td class="restricted-table__reason">' + escapeHtml(reasonFor(s, activeTab)) + '</td>' +
-        '</tr>'
-      );
-    }).join('');
+    el.innerHTML = '<ul class="annex-list">' + rows.map(function (s) {
+      return '<li>' + escapeHtml(s.name) + '</li>';
+    }).join('') + '</ul>';
   }
 
-  function pillFor(tab) {
-    if (tab === 'banned') return '<span class="pill pill--blocked"><i class="bi bi-x-circle-fill pill__icon"></i>Blocked</span>';
-    if (tab === 'closed') return '<span class="pill pill--blocked"><i class="bi bi-slash-circle-fill pill__icon"></i>Closed</span>';
-    if (tab === 'alumni') return '<span class="pill pill--alumni"><i class="bi bi-mortarboard-fill pill__icon"></i>Alumni</span>';
-    return '';
-  }
-
-  function bindTabs() {
-    const tabs = document.querySelectorAll('.restricted-tab');
-    tabs.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        tabs.forEach(function (b) {
-          b.classList.remove('is-active');
-          b.setAttribute('aria-selected', 'false');
-        });
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-selected', 'true');
-        activeTab = btn.getAttribute('data-tab');
-        updateReasonHeader();
-        renderRestricted();
-      });
-    });
+  // Only the Annex B partner list is data-driven. The Closed and Alumni cards
+  // are intentionally static notes on the public page — they describe the
+  // restriction without naming any specific company.
+  function renderReferenceCards() {
+    renderNameList('public-annex-b-list', annexBPartners(),
+      'No partner companies currently under contract.');
   }
 
   function escapeHtml(str) {
@@ -167,21 +122,20 @@
       .replace(/'/g, '&#39;');
   }
 
-  // Boot: wait for the client + data layer, load live data, then render.
+  // Boot: category cards are hardcoded, so render them immediately. Only the
+  // restricted sponsor tables need live data from Supabase.
   function boot() {
+    renderIndustries();
+
     if (!window.sb || !window.PublicData) {
       requestAnimationFrame(boot);
       return;
     }
-    Promise.all([window.PublicData.listIndustries(), window.PublicData.allSponsors()])
-      .then(function (out) { industries = out[0] || []; sponsors = out[1] || []; })
-      .catch(function (e) { console.error('[dashboard] could not load directory', e); industries = []; sponsors = []; })
+    Promise.resolve(window.PublicData.allSponsors())
+      .then(function (rows) { sponsors = rows || []; })
+      .catch(function (e) { console.error('[dashboard] could not load sponsors', e); sponsors = []; })
       .then(function () {
-        renderIndustries();
-        updateCounts();
-        updateReasonHeader();
-        renderRestricted();
-        bindTabs();
+        renderReferenceCards();
       });
   }
 
