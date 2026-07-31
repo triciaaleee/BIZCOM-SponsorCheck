@@ -184,12 +184,6 @@
   margin-top: var(--space-4);
 }
 
-.vet-panel__foot-text {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: #8C7212;
-}
-
 /* Neutral helper text in a panel footer (e.g. the outreach-logging note). */
 .vet-panel__foot-note {
   font-size: var(--font-size-sm);

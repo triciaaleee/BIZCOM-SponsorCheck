@@ -309,11 +309,6 @@
   color: var(--color-orange);
 }
 
-.cap-alert__sub {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
 .cap-alert__list {
   list-style: none;
   margin: 0;
@@ -434,13 +429,6 @@
 
 .annex-card--prohibited .annex-card__title i { color: var(--color-orange); }
 .annex-card--restricted .annex-card__title i { color: #8C7212; }
-
-.annex-card__sub {
-  display: block;
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  margin-top: 2px;
-}
 
 .annex-card__body {
   max-height: 440px;
@@ -1126,77 +1114,6 @@
   max-width: 200px;
   padding-top: var(--space-1);
   padding-bottom: var(--space-1);
-}
-
-/* ============================================================
-   SUBMISSIONS LIST PAGE
-   ============================================================ */
-
-/* Inline-editable status pill: shows caret on hover, raises slightly. */
-.status-pill--edit {
-  cursor: pointer;
-  user-select: none;
-  transition: filter var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-}
-
-.status-pill--edit:hover {
-  filter: brightness(0.96);
-  transform: translateY(-1px);
-}
-
-.status-pill--edit .bi-caret-down-fill {
-  font-size: 9px;
-  margin-left: 4px;
-  opacity: 0.7;
-}
-
-/* Floating dropdown menu anchored to a clicked pill. */
-.status-menu {
-  z-index: var(--z-popover, 60);
-  min-width: 160px;
-  background-color: var(--surface-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-1);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.status-menu__item {
-  border: 0;
-  background: transparent;
-  text-align: left;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-
-.status-menu__item:hover {
-  background-color: var(--surface-muted);
-}
-
-.status-menu__item.is-active {
-  background-color: rgba(46, 82, 157, 0.06);
-}
-
-/* Due-date cell: colour-codes urgency. */
-.due-date {
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-}
-
-.due-date.is-overdue {
-  color: var(--color-orange);
-  font-weight: var(--font-weight-semibold);
-}
-
-.due-date.is-soon {
-  color: #8C7212;
-  font-weight: var(--font-weight-semibold);
 }
 
 /* ============================================================

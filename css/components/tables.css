@@ -32,23 +32,6 @@
   white-space: nowrap;
 }
 
-.table thead th.is-sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-.table thead th.is-sortable:hover {
-  color: var(--text-primary);
-}
-
-.table thead th.is-sortable::after {
-  content: "↕";
-  margin-left: var(--space-1);
-  opacity: 0.4;
-}
-
-.table thead th.is-sorted-asc::after { content: "↑"; opacity: 1; color: var(--color-navy); }
 .table tbody td {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
