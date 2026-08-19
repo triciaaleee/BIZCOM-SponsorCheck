@@ -274,6 +274,14 @@
       ).then(unwrap);
     },
 
+    // Permanent: submissions carry no soft-delete flag, so the row is gone.
+    // RLS (submissions_all) already allows this for any signed-in admin.
+    deleteSubmission: function (id) {
+      return Promise.resolve(
+        sb().from('submissions').delete().eq('id', id)
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
     // ---------- admins (team) — read: any admin; write: super-admin (RLS) ----------
     listAdmins: function () {
       return Promise.resolve(

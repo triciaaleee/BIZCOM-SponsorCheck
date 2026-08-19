@@ -104,6 +104,19 @@
   gap: var(--space-2);
 }
 
+/* Destructive action sits apart from Close/Save so it is not mis-clicked. */
+.side-panel__footer-danger {
+  margin-right: auto;
+  color: var(--color-orange-dark);
+}
+
+.side-panel__footer-danger:hover {
+  background-color: var(--status-prohibited-bg);
+  color: var(--color-orange-dark);
+}
+
+.side-panel__footer-danger[hidden] { display: none; }
+
 /* Status picker inside panel */
 .panel-status-picker {
   display: flex;

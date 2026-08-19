@@ -58,6 +58,7 @@
     const cancelBtn = document.getElementById('panel-cancel');
     const saveBtn = document.getElementById('panel-save');
     const saveLabel = document.getElementById('panel-save-label');
+    const deleteBtn = document.getElementById('panel-delete');
 
     const panelTitle = document.getElementById('panel-title');
     const panelSub = document.getElementById('panel-sub');
@@ -274,6 +275,7 @@
       panelSubmittedLine.style.display = '';
 
       saveLabel.textContent = 'Save';
+      if (deleteBtn) deleteBtn.hidden = false;   // existing row, so deletable
       openPanelUi();
     }
 
@@ -296,6 +298,7 @@
       panelSubmittedLine.style.display = 'none';
 
       saveLabel.textContent = 'Create';
+      if (deleteBtn) deleteBtn.hidden = true;    // nothing saved yet to delete
       openPanelUi();
     }
 
@@ -314,6 +317,7 @@
       pendingSubmittedAt = null;
       mode = 'edit';
       saveBtn.disabled = false;
+      if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.hidden = true; }
     }
 
     function readPanelForm() {
@@ -418,6 +422,35 @@
       closePanel();
     }
 
+    async function deleteSubmission() {
+      const sub = submissions.find(function (s) { return s.id === openSubmissionId; });
+      if (!sub) return;
+
+      // Permanent: there is no soft-delete or audit trail to recover this from.
+      if (!confirm('Delete the submission for "' + sub.event_name + '" by ' + sub.club +
+                   '? This cannot be undone.')) return;
+
+      const id = openSubmissionId;
+      deleteBtn.disabled = true;
+      try {
+        await window.AdminAPI.deleteSubmission(id);
+      } catch (e) {
+        deleteBtn.disabled = false;
+        toastError('Could not delete submission', e);
+        return;
+      }
+
+      // Drop it from the local list so the calendar and banner update without a reload.
+      const i = submissions.findIndex(function (s) { return s.id === id; });
+      if (i !== -1) submissions.splice(i, 1);
+
+      toastMsg({ type: 'success', title: 'Submission deleted', message: sub.event_name });
+
+      renderBanner();
+      renderCalendar();
+      closePanel();
+    }
+
     // ---------- wire panel events ----------
     panelStatusBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -427,6 +460,7 @@
 
     closeBtn.addEventListener('click', closePanel);
     cancelBtn.addEventListener('click', closePanel);
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteSubmission);
     backdrop.addEventListener('click', closePanel);
 
     document.addEventListener('keydown', function (e) {
