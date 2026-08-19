@@ -31,6 +31,10 @@
   gap: var(--space-4);
 }
 
+/* display:flex would otherwise beat the hidden attribute, leaving the
+   password-setup panel on screen. */
+.login-card__form[hidden] { display: none; }
+
 .login-card__error {
   background-color: var(--status-prohibited-bg, rgba(202, 88, 28, 0.08));
   border: 1px solid rgba(202, 88, 28, 0.3);
@@ -42,6 +46,55 @@
 }
 
 .login-card__error.is-shown { display: block; }
+
+/* Confirmation that a one-time sign-in link has gone out. Informational, so
+   it reads as navy rather than borrowing the error styling. */
+.login-card__notice {
+  background-color: rgba(46, 82, 157, 0.06);
+  border: 1px solid rgba(46, 82, 157, 0.25);
+  color: var(--color-navy);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+  margin-bottom: var(--space-4);
+}
+
+.login-card__notice[hidden] { display: none; }
+
+/* First-time sign-in block, below the password form. */
+.login-card__alt {
+  margin-top: var(--space-5);
+}
+
+.login-card__alt[hidden] { display: none; }
+
+.login-card__alt-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.login-card__alt-divider::before,
+.login-card__alt-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-subtle);
+}
+
+.login-card__alt-text {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+}
 
 .login-card__footer {
   margin-top: var(--space-5);

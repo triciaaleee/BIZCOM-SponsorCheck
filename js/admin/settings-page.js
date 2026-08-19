@@ -10,9 +10,11 @@
    settings updates are super-admin only (enforced by RLS). No MOCK_DATA.
 
    NOTE on invite: inserting the `admins` row is the whitelist half.
-   The actual Supabase Auth account (so the person can sign in) is
-   created separately in the dashboard / a server-side invite — the
-   publishable key can't create auth users. The toast says as much.
+   The publishable key cannot create Supabase Auth accounts, so the
+   invited person creates their own on first sign-in: they request a
+   one-time link from the login page, which is gated on this whitelist
+   by is_admin_email(). See 0008_magic_link_onboarding.sql. Admins with
+   no linked account yet are shown as "No login yet" in the team list.
    ============================================================ */
 
 (function () {
@@ -68,6 +70,15 @@
       return '<span class="role-badge role-badge--admin">Admin</span>';
     }
 
+    // Added to the whitelist but never signed in, so no auth account is linked
+    // yet. Flags the case where someone was invited and never onboarded.
+    function pendingBadge(admin) {
+      if (admin.user_id) return '';
+      return ' <span class="pill pill--caution" title="This admin has not signed in yet. ' +
+             'They sign in themselves from the login page using a one-time link.">' +
+             '<i class="bi bi-hourglass-split pill__icon"></i>No login yet</span>';
+    }
+
     function emailLooksValid(s) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
@@ -121,7 +132,7 @@
               '</div>' +
             '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(a.email) + '</span></td>' +
-            '<td>' + roleBadge(a.role) + '</td>' +
+            '<td>' + roleBadge(a.role) + pendingBadge(a) + '</td>' +
             '<td class="text-right">' + actions + '</td>' +
           '</tr>'
         );
@@ -245,7 +256,8 @@
       toastMsg({
         type: 'success',
         title: 'Admin added',
-        message: name + ' is on the team. Create their login in Supabase Auth so they can sign in.'
+        message: name + ' is on the team. Ask them to open the admin login page and '
+                 + 'choose "Email me a sign-in link" to set up their account.'
       });
 
       resetInviteForm();

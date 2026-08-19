@@ -32,17 +32,49 @@
 
       <div class="login-card__error" id="login-error" role="alert"></div>
 
+      <div class="login-card__notice" id="login-notice" role="status" hidden></div>
+
+      <!-- PANEL: normal password sign-in -->
       <form class="login-card__form" id="login-form">
         <div class="form-group">
           <label class="form-label" for="login-email">Email</label>
-          <input type="email" class="form-input" id="login-email" placeholder="biz@sa.smu.edu.sg" autocomplete="email" required>
+          <input type="email" class="form-input" id="login-email" placeholder="name@smu.edu.sg" autocomplete="email" required>
         </div>
         <div class="form-group">
           <label class="form-label" for="login-password">Password</label>
-          <input type="password" class="form-input" id="login-password" placeholder="Mock auth, any value works" autocomplete="current-password" required>
+          <input type="password" class="form-input" id="login-password" placeholder="Your password" autocomplete="current-password" required>
         </div>
         <button type="submit" class="btn btn--primary btn--lg" style="width: 100%">
           <i class="bi bi-shield-lock-fill"></i> Sign in
+        </button>
+      </form>
+
+      <!-- First sign-in, or a forgotten password: no password needed. -->
+      <div class="login-card__alt" id="login-alt">
+        <div class="login-card__alt-divider"><span>First login?</span></div>
+        <p class="login-card__alt-text">
+          Confirm with the BIZCOM President that your SMU email is registered with the team. Enter your SMU email above for a one-time sign-in link, and set a password once you're in.
+        </p>
+        <button type="button" class="btn btn--secondary" id="magic-link-btn" style="width: 100%">
+          <i class="bi bi-envelope-fill"></i> Email me a sign-in link
+        </button>
+      </div>
+
+      <!-- PANEL: set a password after arriving from the link -->
+      <form class="login-card__form" id="setup-form" hidden>
+        <p class="login-card__alt-text">
+          You are signed in. Set a password now so you can sign in normally next time, without waiting for an email.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="setup-password">New password</label>
+          <input type="password" class="form-input" id="setup-password" placeholder="At least 8 characters" autocomplete="new-password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="setup-password-2">Confirm password</label>
+          <input type="password" class="form-input" id="setup-password-2" placeholder="Repeat the password" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn btn--primary btn--lg" style="width: 100%">
+          <i class="bi bi-check-lg"></i> Save password and continue
         </button>
       </form>
 

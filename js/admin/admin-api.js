@@ -277,7 +277,9 @@
     // ---------- admins (team) — read: any admin; write: super-admin (RLS) ----------
     listAdmins: function () {
       return Promise.resolve(
-        sb().from('admins').select('email, name, role').order('email')
+        // user_id is NULL until the admin's first sign-in links their auth
+        // account (see link_admin_user in 0008), which drives "No login yet".
+        sb().from('admins').select('email, name, role, user_id').order('email')
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 
