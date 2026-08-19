@@ -303,9 +303,13 @@
       ).then(unwrap);
     },
 
+    // Server-side RPC, not a plain delete: it removes the `admins` row AND the
+    // person's Supabase Auth login, which the publishable key cannot touch on
+    // its own. Also enforces the "not the super-admin, not yourself" rules.
+    // See 0010_remove_admin_deletes_login.sql.
     removeAdmin: function (email) {
       return Promise.resolve(
-        sb().from('admins').delete().eq('email', email)
+        sb().rpc('remove_admin', { p_email: email })
       ).then(function (res) { if (res.error) throw res.error; });
     },
 

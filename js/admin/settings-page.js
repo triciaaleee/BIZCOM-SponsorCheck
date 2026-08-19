@@ -9,6 +9,11 @@
    Reads/writes live via window.AdminAPI (Supabase). Team writes and
    settings updates are super-admin only (enforced by RLS). No MOCK_DATA.
 
+   NOTE on remove: removal goes through the remove_admin() RPC, which
+   deletes the `admins` row AND the person's Supabase Auth login in one
+   transaction. A plain delete would leave the login behind forever.
+   See 0010_remove_admin_deletes_login.sql.
+
    NOTE on invite: inserting the `admins` row is the whitelist half.
    The publishable key cannot create Supabase Auth accounts, so the
    invited person creates their own on first sign-in: they request a
@@ -277,7 +282,9 @@
         toastMsg({ type: 'error', title: 'Cannot remove yourself', message: 'Ask another super-admin to remove you.' });
         return;
       }
-      if (!confirm('Remove ' + email + ' from the team? This cannot be undone.')) return;
+      if (!confirm('Remove ' + email + ' from the team? '
+                   + 'This deletes their login as well, so they lose access immediately '
+                   + 'and would have to be invited again from scratch.')) return;
 
       try {
         await window.AdminAPI.removeAdmin(email);
@@ -289,7 +296,7 @@
       const idx = admins.indexOf(admin);
       if (idx >= 0) admins.splice(idx, 1);
 
-      toastMsg({ type: 'success', title: 'Admin removed', message: email });
+      toastMsg({ type: 'success', title: 'Admin removed', message: email + ' and their login are gone.' });
       render();
     }
 
