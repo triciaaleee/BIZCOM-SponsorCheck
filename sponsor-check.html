@@ -270,9 +270,6 @@
                   <button type="button" class="btn btn--secondary btn--sm" id="download-csv">
                     <i class="bi bi-download"></i> Download CSV
                   </button>
-                  <button type="button" class="btn btn--primary btn--sm" id="email-bizcom" disabled aria-disabled="true" title="Fill in event name, club, and size first">
-                    <i class="bi bi-envelope-fill"></i> Email to BIZCOM
-                  </button>
                 </div>
               </div>
 
@@ -334,6 +331,48 @@
                 </thead>
                 <tbody id="results-tbody"></tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Step 4: Submit to BIZCOM (always visible, the check is not a submission) -->
+          <div class="event-meta">
+            <div class="event-meta__header">
+              <div class="event-meta__num event-meta__num--gold">4</div>
+              <div>
+                <h2 class="event-meta__title">Send your list to BIZCOM</h2>
+                <div class="event-meta__subtitle">This checker is a pre-check only. Your list is not submitted until you email it.</div>
+              </div>
+            </div>
+
+            <div class="banner banner--info">
+              <i class="bi bi-envelope-fill banner__icon"></i>
+              <div class="banner__body">
+                <div class="banner__title">Nothing here reaches BIZCOM automatically</div>
+                <div class="banner__message">
+                  The checker compares your list against BIZCOM's records, but it does not submit anything on your behalf. BIZCOM only sees your list once you email it, and approval still comes from them.
+                </div>
+              </div>
+            </div>
+
+            <div class="event-meta__list">
+              <div class="event-meta__list-title">Before you email</div>
+              <ul>
+                <li>Remove or replace anything flagged prohibited, cooldown or duplicate.</li>
+                <li>Clear any alumni-affiliated company with OAR before you approach it.</li>
+                <li>Download the CSV from your results, then use <strong>Email to BIZCOM</strong> below to open a pre-filled draft.</li>
+                <li>Attach the CSV, your sponsorship deck and your outreach email template, then send the draft yourself.</li>
+                <li>Wait for BIZCOM's written approval before contacting any sponsor.</li>
+              </ul>
+            </div>
+
+            <div class="event-meta__actions">
+              <button type="button" class="btn btn--primary" id="email-bizcom">
+                <i class="bi bi-envelope-fill"></i> Email to BIZCOM
+              </button>
+              <p class="event-meta__error" id="email-error" role="alert" hidden>
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span id="email-error-text"></span>
+              </p>
             </div>
           </div>
 

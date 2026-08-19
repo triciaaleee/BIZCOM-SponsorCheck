@@ -67,6 +67,67 @@
   margin-top: 2px;
 }
 
+/* Step 4 "before you email" checklist. Same shape as the template-guide
+   rules list, but owned by the event-meta block. */
+.event-meta__list {
+  margin-top: var(--space-4);
+}
+
+.event-meta__list-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.event-meta__list ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.event-meta__list li {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+/* Step 4 action row: the Email to BIZCOM button plus its inline error.
+   The button is never disabled, so the error carries the explanation. */
+.event-meta__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.event-meta__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-orange-dark);
+}
+
+.event-meta__error[hidden] {
+  display: none;
+}
+
+/* Keep the live preview/results blocks clear of the step 4 card below them.
+   Neither .preview-card nor .table-wrapper carries a bottom margin. */
+#state-preview,
+#state-checking,
+#state-results {
+  margin-bottom: var(--space-4);
+}
+
 .event-meta__grid {
   display: grid;
   grid-template-columns: 1fr;

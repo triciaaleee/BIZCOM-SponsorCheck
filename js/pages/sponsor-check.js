@@ -40,6 +40,8 @@
   const startOverBtn  = document.getElementById('start-over');
   const downloadCsvBtn = document.getElementById('download-csv');
   const emailBizcomBtn = document.getElementById('email-bizcom');
+  const emailError     = document.getElementById('email-error');
+  const emailErrorText = document.getElementById('email-error-text');
 
   const resultsTbody  = document.getElementById('results-tbody');
   const filterChips   = document.querySelectorAll('[data-filter]');
@@ -129,21 +131,36 @@
     large:  'Large (over 150 attendees)'
   };
 
-  // ---------- Email button gating ----------
-  // The "Email to BIZCOM" button is only enabled when the three
-  // mandatory event-meta fields are filled in.
+  // ---------- Email validation ----------
+  // The "Email to BIZCOM" button stays clickable at all times. A greyed-out
+  // button gives no reason why, so the mandatory section 1 fields are checked
+  // on click instead, with a message and a jump to the first empty field.
+
+  // Returns the empty section 1 fields, first one first.
+  function missingEventFields() {
+    const missing = [];
+    if (!eventName || !eventName.value.trim()) missing.push(eventName);
+    if (!eventClub || !eventClub.value.trim()) missing.push(eventClub);
+    if (!eventSize) missing.push(document.querySelector('[data-event-size]'));
+    return missing;
+  }
+
+  function showEmailError(text) {
+    if (!emailError || !emailErrorText) return;
+    emailErrorText.textContent = text;
+    emailError.hidden = false;
+  }
+
+  function clearEmailError() {
+    if (!emailError || !emailErrorText) return;
+    emailErrorText.textContent = '';
+    emailError.hidden = true;
+  }
+
+  // Clear a standing error as soon as the fields are put right.
   function updateEmailButtonState() {
-    if (!emailBizcomBtn) return;
-    const hasName = eventName && eventName.value.trim().length > 0;
-    const hasClub = eventClub && eventClub.value.trim().length > 0;
-    const hasSize = !!eventSize;
-    const ready = hasName && hasClub && hasSize;
-    emailBizcomBtn.disabled = !ready;
-    emailBizcomBtn.setAttribute('aria-disabled', String(!ready));
-    if (ready) {
-      emailBizcomBtn.removeAttribute('title');
-    } else {
-      emailBizcomBtn.setAttribute('title', 'Fill in event name, club, and size first');
+    if (emailError && !emailError.hidden && missingEventFields().length === 0) {
+      clearEmailError();
     }
   }
 
@@ -551,17 +568,25 @@
   // ---------- Email BIZCOM ----------
   if (emailBizcomBtn) {
     emailBizcomBtn.addEventListener('click', function () {
-      // Defensive guard: if the button is disabled (mandatory fields empty),
-      // do nothing. The disabled attribute should prevent the click event,
-      // but this catches edge cases where JS toggled the property only.
-      if (emailBizcomBtn.disabled) return;
+      // Section 1 is the only prerequisite: the draft needs the event name,
+      // club and size to be meaningful. Anything missing is reported in place
+      // and the student is taken straight to the first empty field.
+      const missing = missingEventFields();
+      if (missing.length) {
+        showEmailError('Ensure all information in Section 1 is filled before emailing BIZCOM.');
+
+        const target = missing[0];
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Focus after the scroll so the browser does not jump instantly.
+          setTimeout(function () { target.focus({ preventScroll: true }); }, 350);
+        }
+        return;
+      }
+      clearEmailError();
 
       const event = eventName.value.trim();
       const club  = eventClub.value.trim();
-      if (!event || !club || !eventSize) {
-        updateEmailButtonState();
-        return;
-      }
 
       const subject = encodeURIComponent('[Sponsor Check] ' + event + ', ' + club);
       const body = encodeURIComponent(
@@ -577,7 +602,7 @@
         '  3. Outreach email template\n\n' +
         'Thanks!'
       );
-      window.location.href = 'mailto:biz.secretary@sa.smu.edu.sg?subject=' + subject + '&body=' + body;
+      window.location.href = 'mailto:biz@sa.smu.edu.sg,a.biz@sa.smu.edu.sg,biz.secretary@smu.edu.sg?subject=' + subject + '&body=' + body;
     });
   }
 
