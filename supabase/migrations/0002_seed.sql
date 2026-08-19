@@ -179,33 +179,4 @@ select * from (values
 ) as v(event_name, club, contact_email, event_size, sponsor_count, submitted_at, complete_by, status, reviewed_by, reviewed_at, notes)
 where not exists (select 1 from public.submissions);
 
--- ---------- submission_sponsors ---------------------------------------------
--- Joined to the parent on event_name (unique among the seed submissions).
-insert into public.submission_sponsors (submission_id, position, name, status, industry)
-select sub.id, x.position, x.name, x.status, x.industry
-from (values
-  ('Bizad Charity Run 2026', 1, 'KOI',               'caution',    'food_beverage'),
-  ('Bizad Charity Run 2026', 2, 'LiHO',             'cooldown',   'food_beverage'),
-  ('Bizad Charity Run 2026', 3, 'Uniqlo',           'clear',      'apparel_accessories'),
-  ('Bizad Charity Run 2026', 4, 'Tea Tribe',        'alumni',     'food_beverage'),
-  ('Bizad Charity Run 2026', 5, 'Singapore Pools',  'prohibited',    'entertainment_leisure'),
-  ('Bizad Charity Run 2026', 6, 'Logitech',         'clear',      'tech_electronics'),
-  ('Bizad Charity Run 2026', 7, 'Razer',            'clear',      'tech_electronics'),
-  ('Bizad Charity Run 2026', 8, 'Climb Central',    'clear',      'activities_experiences'),
-  ('Loop Music Festival',    1, 'Loop Studio',      'alumni',     'activities_experiences'),
-  ('Loop Music Festival',    2, 'Crave Bakery',     'alumni',     'food_beverage'),
-  ('Loop Music Festival',    3, 'Cathay Cineplexes','clear',      'entertainment_leisure'),
-  ('Loop Music Festival',    4, 'Sephora',          'clear',      'beauty_personal_care'),
-  ('Loop Music Festival',    5, 'MUJI',             'clear',      'home_lifestyle'),
-  ('Code Sprint 2026',       1, 'Razer',            'clear',      'tech_electronics'),
-  ('Code Sprint 2026',       2, 'Logitech',         'clear',      'tech_electronics'),
-  ('Code Sprint 2026',       3, 'Challenger',       'unverified', 'tech_electronics'),
-  ('Freshmen Welcome Tea',   1, 'KOI',               'caution',    'food_beverage'),
-  ('Freshmen Welcome Tea',   2, 'Tea Tribe',        'alumni',     'food_beverage'),
-  ('Freshmen Welcome Tea',   3, 'Watsons',          'clear',      'beauty_personal_care'),
-  ('Hackathon 2026',         1, 'Grab',             'cooldown',   'transport_mobility'),
-  ('Hackathon 2026',         2, 'Razer',            'clear',      'tech_electronics'),
-  ('Hackathon 2026',         3, 'DBS Bank',         'prohibited',    'professional_services')
-) as x(event_name, position, name, status, industry)
-join public.submissions sub on sub.event_name = x.event_name
-where not exists (select 1 from public.submission_sponsors);
+

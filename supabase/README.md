@@ -38,7 +38,6 @@ installs from `0001` already have the final shape and can skip it.
 | `outreach_log` | append-only contact events; the running count is derived from this |
 | `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
-| `submission_sponsors` | the companies on each submission + their computed status |
 | `admins` | EXCO whitelist + role (`super_admin`/`admin`); at most one super-admin |
 | `settings` | single-row caps + cooldown window |
 
@@ -75,7 +74,7 @@ types** (which aren't companies) live in `annex_a_categories`.
 ### 2. Submissions are admin-managed
 The public checker (`sponsor-check.html`) only **emails** BIZCOM — it does not
 write to the database. Admins log/edit each club's submission on the Home
-calendar. RLS therefore locks `submissions` + `submission_sponsors` to signed-in
+calendar. RLS therefore locks `submissions` to signed-in
 admins (no anonymous insert). If you later add a public submit form, add an
 `anon` INSERT policy and generate the row id client-side with `crypto.randomUUID()`.
 
@@ -108,7 +107,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 | ---- | ------------- | --------------- |
 | industries, sponsors, settings, annex_a_categories | read | read + write¹ |
 | `sponsor_outreach` view | read | read |
-| submissions / submission_sponsors | none | full |
+| submissions | none | full |
 | outreach_log | none | full (write via `log_outreach`) |
 | admins | none | read; **super-admin** writes |
 | settings updates | none | **super-admin** only |
@@ -116,8 +115,9 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Dropped `submission_sponsors` (0009): never read or written by the app, so it only ever held seed rows.
 - Widened the `admins.email` domain check (0007): any `smu.edu.sg` address or subdomain, not just `@sa.smu.edu.sg`.
-- Renamed `sponsors.category` `banned` -> `prohibited` and `submission_sponsors.status` `blocked` -> `prohibited` (0006), standardising the term across both sites.
+- Renamed `sponsors.category` `banned` -> `prohibited` (0006), standardising the term across both sites. (0006 also renamed `submission_sponsors.status`; that table was later dropped in 0009.)
 - Dropped `activity_log` (0005): it was write-only, nothing ever read it back.
 - Added `annex_a_categories` (types only).
 - Added `log_outreach()` + `transfer_super_admin()` RPCs and the one-super-admin index.

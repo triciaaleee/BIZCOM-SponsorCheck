@@ -66,6 +66,10 @@ alter table public.sponsors
 
 -- ------------------------------------------------------------
 -- 2. submission_sponsors.status
+--
+-- NOTE: submission_sponsors was dropped in 0009. This section only
+-- applies to projects that ran 0006 before that. Do not run this file
+-- after 0009: the ADD CONSTRAINT below would fail on a missing table.
 -- ------------------------------------------------------------
 
 alter table public.submission_sponsors

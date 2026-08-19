@@ -115,8 +115,9 @@ The public checker refuses a CSV that exceeds the cap for the chosen size.
 ## 3. The matcher (how a company gets a status)
 
 When a CSV is checked (public checker or admin vetting), each row is matched
-against the `sponsors` table and assigned one of these **result statuses**. These
-are also the allowed values of `submission_sponsors.status`:
+against the `sponsors` table and assigned one of these **result statuses**. They
+are computed in the browser by `js/lib/matcher-core.js` and shown in the results
+table; no database column stores them:
 
 | Status | Means |
 | ------ | ----- |
@@ -140,10 +141,7 @@ near-misses.
 ```mermaid
 erDiagram
     industries  ||--o{ sponsors            : classifies
-    industries  ||--o{ submission_sponsors : classifies
     sponsors    ||--o{ outreach_log        : "contacted via"
-    sponsors    |o--o{ submission_sponsors : "matched to"
-    submissions ||--o{ submission_sponsors : contains
     auth_users  |o--o| admins              : "logs in as"
 
     industries {
@@ -187,15 +185,6 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at
     }
-    submission_sponsors {
-        uuid id PK
-        uuid submission_id FK
-        int  position
-        text name
-        text status "matcher status"
-        text industry FK
-        uuid matched_sponsor_id FK
-    }
     admins {
         uuid id PK
         text email UK "smu.edu.sg or subdomain"
@@ -223,7 +212,7 @@ erDiagram
 ```
 
 > `auth_users` is Supabase's built-in **`auth.users`** table (the login
-> accounts). `settings` and `annex_a_categories` have no foreign
+> accounts). `settings`, `annex_a_categories` and `submissions` have no foreign
 > keys — they stand alone.
 
 ---
@@ -235,9 +224,6 @@ erDiagram
 | `sponsors` | `industry` | `industries.code` | — | No | Every company has an industry. |
 | `outreach_log` | `sponsor_id` | `sponsors.id` | **CASCADE** | No | Contacts belong to a sponsor; delete the sponsor, delete its log. |
 | `submissions` | *(none)* | — | — | — | Admin-managed; no FK. |
-| `submission_sponsors` | `submission_id` | `submissions.id` | **CASCADE** | No | Line items belong to a submission. |
-| `submission_sponsors` | `industry` | `industries.code` | — | Yes | Suggested/known industry (may be unknown). |
-| `submission_sponsors` | `matched_sponsor_id` | `sponsors.id` | **SET NULL** | Yes | Links a line to the master record it matched (if any). |
 | `admins` | `user_id` | `auth.users.id` | **SET NULL** | Yes | Links the whitelist row to the actual login account. |
 
 **Not foreign keys (intentionally):** `outreach_log.contacted_by` and
@@ -321,19 +307,6 @@ only** — the public checker emails BIZCOM rather than writing here.
 | `notes` | text | Handover notes. |
 | `created_at` / `updated_at` | timestamptz | `updated_at` auto-maintained. |
 
-### `submission_sponsors` — line items of a submission
-Each company on a submitted list plus its computed status.
-
-| Column | Type | Notes |
-| ------ | ---- | ----- |
-| `id` | uuid | **PK.** |
-| `submission_id` | uuid | **FK → submissions.id** (cascade). |
-| `position` | int | Preserves list order. |
-| `name` | text | Company name as submitted. |
-| `status` | text | A matcher status (see §3). |
-| `industry` | text | **FK → industries.code** (nullable). |
-| `matched_sponsor_id` | uuid | **FK → sponsors.id** (set null; nullable). |
-
 ### `admins` — the EXCO whitelist + roles
 Authorises who may use the admin console. Login itself is via Supabase Auth; a
 person must exist **both** here and in `auth.users` (matched by email).
@@ -399,7 +372,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | `industries`, `sponsors`, `annex_a_categories` | read | read + write | — |
 | `settings` | read | read | **write** |
 | `sponsor_outreach` (view) | read | read | — |
-| `submissions`, `submission_sponsors` | — | full | — |
+| `submissions` | — | full | — |
 | `outreach_log` | — | full (via `log_outreach`) | — |
 | `admins` | — | read | **write** |
 

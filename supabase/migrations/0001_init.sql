@@ -112,19 +112,6 @@ create table if not exists public.submissions (
   updated_at    timestamptz not null default now()
 );
 
--- Child rows of a submission: each company on the list + its computed status.
--- (Present in the data model; not yet read/written by any current admin page.)
-create table if not exists public.submission_sponsors (
-  id                  uuid primary key default gen_random_uuid(),
-  submission_id       uuid not null references public.submissions(id) on delete cascade,
-  position            int  not null default 0,     -- preserves list order
-  name                text not null,
-  status              text not null check (status in
-                        ('clear','caution','cooldown','alumni','prohibited','unverified','duplicate')),
-  industry            text references public.industries(code),
-  matched_sponsor_id  uuid references public.sponsors(id) on delete set null
-);
-
 -- EXCO whitelist + roles. Authorises the matching auth.users account as admin.
 create table if not exists public.admins (
   id         uuid primary key default gen_random_uuid(),
@@ -161,7 +148,6 @@ create index if not exists outreach_sponsor_idx       on public.outreach_log (sp
 create index if not exists outreach_contacted_at_idx  on public.outreach_log (contacted_at);
 create index if not exists submissions_status_idx     on public.submissions (status);
 create index if not exists submissions_submitted_idx  on public.submissions (submitted_at desc);
-create index if not exists subsponsors_submission_idx on public.submission_sponsors (submission_id);
 
 -- ============================================================
 -- HELPER FUNCTIONS (auth) — SECURITY DEFINER so they read `admins`
@@ -294,7 +280,6 @@ alter table public.sponsors            enable row level security;
 alter table public.outreach_log        enable row level security;
 alter table public.annex_a_categories  enable row level security;
 alter table public.submissions         enable row level security;
-alter table public.submission_sponsors enable row level security;
 alter table public.admins              enable row level security;
 alter table public.settings            enable row level security;
 
@@ -329,11 +314,6 @@ drop policy if exists submissions_all on public.submissions;
 create policy submissions_all on public.submissions for all
   using (public.is_admin()) with check (public.is_admin());
 
--- ---- submission_sponsors: admin only ----
-drop policy if exists subsponsors_all on public.submission_sponsors;
-create policy subsponsors_all on public.submission_sponsors for all
-  using (public.is_admin()) with check (public.is_admin());
-
 -- ---- admins: admins read the team; super-admin manages it ----
 drop policy if exists admins_read  on public.admins;
 drop policy if exists admins_write on public.admins;
@@ -361,7 +341,7 @@ grant select on public.sponsor_outreach                       to anon, authentic
 -- admins (any signed-in user; RLS narrows to whitelisted emails)
 grant select, insert, update, delete on
   public.industries, public.sponsors, public.outreach_log, public.annex_a_categories,
-  public.submissions, public.submission_sponsors,
+  public.submissions,
   public.admins, public.settings
   to authenticated;
 
