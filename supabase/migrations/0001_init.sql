@@ -128,7 +128,10 @@ create table if not exists public.submission_sponsors (
 -- EXCO whitelist + roles. Authorises the matching auth.users account as admin.
 create table if not exists public.admins (
   id         uuid primary key default gen_random_uuid(),
-  email      text not null unique check (email like '%@sa.smu.edu.sg'),
+  -- Any SMU address: smu.edu.sg itself, or any subdomain (sa., computing., ...).
+  -- Mirrors isSmuEmail() in js/admin/settings-page.js; keep the two in step.
+  email      text not null unique
+               check (email like '%@smu.edu.sg' or email like '%@%.smu.edu.sg'),
   name       text not null,
   role       text not null default 'admin' check (role in ('super_admin','admin')),
   user_id    uuid references auth.users(id) on delete set null   -- linked on first sign-in

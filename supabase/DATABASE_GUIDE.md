@@ -198,7 +198,7 @@ erDiagram
     }
     admins {
         uuid id PK
-        text email UK "@sa.smu.edu.sg"
+        text email UK "smu.edu.sg or subdomain"
         text name
         text role "super_admin|admin"
         uuid user_id FK "auth.users"
@@ -341,7 +341,7 @@ person must exist **both** here and in `auth.users` (matched by email).
 | Column | Type | Notes |
 | ------ | ---- | ----- |
 | `id` | uuid | **PK.** |
-| `email` | text | **Unique.** Must end `@sa.smu.edu.sg`. |
+| `email` | text | **Unique.** Must be an SMU address: `@smu.edu.sg` or any subdomain (`@sa.`, `@computing.`, ...). |
 | `name` | text | Display name. |
 | `role` | text | `super_admin` \| `admin`. |
 | `user_id` | uuid | **FK → auth.users.id** (set null; linked on first sign-in). |

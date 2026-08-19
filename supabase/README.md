@@ -116,6 +116,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Widened the `admins.email` domain check (0007): any `smu.edu.sg` address or subdomain, not just `@sa.smu.edu.sg`.
 - Renamed `sponsors.category` `banned` -> `prohibited` and `submission_sponsors.status` `blocked` -> `prohibited` (0006), standardising the term across both sites.
 - Dropped `activity_log` (0005): it was write-only, nothing ever read it back.
 - Added `annex_a_categories` (types only).

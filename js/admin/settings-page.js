@@ -71,9 +71,10 @@
     function emailLooksValid(s) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
-    // The admins table CHECK requires the SMU staff domain.
+    // The admins table CHECK requires an SMU address: smu.edu.sg itself or
+    // any of its subdomains (sa., computing., business., and so on).
     function isSmuEmail(s) {
-      return /@sa\.smu\.edu\.sg$/i.test(s);
+      return /@([a-z0-9-]+\.)*smu\.edu\.sg$/i.test(s);
     }
 
     function isSelf(admin) { return admin.email === session.email; }
@@ -211,7 +212,7 @@
         return;
       }
       if (!emailLooksValid(email) || !isSmuEmail(email)) {
-        toastMsg({ type: 'error', title: 'Invalid email', message: 'Admin emails must end with @sa.smu.edu.sg.' });
+        toastMsg({ type: 'error', title: 'Invalid email', message: 'Admin emails must be an SMU address ending in smu.edu.sg.' });
         return;
       }
       if (findAdmin(email)) {
