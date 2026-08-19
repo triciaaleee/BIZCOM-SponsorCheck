@@ -148,17 +148,6 @@ create table if not exists public.settings (
   event_cap_large   int not null default 1000
 );
 
--- Append-only audit trail. The app already calls AdminShell.logActivity() at
--- every mutation (currently a no-op); point those at an insert here to activate.
-create table if not exists public.activity_log (
-  id          uuid primary key default gen_random_uuid(),
-  actor_email text,            -- admin email or null
-  action      text not null,   -- e.g. 'sponsor.created', 'submission.status_changed'
-  entity      text,            -- human label of the affected thing
-  details     text,
-  created_at  timestamptz not null default now()
-);
-
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -170,7 +159,6 @@ create index if not exists outreach_contacted_at_idx  on public.outreach_log (co
 create index if not exists submissions_status_idx     on public.submissions (status);
 create index if not exists submissions_submitted_idx  on public.submissions (submitted_at desc);
 create index if not exists subsponsors_submission_idx on public.submission_sponsors (submission_id);
-create index if not exists activity_created_idx       on public.activity_log (created_at desc);
 
 -- ============================================================
 -- HELPER FUNCTIONS (auth) — SECURITY DEFINER so they read `admins`
@@ -306,7 +294,6 @@ alter table public.submissions         enable row level security;
 alter table public.submission_sponsors enable row level security;
 alter table public.admins              enable row level security;
 alter table public.settings            enable row level security;
-alter table public.activity_log        enable row level security;
 
 -- ---- industries: public read, admin write ----
 drop policy if exists industries_read  on public.industries;
@@ -358,14 +345,6 @@ create policy settings_read   on public.settings for select using (true);
 create policy settings_update on public.settings for update
   using (public.is_super_admin()) with check (public.is_super_admin());
 
--- ---- activity_log: admins read + append; super-admin prunes ----
-drop policy if exists activity_read   on public.activity_log;
-drop policy if exists activity_insert on public.activity_log;
-drop policy if exists activity_delete on public.activity_log;
-create policy activity_read   on public.activity_log for select using (public.is_admin());
-create policy activity_insert on public.activity_log for insert with check (public.is_admin());
-create policy activity_delete on public.activity_log for delete using (public.is_super_admin());
-
 -- ============================================================
 -- GRANTS  (RLS still gates which rows each role can touch)
 -- ============================================================
@@ -380,7 +359,7 @@ grant select on public.sponsor_outreach                       to anon, authentic
 grant select, insert, update, delete on
   public.industries, public.sponsors, public.outreach_log, public.annex_a_categories,
   public.submissions, public.submission_sponsors,
-  public.admins, public.settings, public.activity_log
+  public.admins, public.settings
   to authenticated;
 
 grant execute on function public.log_outreach(uuid, text)      to authenticated;

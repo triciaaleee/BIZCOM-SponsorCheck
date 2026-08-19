@@ -29,6 +29,15 @@
       return;
     }
 
+    // Bounced back here by the admin shell because the session ended on its own.
+    // Clear the flag from the URL so a refresh does not repeat the message.
+    if (/[?&]expired=1(&|$)/.test(window.location.search)) {
+      showError('Your session has ended. Please sign in again.');
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+
     // Already signed in (valid live session + still whitelisted)? Skip the form.
     window.sb.auth.getSession().then(function (res) {
       const session = res && res.data ? res.data.session : null;

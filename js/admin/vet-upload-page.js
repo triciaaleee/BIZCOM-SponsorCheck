@@ -649,8 +649,6 @@
           else if (res === 'skipped') skipped++;
         }
 
-        window.AdminShell.logActivity('outreach.logged', logged + ' companies',
-          'Logged outreach for ' + logged + ' companies' + (capped ? ' (' + capped + ' reached the cap)' : ''));
 
         await refreshOutreach();
         revet();  // refresh status, remarks, outreach and panels consistently
@@ -927,15 +925,13 @@
       });
 
       let loggedCount = 0;
+      let outreachFailed = 0;
       for (const id of toLogIds) {
         try { const res = await window.AdminAPI.logOutreach(id); if (res !== 'skipped') loggedCount++; }
-        catch (e) { /* non-fatal: the sponsor is still added */ }
+        catch (e) { outreachFailed++; }   // non-fatal: the sponsor itself is still added
       }
       await refreshOutreach();
 
-      window.AdminShell.logActivity('sponsor.bulk_added', added + ' sponsors',
-        'Bulk add of ' + added + ' sponsors' + (loggedCount ? ', ' + loggedCount + ' with first outreach' : '') +
-        (skipped.length + dbSkipped ? ' (' + (skipped.length + dbSkipped) + ' skipped as duplicates)' : ''));
 
       // 5. Remove the committed rows; keep only unticked ones.
       stagingRows = stagingRows.filter(function (r) { return !r.include; });
@@ -946,7 +942,15 @@
       const parts = ['Added ' + added + (added === 1 ? ' sponsor' : ' sponsors') + '.'];
       if (loggedCount) parts.push('First outreach recorded for ' + loggedCount + '.');
       if (totalSkipped) parts.push(totalSkipped + ' skipped (already in the database).');
-      toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
+      if (outreachFailed) {
+        parts.push('Outreach could not be recorded for ' + outreachFailed +
+          (outreachFailed === 1 ? ' company.' : ' companies.'));
+      }
+      toastMsg({
+        type: outreachFailed ? 'warning' : 'success',
+        title: 'Database updated',
+        message: parts.join(' ')
+      });
 
       // Re-vet so anything just added moves up into "Found in the database".
       revet();

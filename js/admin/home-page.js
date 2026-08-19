@@ -347,7 +347,6 @@
         return;
       }
 
-      const oldStatus = sub.status;
       const statusChanged = sub.status !== form.status;
       let anyChanged = statusChanged;
       ['event_name', 'club', 'contact_email', 'event_size', 'sponsor_count', 'complete_by', 'notes'].forEach(function (k) {
@@ -374,13 +373,6 @@
         return;
       }
       Object.assign(sub, updated || patch);
-
-      if (statusChanged) {
-        window.AdminShell.logActivity('submission.status_changed', sub.event_name,
-          'Status changed from "' + oldStatus + '" to "' + form.status + '"');
-      } else {
-        window.AdminShell.logActivity('submission.updated', sub.event_name, 'Submission details updated');
-      }
 
       toastMsg({ type: 'success', title: 'Saved', message: sub.event_name });
       renderBanner();
@@ -419,8 +411,6 @@
       }
       if (created) submissions.unshift(created);
 
-      window.AdminShell.logActivity('submission.received', created ? created.event_name : form.event_name,
-        'Added by admin, club "' + form.club + '"');
       toastMsg({ type: 'success', title: 'Submission created', message: form.event_name });
 
       renderBanner();
@@ -474,7 +464,7 @@
         submissions = out[0] || [];
         settings = out[1] || {};
       } catch (e) {
-        toastError('Could not load submissions', e);
+        toastError('Could not load the dashboard', e);
         submissions = [];
         settings = {};
       }

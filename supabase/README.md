@@ -41,7 +41,6 @@ installs from `0001` already have the final shape and can skip it.
 | `submission_sponsors` | the companies on each submission + their computed status |
 | `admins` | EXCO whitelist + role (`super_admin`/`admin`); at most one super-admin |
 | `settings` | single-row caps + cooldown window |
-| `activity_log` | append-only audit trail |
 
 **Views**
 
@@ -112,13 +111,13 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 | submissions / submission_sponsors | none | full |
 | outreach_log | none | full (write via `log_outreach`) |
 | admins | none | read; **super-admin** writes |
-| activity_log | none | read + append; **super-admin** deletes |
 | settings updates | none | **super-admin** only |
 
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
-- Added `annex_a_categories` (types only) and `activity_log`.
+- Dropped `activity_log` (0005): it was write-only, nothing ever read it back.
+- Added `annex_a_categories` (types only).
 - Added `log_outreach()` + `transfer_super_admin()` RPCs and the one-super-admin index.
 - `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
 - Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).

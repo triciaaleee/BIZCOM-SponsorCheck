@@ -216,14 +216,6 @@ erDiagram
         text label UK
         int  sort_order
     }
-    activity_log {
-        uuid id PK
-        text actor_email
-        text action
-        text entity
-        text details
-        timestamptz created_at
-    }
     auth_users {
         uuid id PK
         text email
@@ -231,7 +223,7 @@ erDiagram
 ```
 
 > `auth_users` is Supabase's built-in **`auth.users`** table (the login
-> accounts). `settings`, `annex_a_categories`, and `activity_log` have no foreign
+> accounts). `settings` and `annex_a_categories` have no foreign
 > keys — they stand alone.
 
 ---
@@ -248,8 +240,8 @@ erDiagram
 | `submission_sponsors` | `matched_sponsor_id` | `sponsors.id` | **SET NULL** | Yes | Links a line to the master record it matched (if any). |
 | `admins` | `user_id` | `auth.users.id` | **SET NULL** | Yes | Links the whitelist row to the actual login account. |
 
-**Not foreign keys (intentionally):** `outreach_log.contacted_by`,
-`submissions.reviewed_by`, and `activity_log.actor_email` store an **email string**,
+**Not foreign keys (intentionally):** `outreach_log.contacted_by` and
+`submissions.reviewed_by` store an **email string**,
 not an FK to `admins` — so history survives even if an admin is later removed.
 
 ---
@@ -366,18 +358,6 @@ One row, pinned by a boolean PK. Public-readable (students see the caps).
 | `cooldown_days` | int | Cooldown length (default 30). |
 | `event_cap_small/medium/large` | int | Max sponsors per event size. |
 
-### `activity_log` — audit trail
-Append-only record of admin actions. Ready for the app's existing logging hooks.
-
-| Column | Type | Notes |
-| ------ | ---- | ----- |
-| `id` | uuid | **PK.** |
-| `actor_email` | text | Who did it. |
-| `action` | text | e.g. `sponsor.created`, `submission.status_changed`. |
-| `entity` | text | Human label of the affected thing. |
-| `details` | text | Free text. |
-| `created_at` | timestamptz | When. |
-
 ---
 
 ## 7. View
@@ -422,7 +402,6 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | `submissions`, `submission_sponsors` | — | full | — |
 | `outreach_log` | — | full (via `log_outreach`) | — |
 | `admins` | — | read | **write** |
-| `activity_log` | — | read + append | **delete** |
 
 ---
 
@@ -445,8 +424,6 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | **Sponsor detail / add-edit** | `sponsors`, `sponsor_outreach` | `sponsors` (create/update/delete) | The single-company form. Sidebar shows outreach count / cap and cooldown. |
 | **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add) | Upload a CSV, vet against the DB, log outreach for approved companies, and bulk-add new companies with their category + industry. |
 | **Settings** *(super-admin only)* | `admins`, `settings` | `admins` (invite/remove, `transfer_super_admin`), `settings` (update) | Team management + cap/cooldown/event-cap configuration. |
-
-*(Every mutating action is designed to also append to `activity_log`.)*
 
 ---
 

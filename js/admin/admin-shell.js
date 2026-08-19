@@ -7,7 +7,7 @@
    1. Auth guard: if no session, redirect to login.
    2. Render sidebar nav with active-page highlight.
    3. Render top-bar with signed-in email + role badge + sign out.
-   4. Action helpers: logActivity (audit-log insert), signOut.
+   4. Action helper: signOut.
 
    Auth is now wired to Supabase: the guard verifies the live auth
    session (window.sb) and sign-out calls supabase.auth.signOut().
@@ -40,22 +40,15 @@
     sessionStorage.removeItem('sponsorcheck_admin_session');
   }
 
-  // ---------- Activity log ----------
+  // Set while the admin is signing out on purpose, so the involuntary-logout
+  // notice on the login page is only shown when the session ended by itself.
+  let signingOut = false;
 
-  // Append an entry to the activity_log audit trail. Best-effort and
-  // fire-and-forget: a logging failure must never block the user's action, so
-  // errors are only warned to the console. RLS lets any signed-in admin insert.
-  function logActivity(action, entity, details) {
-    if (!window.sb || !action) return;
-    const s = getSession();
-    window.sb.from('activity_log').insert({
-      actor_email: s ? s.email : null,
-      action: action,
-      entity: entity != null ? String(entity) : null,
-      details: details != null ? String(details) : null
-    }).then(function (res) {
-      if (res && res.error) console.warn('[logActivity] ' + res.error.message);
-    }, function () { /* swallow */ });
+  // Send the admin back to login. `expired` flags an involuntary logout
+  // (token lapsed, or signed out from another tab) so login.html can explain.
+  function goToLogin(expired) {
+    clearSession();
+    window.location.href = (expired && !signingOut) ? 'login.html?expired=1' : 'login.html';
   }
 
   // ---------- Sidebar ----------
@@ -173,16 +166,10 @@
     if (session && !opts.skipAuth && window.sb) {
       window.sb.auth.getSession().then(function (res) {
         const live = res && res.data ? res.data.session : null;
-        if (!live) {
-          clearSession();
-          window.location.href = 'login.html';
-        }
+        if (!live) goToLogin(true);
       });
       window.sb.auth.onAuthStateChange(function (event) {
-        if (event === 'SIGNED_OUT') {
-          clearSession();
-          window.location.href = 'login.html';
-        }
+        if (event === 'SIGNED_OUT') goToLogin(true);
       });
     }
 
@@ -229,10 +216,8 @@
       if (signOutBtn) {
         signOutBtn.addEventListener('click', function () {
           if (!confirm('Sign out?')) return;
-          const finish = function () {
-            clearSession();
-            window.location.href = 'login.html';
-          };
+          signingOut = true;
+          const finish = function () { goToLogin(false); };
           // End the real Supabase session first, then clear the local cache.
           if (window.sb) window.sb.auth.signOut().then(finish, finish);
           else finish();
@@ -249,7 +234,6 @@
     getSession: getSession,
     setSession: setSession,
     clearSession: clearSession,
-    logActivity: logActivity,
     escapeHtml: escapeHtml,
     mapsLink: mapsLink
   };

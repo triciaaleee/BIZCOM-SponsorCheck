@@ -10,7 +10,8 @@
 --   admins.created_at
 --   settings.updated_at     (+ trigger trg_settings_updated)
 --
--- KEPT: activity_log.created_at (a timestamp is the point of an audit trail).
+-- (KEPT activity_log.created_at at the time; the whole table was later
+--  dropped in 0005_drop_activity_log.sql.)
 -- Safe to re-run: uses IF EXISTS everywhere.
 -- ============================================================
 

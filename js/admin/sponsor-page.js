@@ -138,17 +138,9 @@
       try {
         if (isCreate) {
           await window.AdminAPI.addSponsor(values);
-          window.AdminShell.logActivity('sponsor.created', name,
-            'Added as ' + currentStatus + ', industry ' + values.industry);
           toastMsg({ type: 'success', title: 'Sponsor created', message: name });
         } else {
           await window.AdminAPI.updateSponsor(sponsorId, values);
-          if (original.category !== values.category) {
-            window.AdminShell.logActivity('sponsor.status_changed', name,
-              'Status changed from "' + original.category + '" to "' + values.category + '"');
-          } else {
-            window.AdminShell.logActivity('sponsor.updated', name, describeDiff(original, values).join('; '));
-          }
           toastMsg({ type: 'success', title: 'Saved', message: name });
         }
       } catch (err) {
@@ -168,7 +160,7 @@
     // ---------- delete (super-admin only; danger zone) ----------
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async function () {
-        if (!confirm('Delete this sponsor? This is logged but reversible by re-adding it.')) return;
+        if (!confirm('Delete this sponsor? This cannot be undone, but it can be added again.')) return;
         const name = original ? original.name : nameEl.value.trim();
         deleteBtn.disabled = true;
         try {
@@ -178,7 +170,6 @@
           toastError('Could not delete sponsor', err);
           return;
         }
-        window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
         toastMsg({ type: 'success', title: 'Deleted', message: name });
         setTimeout(function () { window.location.href = 'sponsors.html'; }, 600);
       });

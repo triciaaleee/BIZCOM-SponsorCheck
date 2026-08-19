@@ -219,12 +219,12 @@
         } else {
           toastError('Could not add partner', e);
         }
-        return;
+        return false;
       }
-      window.AdminShell.logActivity('sponsor.created', name, 'Added to Annex B, contract ends ' + dateStr);
       toastMsg({ type: 'success', title: 'Partner added', message: name });
       renderAnnexBList();
       render();
+      return true;
     }
 
     async function removeAnnexBPartner(id) {
@@ -237,7 +237,6 @@
         toastError('Could not remove partner', e);
         return;
       }
-      window.AdminShell.logActivity('sponsor.deleted', name, 'Removed from Annex B');
       toastMsg({ type: 'success', title: 'Removed', message: name });
       renderAnnexBList();
       render();
@@ -494,7 +493,6 @@
           return;
         }
         deleteConfirmEl.disabled = false;
-        window.AdminShell.logActivity('sponsor.deleted', name, 'Sponsor removed from database');
         toastMsg({ type: 'success', title: 'Deleted', message: name });
         pendingDeleteId = null;
         pendingDeleteName = '';
@@ -527,7 +525,7 @@
         window.openModal && window.openModal('annex-b-modal');
       });
 
-      annexForm.addEventListener('submit', function (e) {
+      annexForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const name = annexName.value.trim();
         const date = annexDate.value;
@@ -541,8 +539,16 @@
           annexDate.focus();
           return;
         }
-        addAnnexBPartner(name, date, annexIndustry ? annexIndustry.value : 'other', annexNotes ? annexNotes.value.trim() : '');
-        window.closeModal && window.closeModal('annex-b-modal');
+        // Keep the modal open on failure so the typed values are not lost.
+        const submitBtn = annexForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        const ok = await addAnnexBPartner(
+          name, date,
+          annexIndustry ? annexIndustry.value : 'other',
+          annexNotes ? annexNotes.value.trim() : ''
+        );
+        if (submitBtn) submitBtn.disabled = false;
+        if (ok) window.closeModal && window.closeModal('annex-b-modal');
       });
     }
 

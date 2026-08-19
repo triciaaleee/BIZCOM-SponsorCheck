@@ -190,7 +190,6 @@
         window.AdminShell.setSession(session);
       }
 
-      window.AdminShell.logActivity('admin.updated', email, 'Name changed to "' + name + '"');
       toastMsg({ type: 'success', title: 'Name updated', message: name });
       render();
     }
@@ -242,7 +241,6 @@
       inviteSubmit.disabled = false;
 
       admins.push(created || { email: email, name: name, role: role });
-      window.AdminShell.logActivity('admin.added', email, name + ' invited as ' + role);
       toastMsg({
         type: 'success',
         title: 'Admin added',
@@ -278,7 +276,6 @@
       const idx = admins.indexOf(admin);
       if (idx >= 0) admins.splice(idx, 1);
 
-      window.AdminShell.logActivity('admin.removed', email, 'Removed by ' + session.email);
       toastMsg({ type: 'success', title: 'Admin removed', message: email });
       render();
     }
@@ -316,8 +313,6 @@
       target.role = 'super_admin';
       me.role = 'admin';
 
-      window.AdminShell.logActivity('admin.role_changed', target.email, 'Promoted to super-admin');
-      window.AdminShell.logActivity('admin.role_changed', me.email, 'Demoted to admin (transferred role)');
       toastMsg({ type: 'success', title: 'Role transferred', message: target.email + ' is now super-admin.' });
 
       // This page is super-admin only; update the session and bounce.
@@ -367,6 +362,15 @@
         event_cap_large: vals[4]
       };
 
+      // Nothing actually edited - skip the write (matches the other save paths).
+      const unchanged = Object.keys(patch).every(function (k) {
+        return Number(settings[k]) === patch[k];
+      });
+      if (unchanged) {
+        toastMsg({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
+        return;
+      }
+
       settingsSave.disabled = true;
       let updated;
       try {
@@ -380,8 +384,6 @@
 
       settings = updated || Object.assign(settings, patch);
 
-      window.AdminShell.logActivity('settings.updated', 'settings',
-        'Outreach cap ' + patch.outreach_cap + ', cooldown ' + patch.cooldown_days + 'd');
       toastMsg({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
     }
 
@@ -397,7 +399,7 @@
         admins = out[0] || [];
         settings = out[1] || {};
       } catch (e) {
-        toastError('Could not load settings', e);
+        toastError('Could not load the settings page', e);
         admins = [];
         settings = {};
       }
