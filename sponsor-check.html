@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sponsor checker, BIZCOM SponsorCheck</title>
   <link rel="icon" href="admin/assets/favicon.png">
-  <meta name="description" content="Upload a CSV of intended sponsors and see which are banned, closed, alumni-affiliated, or near the outreach cap.">
+  <meta name="description" content="Upload a CSV of intended sponsors and see which are prohibited, closed, alumni-affiliated, or near the outreach cap.">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,7 +65,7 @@
         <div class="page-header__eyebrow">Sponsor checker</div>
         <h1 class="page-header__title">Check your sponsor list.</h1>
         <p class="page-header__description">
-          Upload a CSV. The checker flags banned, closed, alumni-affiliated, and over-cap companies so you submit a clean list to BIZCOM.
+          Upload a CSV. The checker flags prohibited, closed, alumni-affiliated, and over-cap companies so you submit a clean list to BIZCOM.
         </p>
       </header>
 
@@ -289,9 +289,9 @@
                   <div class="summary-stat__value" id="count-alumni">0</div>
                   <div class="summary-stat__label">Alumni</div>
                 </div>
-                <div class="summary-stat summary-stat--blocked">
-                  <div class="summary-stat__value" id="count-blocked">0</div>
-                  <div class="summary-stat__label">Blocked</div>
+                <div class="summary-stat summary-stat--prohibited">
+                  <div class="summary-stat__value" id="count-prohibited">0</div>
+                  <div class="summary-stat__label">Prohibited</div>
                 </div>
                 <div class="summary-stat summary-stat--cooldown">
                   <div class="summary-stat__value" id="count-cooldown">0</div>
@@ -314,7 +314,7 @@
                 <button class="filter-chip" data-filter="clear">Clear</button>
                 <button class="filter-chip" data-filter="caution">Caution</button>
                 <button class="filter-chip" data-filter="alumni">Alumni</button>
-                <button class="filter-chip" data-filter="blocked">Blocked</button>
+                <button class="filter-chip" data-filter="prohibited">Prohibited</button>
                 <button class="filter-chip" data-filter="cooldown">Cooldown</button>
                 <button class="filter-chip" data-filter="unverified">Unverified</button>
                 <button class="filter-chip" data-filter="duplicate">Duplicate</button>
@@ -349,7 +349,7 @@
               <li><strong>Clear</strong>: previously approved by BIZCOM, safe to approach.</li>
               <li><strong>Caution</strong>: approaching the 30-day outreach cap.</li>
               <li><strong>Alumni</strong>: alumni-affiliated, needs OAR clearance.</li>
-              <li><strong>Blocked</strong>: banned per Annex A or B, or company has closed.</li>
+              <li><strong>Prohibited</strong>: prohibited per Annex A or B, or company has closed.</li>
               <li><strong>Cooldown</strong>: 30-day outreach cap reached, wait for next cycle.</li>
               <li><strong>Unverified</strong>: new company, BIZCOM has not vetted yet.</li>
               <li><strong>Duplicate</strong>: the same company appears twice in your list. Remove the extra rows before submitting.</li>

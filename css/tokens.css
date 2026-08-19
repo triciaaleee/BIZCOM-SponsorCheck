@@ -29,14 +29,14 @@
   --status-clear:    var(--color-green);
   --status-caution:  var(--color-gold);
   --status-alumni:   var(--color-navy);
-  --status-blocked:  var(--color-orange);
+  --status-prohibited:  var(--color-orange);
   --status-cooldown: var(--color-orange-dark);
 
   /* Status backgrounds (10% tints for pill backgrounds) */
   --status-clear-bg:    rgba(42, 148, 99, 0.10);
   --status-caution-bg:  rgba(214, 178, 56, 0.14);
   --status-alumni-bg:   rgba(46, 82, 157, 0.10);
-  --status-blocked-bg:  rgba(202, 88, 28, 0.10);
+  --status-prohibited-bg:  rgba(202, 88, 28, 0.10);
   --status-cooldown-bg: rgba(211, 58, 3, 0.10);
 
   /* ---------- Surfaces ---------- */

@@ -69,7 +69,7 @@
       // Show only the relevant status-specific field. Alumni reuses the general
       // (optional) notes field — there is no dedicated alumni-owner field.
       grpNotes.style.display  = (s === 'approved' || s === 'alumni') ? '' : 'none';
-      grpBan.style.display    = (s === 'banned') ? '' : 'none';
+      grpBan.style.display    = (s === 'prohibited') ? '' : 'none';
       grpClosed.style.display = (s === 'closed') ? '' : 'none';
     }
 
@@ -81,8 +81,8 @@
 
     // Build the row values from the form. normalised uses the shared matcher key
     // so a saved sponsor is found by the same lookup the checker uses.
-    // Leaving 'banned' clears ban_reason + contract_ends to satisfy the DB check
-    // constraint (contract_ends only allowed when banned).
+    // Leaving 'prohibited' clears ban_reason + contract_ends to satisfy the DB check
+    // constraint (contract_ends only allowed when prohibited).
     function buildValues() {
       const name = nameEl.value.trim();
       const values = {
@@ -95,8 +95,8 @@
       };
       if (currentStatus === 'approved' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
       else if (currentStatus === 'closed') values.notes = closedNotesEl.value.trim();
-      else if (currentStatus === 'banned') values.ban_reason = banReasonEl.value.trim();
-      if (currentStatus !== 'banned') values.contract_ends = null;
+      else if (currentStatus === 'prohibited') values.ban_reason = banReasonEl.value.trim();
+      if (currentStatus !== 'prohibited') values.contract_ends = null;
       return values;
     }
 
@@ -106,7 +106,7 @@
       if (a.industry !== b.industry) out.push('Industry: ' + a.industry + ' → ' + b.industry);
       if (a.category !== b.category) out.push('Status: ' + a.category + ' → ' + b.category);
       if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
-      if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Ban reason updated');
+      if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Prohibited reason updated');
       return out;
     }
 
@@ -118,7 +118,7 @@
         toastMsg({ type: 'error', title: 'Name required', message: 'Enter a company name.' });
         return;
       }
-      if (currentStatus === 'banned' && !banReasonEl.value.trim()) {
+      if (currentStatus === 'prohibited' && !banReasonEl.value.trim()) {
         toastMsg({ type: 'error', title: 'Ban reason required', message: 'Add the Annex reference.' });
         return;
       }

@@ -134,7 +134,7 @@
    Reference cards — Annex A / Annex B / Closed / Alumni
    Colour-coded cards mirroring the admin sponsors panel. The public
    page uses them as a plain reference: company names only, never a
-   "banned" label and never contract dates.
+   "prohibited" label and never contract dates.
    ============================================================ */
 
 .annex-panel {
@@ -266,7 +266,7 @@
 }
 
 .annex-card--prohibited .annex-tag {
-  background-color: var(--status-blocked-bg);
+  background-color: var(--status-prohibited-bg);
   border-color: rgba(202, 88, 28, 0.25);
   color: var(--color-orange-dark);
 }

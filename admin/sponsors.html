@@ -41,7 +41,7 @@
   <section class="annex-panel" aria-label="Prohibited and restricted companies">
     <div class="annex-card annex-card--prohibited">
       <div class="annex-card__head">
-        <span class="annex-card__title"><i class="bi bi-slash-circle-fill"></i> Annex A — Prohibited</span>
+        <span class="annex-card__title"><i class="bi bi-x-circle-fill"></i> Annex A — Prohibited</span>
       </div>
       <div class="annex-card__body">
         <div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>
@@ -127,7 +127,7 @@
       <div class="status-filter" id="sponsors-status-filter" role="group" aria-label="Filter by status">
         <button type="button" class="status-filter__pill status-filter__pill--all is-active" data-status="all" aria-pressed="true">All</button>
         <button type="button" class="status-filter__pill status-filter__pill--approved" data-status="approved" aria-pressed="false"><i class="bi bi-check-circle-fill"></i> Approved</button>
-        <button type="button" class="status-filter__pill status-filter__pill--banned" data-status="banned" aria-pressed="false"><i class="bi bi-slash-circle-fill"></i> Banned</button>
+        <button type="button" class="status-filter__pill status-filter__pill--prohibited" data-status="prohibited" aria-pressed="false"><i class="bi bi-x-circle-fill"></i> Prohibited</button>
         <button type="button" class="status-filter__pill status-filter__pill--closed" data-status="closed" aria-pressed="false"><i class="bi bi-dash-circle-fill"></i> Closed</button>
         <button type="button" class="status-filter__pill status-filter__pill--alumni" data-status="alumni" aria-pressed="false"><i class="bi bi-mortarboard-fill"></i> Alumni</button>
       </div>
@@ -189,7 +189,7 @@
         <div class="form-group">
           <label class="form-label" for="annex-b-date">Contract end date <span class="form-label__required">*</span></label>
           <input type="date" class="form-input" id="annex-b-date">
-          <div class="form-helper">The company is blocked as a sponsor until this date, then automatically flagged to clear.</div>
+          <div class="form-helper">The company is prohibited as a sponsor until this date, then automatically flagged to clear.</div>
         </div>
         <div class="form-group">
           <label class="form-label" for="annex-b-industry">Industry</label>

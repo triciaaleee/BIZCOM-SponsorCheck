@@ -18,7 +18,7 @@
 **SponsorCheck** is an internal tool for **SMU BIZCOM** (the student body that
 manages corporate sponsorships). It answers one core question for student clubs:
 
-> *"Can we approach this company for sponsorship — or is it banned, on cooldown,
+> *"Can we approach this company for sponsorship — or is it prohibited, on cooldown,
 > alumni-owned, or something we need to vet?"*
 
 There are **two surfaces**:
@@ -42,29 +42,29 @@ Every company in the system has exactly one **category** (its vetting status):
 | Category | Meaning |
 | -------- | ------- |
 | `approved` | **Approved.** On the approved list, previously cleared by BIZCOM. |
-| `banned` | **Prohibited/restricted.** Must not be approached (see the ban model below). |
+| `prohibited` | **Prohibited.** Must not be approached (see the prohibition model below). |
 | `closed` | Company has ceased operations / brand discontinued. |
 | `alumni` | Alumni-affiliated — needs OAR (alumni office) clearance before outreach. |
 
-### 2.2 The ban model (Annex A vs Annex B) — one table, no duplication
+### 2.2 The prohibition model (Annex A vs Annex B) — one table, no duplication
 The SMUSA *Sponsorship Standing Order* has two annexes of prohibited sponsors.
-**Both are modelled as ordinary `banned` sponsor rows** — there is deliberately
+**Both are modelled as ordinary `prohibited` sponsor rows** — there is deliberately
 **no separate "annex companies" table**. Two fields carry the nuance:
 
-- **`ban_reason`** (free text) — *why* it's banned, referencing the annex, e.g.
+- **`ban_reason`** (free text) — *why* it's prohibited, referencing the annex, e.g.
   `"Annex A, Gaming & Betting"`, `"Annex A, Board of Trustees"`,
   `"Annex B, BIZCOM partner"`, `"Annex B, Banks & Financial"`.
 - **`contract_ends`** (date, nullable) — set **only** for time-boxed **BIZCOM
-  partners** (Annex B). `NULL` = a permanent ban.
+  partners** (Annex B). `NULL` = permanently prohibited.
 
-The **single rule** for "is this company banned *right now*?", used everywhere:
+The **single rule** for "is this company prohibited *right now*?", used everywhere:
 
 ```
-category = 'banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+category = 'prohibited' AND (contract_ends IS NULL OR contract_ends >= current_date)
 ```
 
-So a BIZCOM partner is blocked while its contract runs, then **automatically**
-drops out of the active banned set the day the contract lapses.
+So a BIZCOM partner is prohibited while its contract runs, then **automatically**
+drops out of the active prohibited set the day the contract lapses.
 
 > The Standing Order's Annex A also lists *prohibited category types* (Alcohol,
 > Tobacco, Foundations, Gaming, …). Those aren't companies, so they live in their
@@ -87,7 +87,7 @@ This is a small **state machine** per sponsor:
       ▲                                   │
       │                          count reaches cap
       │                                   ▼
-      └──(cooldown_days pass, reset)── IN COOLDOWN (blocked)
+      └──(cooldown_days pass, reset)── IN COOLDOWN (prohibited)
 ```
 
 The count is **derived from an append-only log** (`outreach_log`), not stored as
@@ -124,7 +124,7 @@ are also the allowed values of `submission_sponsors.status`:
 | `caution` | On the approved list but **approaching** the cap (within 2, e.g. 8–9 of 10). |
 | `cooldown` | On the approved list but the cap is reached — in its cooldown window. |
 | `alumni` | Alumni-affiliated — needs OAR clearance. |
-| `blocked` | Banned (Annex A/B) **or** closed. Do not approach. |
+| `prohibited` | Prohibited (Annex A/B) **or** closed. Do not approach. |
 | `unverified` | Not on any list — a new company BIZCOM hasn't vetted yet. |
 | `duplicate` | The same company appears more than once in the uploaded list. |
 
@@ -156,9 +156,9 @@ erDiagram
         text name
         text normalised UK
         text industry FK
-        text category "approved|banned|closed|alumni"
+        text category "approved|prohibited|closed|alumni"
         text notes "approved/closed/alumni"
-        text ban_reason "when banned"
+        text ban_reason "when prohibited"
         date contract_ends "Annex B only"
         timestamptz cooldown_started_at
         timestamptz count_reset_at
@@ -258,7 +258,7 @@ Reference/lookup table. Read by everyone; written by admins.
 | `sort_order` | int | Display order. |
 
 ### `sponsors` — every company (the approved list)
-The heart of the system. Holds approved, banned, closed, and alumni companies.
+The heart of the system. Holds approved, prohibited, closed, and alumni companies.
 
 | Column | Type | Notes |
 | ------ | ---- | ----- |
@@ -266,16 +266,16 @@ The heart of the system. Holds approved, banned, closed, and alumni companies.
 | `name` | text | Display name. |
 | `normalised` | text | **Unique.** Lookup key for matching (lower-cased, suffix-stripped). Supplied by the app. |
 | `industry` | text | **FK → industries.code.** |
-| `category` | text | `approved` \| `banned` \| `closed` \| `alumni`. |
+| `category` | text | `approved` \| `prohibited` \| `closed` \| `alumni`. |
 | `notes` | text | General notes (used by `approved`, `closed`, and `alumni`). Default `''`. |
-| `ban_reason` | text | **Required when `banned`.** Annex reference. |
-| `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = permanent ban. |
+| `ban_reason` | text | **Required when `prohibited`.** Annex reference. |
+| `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = permanently prohibited. |
 | `cooldown_started_at` | timestamptz | Stamped when the outreach cap is hit. |
 | `count_reset_at` | timestamptz | Marks the start of the current outreach cycle. |
 | `created_at` | timestamptz | Row creation timestamp. |
 
-**Constraints:** `banned` ⇒ `ban_reason` present; `contract_ends` only allowed
-when `banned`. (Alumni companies have no required extra field — an optional
+**Constraints:** `prohibited` ⇒ `ban_reason` present; `contract_ends` only allowed
+when `prohibited`. (Alumni companies have no required extra field — an optional
 `notes` entry is all.)
 
 ### `outreach_log` — append-only contact history
@@ -411,7 +411,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | Screen | Reads | Writes | Notes |
 | ------ | ----- | ------ | ----- |
 | Landing page | — | — | Static marketing/intro. |
-| **Sponsor directory** | `industries`, `sponsors` | — | Industry cards + browseable banned/closed/alumni tables. |
+| **Sponsor directory** | `industries`, `sponsors` | — | Industry cards + browseable prohibited/closed/alumni tables. |
 | **Sponsor checker** | `sponsors`, `settings`, `sponsor_outreach` | — | Upload CSV → matcher assigns each company a status → results table + summary. Enforces the event cap. Then **emails** the annotated list to BIZCOM (no DB write). |
 | Standing Order | — | — | Static policy reference (Annexes A/B in prose). |
 
@@ -420,7 +420,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | ------ | ----- | ------ | ----- |
 | **Login** | `admins` (+ Supabase Auth) | — | Only whitelisted emails get in. |
 | **Home** (submissions calendar) | `submissions` | `submissions` (create/edit) | Year calendar of club submissions + a "pending" list by due date. |
-| **Sponsors list** | `sponsors`, `sponsor_outreach`, `annex_a_categories` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (`annex_a_categories` + banned sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (banned sponsors with a `contract_ends`, add/remove). |
+| **Sponsors list** | `sponsors`, `sponsor_outreach`, `annex_a_categories` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (`annex_a_categories` + prohibited sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (prohibited sponsors with a `contract_ends`, add/remove). |
 | **Sponsor detail / add-edit** | `sponsors`, `sponsor_outreach` | `sponsors` (create/update/delete) | The single-company form. Sidebar shows outreach count / cap and cooldown. |
 | **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add) | Upload a CSV, vet against the DB, log outreach for approved companies, and bulk-add new companies with their category + industry. |
 | **Settings** *(super-admin only)* | `admins`, `settings` | `admins` (invite/remove, `transfer_super_admin`), `settings` (update) | Team management + cap/cooldown/event-cap configuration. |
@@ -432,7 +432,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 - **BIZCOM** — the SMU student body managing corporate sponsorships (runs this tool).
 - **EXCO** — the executive committee; the admins.
 - **Approved list** — the approved sponsors (`category = 'approved'`).
-- **Annex A / Annex B** — sections of the SMUSA Sponsorship Standing Order listing prohibited (A, permanent) and restricted (B, includes time-boxed BIZCOM partners) sponsors. Both stored as `banned` sponsors.
+- **Annex A / Annex B** — sections of the SMUSA Sponsorship Standing Order listing prohibited (A, permanent) and restricted (B, includes time-boxed BIZCOM partners) sponsors. Both stored as `prohibited` sponsors.
 - **OAR / OA** — the alumni office; must sign off before approaching alumni-owned companies.
 - **Outreach** — a logged contact with a company for sponsorship.
 - **Cooldown** — the enforced waiting period after a company hits its outreach cap.

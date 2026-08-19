@@ -15,7 +15,7 @@
      today:    'YYYY-MM-DD'
    }
 
-   STATUS values: clear | caution | cooldown | alumni | blocked | unverified | duplicate.
+   STATUS values: clear | caution | cooldown | alumni | prohibited | unverified | duplicate.
    ============================================================ */
 (function () {
   'use strict';
@@ -82,10 +82,10 @@
     return union === 0 ? 0 : intersect / union;
   }
 
-  // Currently-banned rule: banned AND (permanent OR contract not yet lapsed).
+  // Currently-prohibited rule: prohibited AND (permanent OR contract not yet lapsed).
   // ISO date strings (YYYY-MM-DD) compare correctly lexicographically.
   function isActiveBan(s, today) {
-    if (!s || s.category !== 'banned') return false;
+    if (!s || s.category !== 'prohibited') return false;
     if (!s.contract_ends) return true;
     return String(s.contract_ends) >= today;
   }
@@ -138,17 +138,17 @@
     var status, reason;
     if (effectiveMatch) {
       switch (effectiveMatch.category) {
-        case 'banned':
+        case 'prohibited':
           if (!isActiveBan(effectiveMatch, ctx.today)) {
             status = 'unverified';
             reason = 'BIZCOM contract has ended — no longer restricted. Vet before approaching.';
           } else {
-            status = 'blocked';
-            reason = effectiveMatch.ban_reason || 'On the banned list';
+            status = 'prohibited';
+            reason = effectiveMatch.ban_reason || 'On the prohibited list';
           }
           break;
         case 'closed':
-          status = 'blocked';
+          status = 'prohibited';
           reason = 'Company is closed or defunct';
           break;
         case 'alumni':

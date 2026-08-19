@@ -25,16 +25,16 @@
   // Sponsor categories, mirroring sponsor-page.js / the DB check constraint.
   const STATUS_OPTIONS = [
     { value: 'approved', label: 'Approved' },
-    { value: 'banned', label: 'Banned'   },
+    { value: 'prohibited', label: 'Prohibited'   },
     { value: 'closed', label: 'Closed'   },
     { value: 'alumni', label: 'Alumni'   }
   ];
 
   // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (approved/closed/alumni) or ban_reason (banned).
+  // detail column maps to notes (approved/closed/alumni) or ban_reason (prohibited).
   const DETAIL_META = {
     approved: { placeholder: 'Notes (optional)',                 required: false },
-    banned: { placeholder: 'Ban reason, e.g. Annex A, Gaming', required: true },
+    prohibited: { placeholder: 'Prohibited reason, e.g. Annex A, Gaming', required: true },
     closed: { placeholder: 'Closed notes (optional)',          required: false },
     alumni: { placeholder: 'Notes (optional)',                 required: false }
   };
@@ -184,12 +184,12 @@
     }
 
     // Bucket a Matcher result by the matched company's real DB category, so
-    // banned / approved / closed / alumni are distinguished. 'review' = not on
+    // prohibited / approved / closed / alumni are distinguished. 'review' = not on
     // record. Cap state is read live so a just-logged company re-buckets.
     function classify(r) {
       if (r.status === 'duplicate') return 'duplicate';
       switch (r.matchedCategory) {
-        case 'banned': return 'banned';
+        case 'prohibited': return 'prohibited';
         case 'closed': return 'closed';
         case 'alumni': return 'alumni';
         case 'approved': {
@@ -364,7 +364,7 @@
     }
 
     function renderCheck() {
-      const counts = { approved: 0, cooldown: 0, banned: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
+      const counts = { approved: 0, cooldown: 0, prohibited: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
       results.forEach(function (r) { counts[classify(r)]++; });
       counts.review = reviewCompanies().length;
 
@@ -374,7 +374,7 @@
       summaryEl.innerHTML =
         statTile('approved', counts.approved, 'Approved') +
         statTile('cooldown', counts.cooldown, 'Cooldown') +
-        statTile('banned',   counts.banned,   'Banned') +
+        statTile('prohibited',   counts.prohibited,   'Prohibited') +
         statTile('closed',   counts.closed,   'Closed') +
         statTile('alumni',   counts.alumni,   'Alumni') +
         statTile('review',   counts.review,   'Not in database');
@@ -398,7 +398,7 @@
     }
 
     // Panel A — companies found in the database, most-severe first.
-    const SEVERITY = { banned: 0, cooldown: 1, closed: 2, alumni: 3, approved: 4 };
+    const SEVERITY = { prohibited: 0, cooldown: 1, closed: 2, alumni: 3, approved: 4 };
     function renderMatched() {
       const rows = results.filter(function (r) {
         return SEVERITY[classify(r)] !== undefined;
@@ -418,7 +418,7 @@
       matchedTbody.innerHTML = rows.map(function (r) {
         const bucket = classify(r);
         const idx = results.indexOf(r) + 1;         // original row number in the file
-        const flaggedCls = (bucket === 'banned' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
+        const flaggedCls = (bucket === 'prohibited' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
         const canLog = bucket === 'approved' && r.matchedId;
         if (canLog) eligible++;
@@ -508,7 +508,7 @@
       const map = {
         approved: { cls: 'pill--clear',    icon: 'bi-check-circle-fill',  label: 'Approved' },
         cooldown: { cls: 'pill--cooldown', icon: 'bi-clock-fill',         label: 'Cooldown' },
-        banned:   { cls: 'pill--blocked',  icon: 'bi-x-octagon-fill',     label: 'Banned' },
+        prohibited:   { cls: 'pill--prohibited',  icon: 'bi-x-circle-fill',     label: 'Prohibited' },
         closed:   { cls: 'pill--neutral',  icon: 'bi-slash-circle-fill',  label: 'Closed' },
         alumni:   { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',   label: 'Alumni' }
       };
@@ -558,7 +558,7 @@
     }
 
     function catPill(cat) {
-      const labels = { approved: 'Approved', banned: 'Banned', closed: 'Closed', alumni: 'Alumni' };
+      const labels = { approved: 'Approved', prohibited: 'Prohibited', closed: 'Closed', alumni: 'Alumni' };
       return '<span class="status-pill status-pill--' + cat + '">' + (labels[cat] || cat) + '</span>';
     }
 
@@ -857,7 +857,7 @@
         }
         if (DETAIL_META[row.category].required && !row.detail.trim()) {
           if (detailInput) detailInput.classList.add('is-invalid');
-          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a ban reason.' };
+          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a prohibited reason.' };
         }
       });
       if (firstError) {
@@ -892,7 +892,7 @@
         };
         if (row.category === 'approved' || row.category === 'alumni') payload.notes = row.detail.trim();
         else if (row.category === 'closed') payload.notes = row.detail.trim();
-        else if (row.category === 'banned') payload.ban_reason = row.detail.trim();
+        else if (row.category === 'prohibited') payload.ban_reason = row.detail.trim();
         payloads.push(payload);
         logFlags.push(row.category === 'approved' && row.logOutreach);
       });

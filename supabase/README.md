@@ -34,7 +34,7 @@ installs from `0001` already have the final shape and can skip it.
 | Table | Purpose |
 | ----- | ------- |
 | `industries` | 15 canonical industry codes |
-| `sponsors` | every company — name, normalised key, industry, category (`approved`/`banned`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
+| `sponsors` | every company — name, normalised key, industry, category (`approved`/`prohibited`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
 | `outreach_log` | append-only contact events; the running count is derived from this |
 | `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
@@ -54,20 +54,20 @@ installs from `0001` already have the final shape and can skip it.
 
 ## Key modelling decisions
 
-### 1. Annex A + Annex B companies are just `banned` sponsors
+### 1. Annex A + Annex B companies are just `prohibited` sponsors
 There is **no separate annex-companies table**. Everything prohibited/restricted
-lives in `sponsors` with `category = 'banned'`, distinguished by:
+lives in `sponsors` with `category = 'prohibited'`, distinguished by:
 
 - `ban_reason` — free text (`'Annex A, Gaming & Betting'`, `'Annex A, Board of Trustees'`, `'Annex B, BIZCOM partner'`, …)
-- `contract_ends` — set only for **time-boxed BIZCOM partners** (Annex B). `NULL` = permanent ban. A partner whose contract has lapsed drops out of the active banned set automatically.
+- `contract_ends` — set only for **time-boxed BIZCOM partners** (Annex B). `NULL` = permanently prohibited. A partner whose contract has lapsed drops out of the active prohibited set automatically.
 
-The single "currently banned?" rule used by the matcher, lists and panels is:
+The single "currently prohibited?" rule used by the matcher, lists and panels is:
 
 ```
-category = 'banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+category = 'prohibited' AND (contract_ends IS NULL OR contract_ends >= current_date)
 ```
 
-The Board-of-Trustees companies are seeded as banned sponsors too (so the checker
+The Board-of-Trustees companies are seeded as prohibited sponsors too (so the checker
 flags them). The Sponsors-page "Board of Trustees" panel lists them by querying
 `ban_reason = 'Annex A, Board of Trustees'`. Only the prohibited **category
 types** (which aren't companies) live in `annex_a_categories`.
@@ -100,7 +100,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 > Note: `sponsor-page.js` / `sponsors-page.js` currently use a **simpler** inline
 > `normalise()` that does *not* strip legal suffixes. When wiring the backend,
 > switch those to `Matcher.normalise()` so a saved key can't drift from the
-> lookup key (a mismatch would let a banned company read as "unverified").
+> lookup key (a mismatch would let a prohibited company read as "unverified").
 
 ### 5. Security model (RLS) at a glance
 
@@ -116,13 +116,14 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Renamed `sponsors.category` `banned` -> `prohibited` and `submission_sponsors.status` `blocked` -> `prohibited` (0006), standardising the term across both sites.
 - Dropped `activity_log` (0005): it was write-only, nothing ever read it back.
 - Added `annex_a_categories` (types only).
 - Added `log_outreach()` + `transfer_super_admin()` RPCs and the one-super-admin index.
 - `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
 - Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).
 - Dropped the unused `dashboard_stats` view (no page reads it; the public dashboard counts client-side, and the admin list uses a paged `count`).
-- Field-integrity `CHECK`s mirror the sponsor form (banned⇒ban_reason, contract_ends only when banned).
+- Field-integrity `CHECK`s mirror the sponsor form (prohibited⇒ban_reason, contract_ends only when prohibited).
 
 ## Next step (not done yet)
 Wire the frontend to these tables: add the `supabase-js` client + config, then

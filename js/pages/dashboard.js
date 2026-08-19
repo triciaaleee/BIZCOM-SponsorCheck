@@ -2,7 +2,7 @@
    js/pages/dashboard.js
    Renders the Sponsor Directory:
    - 15 industry category cards
-   - Browseable banned / closed / alumni tables with search
+   - Browseable prohibited / closed / alumni tables with search
 
    Reads live from window.PublicData (Supabase, anon-readable).
    ============================================================ */
@@ -81,14 +81,14 @@
 
   // -- Annex B / Closed / Alumni reference cards --
   // The public page names companies as a plain reference list only. It never
-  // labels them "banned" and never shows contract dates — just the company
+  // labels them "prohibited" and never shows contract dates — just the company
   // names, so an external reader can't infer anything negative from the page.
 
-  // Annex B partners = banned sponsors that carry a contract_ends date. Only
+  // Annex B partners = prohibited sponsors that carry a contract_ends date. Only
   // ACTIVE contracts are shown; a lapsed partner is no longer restricted.
   function annexBPartners() {
     return sponsors.filter(function (s) {
-      return s.category === 'banned' && s.contract_ends && String(s.contract_ends) >= todayStr;
+      return s.category === 'prohibited' && s.contract_ends && String(s.contract_ends) >= todayStr;
     });
   }
 

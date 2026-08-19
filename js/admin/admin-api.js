@@ -243,12 +243,12 @@
     },
 
     // ---------- Annex A / Annex B reference ----------
-    // Annex B partners = banned sponsors carrying a contract_ends date (active
+    // Annex B partners = prohibited sponsors carrying a contract_ends date (active
     // AND lapsed — the panel shows lapsed ones with a Remove button).
     listContractPartners: function () {
       return Promise.resolve(
         sb().from('sponsors').select('*')
-          .eq('category', 'banned')
+          .eq('category', 'prohibited')
           .not('contract_ends', 'is', null)
           .order('contract_ends', { ascending: true })
       ).then(unwrap).then(function (rows) { return rows || []; });

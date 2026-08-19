@@ -47,7 +47,7 @@
     clear:      document.getElementById('count-clear'),
     caution:    document.getElementById('count-caution'),
     alumni:     document.getElementById('count-alumni'),
-    blocked:    document.getElementById('count-blocked'),
+    prohibited:    document.getElementById('count-prohibited'),
     cooldown:   document.getElementById('count-cooldown'),
     unverified: document.getElementById('count-unverified'),
     duplicate:  document.getElementById('count-duplicate')
@@ -383,7 +383,7 @@
     checkingState.classList.add('d-none');
     resultsState.classList.remove('d-none');
 
-    const counts = { clear: 0, caution: 0, alumni: 0, blocked: 0, cooldown: 0, unverified: 0, duplicate: 0 };
+    const counts = { clear: 0, caution: 0, alumni: 0, prohibited: 0, cooldown: 0, unverified: 0, duplicate: 0 };
     results.forEach(function (r) {
       if (counts[r.status] !== undefined) counts[r.status]++;
     });
@@ -415,9 +415,9 @@
     renderTable();
 
     // Confetti only when there are zero issues to act on.
-    // "Issues" = blocked, cooldown, alumni (alumni still needs OAR coordination).
+    // "Issues" = prohibited, cooldown, alumni (alumni still needs OAR coordination).
     // Unverified is fine, that's just BIZCOM's normal job.
-    const hasIssues = counts.blocked > 0 || counts.cooldown > 0 || counts.alumni > 0;
+    const hasIssues = counts.prohibited > 0 || counts.cooldown > 0 || counts.alumni > 0;
     if (!hasIssues && results.length > 0 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       if (window.confetti) {
         window.confetti({
@@ -452,7 +452,7 @@
     resultsTbody.innerHTML = filtered.map(function (r, i) {
       const pill = pillFor(r.status);
       const industryLabel = r.industry ? industryDisplayName(r.industry) : '';
-      const flagClass = (r.status === 'blocked' || r.status === 'cooldown') ? 'is-flagged' : '';
+      const flagClass = (r.status === 'prohibited' || r.status === 'cooldown') ? 'is-flagged' : '';
       return (
         '<tr class="' + flagClass + '">' +
           '<td class="table__cell-secondary" data-label="#">' + (i + 1) + '</td>' +
@@ -483,7 +483,7 @@
       clear:      { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
       caution:    { cls: 'pill--caution',  icon: 'bi-exclamation-circle-fill', label: 'Caution' },
       alumni:     { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
-      blocked:    { cls: 'pill--blocked',  icon: 'bi-x-circle-fill',           label: 'Blocked' },
+      prohibited:    { cls: 'pill--prohibited',  icon: 'bi-x-circle-fill',           label: 'Prohibited' },
       cooldown:   { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },
       unverified: { cls: 'pill--neutral',  icon: 'bi-question-circle-fill',    label: 'Unverified' },
       duplicate:  { cls: 'pill--neutral',  icon: 'bi-files',                   label: 'Duplicate' }

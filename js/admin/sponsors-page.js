@@ -86,7 +86,7 @@
     function statusPill(category) {
       const meta = {
         approved: { label: 'Approved', icon: 'bi-check-circle-fill' },
-        banned: { label: 'Banned',   icon: 'bi-slash-circle-fill' },
+        prohibited: { label: 'Prohibited', icon: 'bi-x-circle-fill' },
         closed: { label: 'Closed',   icon: 'bi-dash-circle-fill' },
         alumni: { label: 'Alumni',   icon: 'bi-mortarboard-fill' }
       };
@@ -96,7 +96,7 @@
     }
 
     function notesFor(sponsor) {
-      if (sponsor.category === 'banned' && sponsor.ban_reason) return sponsor.ban_reason;
+      if (sponsor.category === 'prohibited' && sponsor.ban_reason) return sponsor.ban_reason;
       return sponsor.notes || '';
     }
 
@@ -206,7 +206,7 @@
         name: name,
         normalised: window.Matcher.normalise(name),
         industry: industry || 'other',
-        category: 'banned',
+        category: 'prohibited',
         ban_reason: 'Annex B, BIZCOM partner',
         notes: notes || '',
         contract_ends: dateStr

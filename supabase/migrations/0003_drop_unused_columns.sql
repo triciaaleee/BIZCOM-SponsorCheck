@@ -28,6 +28,8 @@ alter table public.sponsors
 
 -- Re-add the CHECK without the alumni_owner clause (banned still needs a reason;
 -- contract_ends only allowed on banned rows).
+-- NOTE: 'banned' was renamed to 'prohibited' in 0006; this constraint is
+-- rebuilt there. Do not run this file after 0006.
 alter table public.sponsors add constraint sponsors_category_fields check (
   (category <> 'banned' or ban_reason is not null) and
   (contract_ends is null or category = 'banned')

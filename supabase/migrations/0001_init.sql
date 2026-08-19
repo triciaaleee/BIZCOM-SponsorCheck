@@ -10,7 +10,7 @@
 --
 -- DESIGN NOTES
 --   * One companies table (`sponsors`). Annex A and Annex B companies are just
---     `category = 'banned'` rows — described by `ban_reason`, and (for time-boxed
+--     `category = 'prohibited'` rows — described by `ban_reason`, and (for time-boxed
 --     BIZCOM partners) auto-expiring via `contract_ends`. There is deliberately
 --     NO separate "annex companies" table.
 --   * `annex_a_categories` holds only the prohibited *category types* (Alcohol,
@@ -43,22 +43,22 @@ create table if not exists public.industries (
 -- lower-cased / suffix-stripped key the matcher does its exact lookup on and is
 -- supplied by the app via the shared normalize() helper in js/lib/matcher.js.
 --
--- Banned companies (Annex A + Annex B) all live here:
---   * Annex A permanent bans  -> category='banned', ban_reason set, contract_ends NULL
---   * Board-of-Trustees cos    -> category='banned', ban_reason='Annex A, Board of Trustees'
---   * Annex B BIZCOM partners  -> category='banned', ban_reason set, contract_ends set
--- The single "currently banned?" rule used everywhere (matcher, lists, panels):
---   category='banned' AND (contract_ends IS NULL OR contract_ends >= current_date)
+-- Prohibited companies (Annex A + Annex B) all live here:
+--   * Annex A permanent bans  -> category='prohibited', ban_reason set, contract_ends NULL
+--   * Board-of-Trustees cos    -> category='prohibited', ban_reason='Annex A, Board of Trustees'
+--   * Annex B BIZCOM partners  -> category='prohibited', ban_reason set, contract_ends set
+-- The single "currently prohibited?" rule used everywhere (matcher, lists, panels):
+--   category='prohibited' AND (contract_ends IS NULL OR contract_ends >= current_date)
 create table if not exists public.sponsors (
   id           uuid primary key default gen_random_uuid(),
   name         text not null,
   normalised   text not null unique,
   industry     text not null references public.industries(code),
-  category     text not null check (category in ('approved','banned','closed','alumni')),
+  category     text not null check (category in ('approved','prohibited','closed','alumni')),
   notes        text not null default '',        -- used by approved, closed, and alumni notes
-  ban_reason   text,                             -- required when category='banned'
+  ban_reason   text,                             -- required when category='prohibited'
   -- Annex B (time-boxed BIZCOM partner). NULL = permanent ban. A partner whose
-  -- contract has lapsed drops out of the active banned set automatically.
+  -- contract has lapsed drops out of the active prohibited set automatically.
   contract_ends date,
   -- Outreach cap/cooldown state. The running count is DERIVED (sponsor_outreach
   -- view) by counting outreach_log rows since count_reset_at. When the count hits
@@ -70,8 +70,8 @@ create table if not exists public.sponsors (
   created_at   timestamptz not null default now(),
   -- Field requirements mirror the sponsor form's validation.
   constraint sponsors_category_fields check (
-    (category <> 'banned' or ban_reason is not null) and
-    (contract_ends is null or category = 'banned')
+    (category <> 'prohibited' or ban_reason is not null) and
+    (contract_ends is null or category = 'prohibited')
   )
 );
 
@@ -120,7 +120,7 @@ create table if not exists public.submission_sponsors (
   position            int  not null default 0,     -- preserves list order
   name                text not null,
   status              text not null check (status in
-                        ('clear','caution','cooldown','alumni','blocked','unverified','duplicate')),
+                        ('clear','caution','cooldown','alumni','prohibited','unverified','duplicate')),
   industry            text references public.industries(code),
   matched_sponsor_id  uuid references public.sponsors(id) on delete set null
 );

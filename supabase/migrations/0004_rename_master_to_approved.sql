@@ -35,5 +35,7 @@ update public.sponsors set category = 'approved' where category = 'master';
 alter table public.sponsors
   add constraint sponsors_category_check
   check (category in ('approved','banned','closed','alumni'));
+-- NOTE: 'banned' was renamed to 'prohibited' in 0006, which reinstates this
+-- constraint with the new value set. Do not run this file after 0006.
 
 commit;

@@ -509,7 +509,7 @@
 }
 
 .annex-card--prohibited .annex-tag {
-  background-color: var(--status-blocked-bg);
+  background-color: var(--status-prohibited-bg);
   border-color: rgba(202, 88, 28, 0.25);
   color: var(--color-orange-dark);
 }
@@ -1021,7 +1021,7 @@
   border-color: rgba(42, 148, 99, 0.55);
   color: var(--color-green-dark);
 }
-.status-filter__pill--banned.is-active {
+.status-filter__pill--prohibited.is-active {
   background-color: rgba(202, 88, 28, 0.12);
   border-color: rgba(202, 88, 28, 0.55);
   color: var(--color-orange-dark);
@@ -1086,7 +1086,7 @@
 
 /* Destructive row action (delete). */
 .table__action--danger { color: var(--color-orange-dark); }
-.table__action--danger:hover { background-color: var(--status-blocked-bg); }
+.table__action--danger:hover { background-color: var(--status-prohibited-bg); }
 
 /* ============================================================
    TEAM PAGE — inline name editing
