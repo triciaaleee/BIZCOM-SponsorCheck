@@ -42,7 +42,10 @@
           Showing <strong id="team-count">0</strong> admins
         </span>
       </div>
-      <button type="button" class="btn btn--primary btn--sm" data-modal-open="invite-modal">
+      <span class="text-xs text-muted" id="team-readonly-note" hidden>
+        <i class="bi bi-lock-fill"></i> Only a super-admin can change the team.
+      </span>
+      <button type="button" class="btn btn--primary btn--sm" id="invite-open-btn" data-modal-open="invite-modal">
         <i class="bi bi-plus-lg"></i> Invite admin
       </button>
     </div>

@@ -33,10 +33,14 @@
 
     const session = window.AdminShell.mount({
       currentPage: 'settings.html',
-      pageTitle: 'Settings',
-      requiresSuperAdmin: true
+      pageTitle: 'Settings'
     });
     if (!session) return;
+
+    // Any admin may open this page and edit the cooldown/event limits. Managing
+    // the team stays super-admin only: the roster below is read-only for a
+    // normal admin, and RLS (admins_write) enforces that regardless of the UI.
+    const canManageTeam = session.role === 'super_admin';
 
     const esc = window.AdminShell.escapeHtml;
 
@@ -47,6 +51,8 @@
     // ---------- elements ----------
     const tbody = document.getElementById('team-tbody');
     const countEl = document.getElementById('team-count');
+    const inviteOpenBtn = document.getElementById('invite-open-btn');
+    const teamReadonlyNote = document.getElementById('team-readonly-note');
 
     const inviteName = document.getElementById('invite-name');
     const inviteEmail = document.getElementById('invite-email');
@@ -111,7 +117,9 @@
         const youTag = self ? ' <span class="text-xs text-muted">(you)</span>' : '';
 
         let actions = '';
-        if (self && isSuper) {
+        if (!canManageTeam) {
+          actions = '<span class="text-xs text-muted">-</span>';
+        } else if (self && isSuper) {
           actions = '<span class="text-xs text-muted">Use Transfer on another admin</span>';
         } else if (isSuper) {
           actions = '<span class="text-xs text-muted">-</span>';
@@ -131,9 +139,11 @@
             '<td>' +
               '<div class="table__cell-primary" data-name-wrap="' + esc(a.email) + '">' +
                 '<span class="team-name">' + esc(a.name || '(unnamed)') + '</span>' + youTag +
-                ' <button type="button" class="table__action table__action--inline" data-action="edit-name" data-email="' + esc(a.email) + '" title="Edit name" aria-label="Edit name">' +
-                  '<i class="bi bi-pencil"></i>' +
-                '</button>' +
+                (canManageTeam
+                  ? ' <button type="button" class="table__action table__action--inline" data-action="edit-name" data-email="' + esc(a.email) + '" title="Edit name" aria-label="Edit name">' +
+                      '<i class="bi bi-pencil"></i>' +
+                    '</button>'
+                  : '') +
               '</div>' +
             '</td>' +
             '<td><span class="text-sm text-secondary">' + esc(a.email) + '</span></td>' +
@@ -184,6 +194,10 @@
     }
 
     async function saveName(email, value) {
+      if (!canManageTeam) {
+        toastMsg({ type: 'error', title: 'Super-admin only', message: 'Only a super-admin can change the team.' });
+        return;
+      }
       const admin = findAdmin(email);
       if (!admin) return;
       const name = value.trim();
@@ -219,6 +233,10 @@
     }
 
     async function submitInvite() {
+      if (!canManageTeam) {
+        toastMsg({ type: 'error', title: 'Super-admin only', message: 'Only a super-admin can change the team.' });
+        return;
+      }
       const name = inviteName.value.trim();
       const email = inviteEmail.value.trim().toLowerCase();
       const role = inviteRole.value;
@@ -272,6 +290,10 @@
 
     // ---------- remove ----------
     async function removeAdmin(email) {
+      if (!canManageTeam) {
+        toastMsg({ type: 'error', title: 'Super-admin only', message: 'Only a super-admin can change the team.' });
+        return;
+      }
       const admin = findAdmin(email);
       if (!admin) return;
       if (admin.role === 'super_admin') {
@@ -316,6 +338,10 @@
     }
 
     async function doTransfer() {
+      if (!canManageTeam) {
+        toastMsg({ type: 'error', title: 'Super-admin only', message: 'Only a super-admin can change the team.' });
+        return;
+      }
       if (!transferTarget) return;
       const target = findAdmin(transferTarget);
       const me = findAdmin(session.email);
@@ -405,6 +431,14 @@
       settings = updated || Object.assign(settings, patch);
 
       toastMsg({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
+    }
+
+    // ---------- role-based UI ----------
+    // The team section is read-only for a normal admin: no invite, no row
+    // actions, no rename. Cooldown and event limits stay editable for everyone.
+    if (!canManageTeam) {
+      if (inviteOpenBtn) inviteOpenBtn.hidden = true;
+      if (teamReadonlyNote) teamReadonlyNote.hidden = false;
     }
 
     // ---------- wire ----------

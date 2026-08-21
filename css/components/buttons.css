@@ -30,6 +30,10 @@
     transform       var(--duration-fast) var(--ease-out);
 }
 
+/* display:inline-flex above would otherwise beat the hidden attribute,
+   so buttons toggled with .hidden = true would stay on screen. */
+.btn[hidden] { display: none; }
+
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);

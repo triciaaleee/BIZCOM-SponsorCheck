@@ -57,7 +57,7 @@
     { href: 'home.html',        label: 'Home',          icon: 'bi-house-door-fill' },
     { href: 'vet-upload.html',  label: 'Vet & Upload',  icon: 'bi-clipboard-check-fill' },
     { href: 'sponsors.html',    label: 'Sponsors',      icon: 'bi-building'      },
-    { href: 'settings.html',    label: 'Settings',      icon: 'bi-gear-fill',    superOnly: true }
+    { href: 'settings.html',    label: 'Settings',      icon: 'bi-gear-fill'     }
   ];
 
   function renderSidebar(currentPage, session) {

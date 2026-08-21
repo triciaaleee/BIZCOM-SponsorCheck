@@ -321,12 +321,12 @@ create policy admins_read  on public.admins for select using (public.is_admin())
 create policy admins_write on public.admins for all
   using (public.is_super_admin()) with check (public.is_super_admin());
 
--- ---- settings: public read (caps shown to students), super-admin updates ----
+-- ---- settings: public read (caps shown to students), any admin updates ----
 drop policy if exists settings_read   on public.settings;
 drop policy if exists settings_update on public.settings;
 create policy settings_read   on public.settings for select using (true);
 create policy settings_update on public.settings for update
-  using (public.is_super_admin()) with check (public.is_super_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================
 -- GRANTS  (RLS still gates which rows each role can touch)
