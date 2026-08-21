@@ -19,6 +19,22 @@
 .checker__main { min-width: 0; }
 .checker__aside { min-width: 0; }
 
+/* Keep the reference column in view while the student works down the form.
+   Without this the status legend has scrolled away by the time they reach
+   the upload step, which is exactly when they need it. */
+@media (min-width: 1024px) {
+  .checker__aside {
+    position: sticky;
+    top: calc(var(--navbar-height) + var(--space-4));
+    /* On a short laptop screen the three cards are taller than the space left
+       below the navbar. Without this the last card would be clipped and
+       unreachable, so the column scrolls within itself instead. */
+    max-height: calc(100vh - var(--navbar-height) - var(--space-6));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
 /* ---------- Event metadata card ---------- */
 
 .event-meta {
@@ -463,12 +479,23 @@
 
 /* ---------- Aside cards ---------- */
 
+/* The sidebar is supporting material, not a step in the flow. It is set apart
+   from the white task cards rather than made louder, so the form keeps
+   priority: brand off-white ground plus a navy edge to bind the column. */
 .aside-card {
-  background-color: var(--surface-card);
+  background-color: var(--surface-muted);
   border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--color-navy-light);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   margin-bottom: var(--space-3);
+}
+
+/* "Try a sample" is the one card you can act on, so it carries more weight
+   than the two read-only reference cards above it. */
+.aside-card--action {
+  background-color: rgba(46, 82, 157, 0.06);
+  border-left-color: var(--color-navy);
 }
 
 .aside-card__title {
@@ -494,12 +521,15 @@
   gap: var(--space-2);
 }
 
+/* Deliberately NOT flex. Any inline child (<code>, <strong>, a link) would
+   become its own flex item and lay out as a separate column instead of
+   flowing as text, which is what broke the industry_code tip. The bullet is
+   positioned instead, so the content stays ordinary inline text. */
 .aside-card__list li {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
+  position: relative;
+  padding-left: var(--space-4);
   line-height: var(--line-height-snug);
   margin: 0;
 }
@@ -508,7 +538,39 @@
   content: "\2022";
   color: var(--color-gold);
   font-weight: var(--font-weight-extrabold);
-  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+}
+
+/* Status legend: shows the real pills from the results table rather than
+   naming the colours in prose, so the mapping is immediate. The pill replaces
+   the bullet, with its description on the line below to avoid cramped wrapping
+   in a 320px column. */
+.aside-card__list--legend {
+  gap: var(--space-3);
+}
+
+.aside-card__list--legend li {
+  display: block;
+  padding-left: 0;
+}
+
+.aside-card__list--legend li::before {
+  content: none;
+}
+
+.aside-card__legend-text {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* base.css gives <code> a --surface-muted ground, which is now also the aside
+   card colour, so the chip would disappear. Flip it to the card white with an
+   edge instead. */
+.aside-card code {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 5px;
 }
 
 /* ---------- Preview card ---------- */

@@ -184,10 +184,11 @@
                 <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
                 <div class="drop-zone__title">Drop your sponsor list here</div>
                 <div class="drop-zone__hint">or click to browse</div>
+                <!-- No sample link here: the file input overlays the whole drop
+                     zone, so any control inside it is unclickable. The sample
+                     lives in the "Try a sample" card in the sidebar instead. -->
                 <div class="drop-zone__divider">
                   <span>CSV only, up to 5 MB</span>
-                  <span>&middot;</span>
-                  <a href="#" onclick="loadSample(); return false;">Load sample list</a>
                 </div>
               </div>
 
@@ -379,13 +380,31 @@
             <div class="aside-card__title">
               <i class="bi bi-question-circle-fill"></i> What each status means
             </div>
-            <ul class="aside-card__list">
-              <li><strong>Clear</strong>: previously approved by BIZCOM, safe to approach.</li>
-              <li><strong>Alumni</strong>: alumni-affiliated, needs OAR clearance.</li>
-              <li><strong>Prohibited</strong>: prohibited per Annex A or B, or company has closed.</li>
-              <li><strong>Cooldown</strong>: 30-day outreach cap reached, wait for next cycle.</li>
-              <li><strong>Unverified</strong>: new company, BIZCOM has not vetted yet.</li>
-              <li><strong>Duplicate</strong>: the same company appears twice in your list. Remove the extra rows before submitting.</li>
+            <ul class="aside-card__list aside-card__list--legend">
+              <li>
+                <span class="pill pill--clear"><i class="bi bi-check-circle-fill pill__icon"></i>Clear</span>
+                <span class="aside-card__legend-text">Previously approved by BIZCOM, safe to approach.</span>
+              </li>
+              <li>
+                <span class="pill pill--alumni"><i class="bi bi-mortarboard-fill pill__icon"></i>Alumni</span>
+                <span class="aside-card__legend-text">Requires Office of Alumni Relations (OAR) clearance.</span>
+              </li>
+              <li>
+                <span class="pill pill--prohibited"><i class="bi bi-x-circle-fill pill__icon"></i>Prohibited</span>
+                <span class="aside-card__legend-text">Prohibited per Annex A/B, or the company has closed.</span>
+              </li>
+              <li>
+                <span class="pill pill--cooldown"><i class="bi bi-clock-fill pill__icon"></i>Cooldown</span>
+                <span class="aside-card__legend-text">30-day outreach cap reached. Please wait for the next cycle.</span>
+              </li>
+              <li>
+                <span class="pill pill--neutral"><i class="bi bi-question-circle-fill pill__icon"></i>Unverified</span>
+                <span class="aside-card__legend-text">BIZCOM has not vetted this company before.</span>
+              </li>
+              <li>
+                <span class="pill pill--neutral"><i class="bi bi-files pill__icon"></i>Duplicate</span>
+                <span class="aside-card__legend-text">Remove repeating companies from your sponsor list.</span>
+              </li>
             </ul>
           </div>
 
@@ -394,13 +413,13 @@
               <i class="bi bi-info-circle-fill"></i> Tips
             </div>
             <ul class="aside-card__list">
-              <li>One company per row. Suffixes like "Pte Ltd" are auto-stripped.</li>
+              <li>One company per row.</li>
               <li>Include an <code>industry_code</code> column to skip auto-classification.</li>
               <li>Caps are enforced before submit. Trim if you exceed.</li>
             </ul>
           </div>
 
-          <div class="aside-card">
+          <div class="aside-card aside-card--action">
             <div class="aside-card__title">
               <i class="bi bi-file-earmark-text-fill"></i> Try a sample
             </div>

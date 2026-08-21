@@ -53,6 +53,10 @@
 .pill--neutral {
   color: var(--text-secondary);
   background-color: var(--surface-muted);
+  /* Its ground is --surface-muted, which is also the sidebar card colour, so
+     without an edge the pill vanishes there. Inset shadow rather than a border
+     keeps it the same size as the coloured pills beside it. */
+  box-shadow: inset 0 0 0 1px var(--border-default);
 }
 
 /* ---------- Admin-specific status pills ---------- */
