@@ -121,8 +121,7 @@ table; no database column stores them:
 
 | Status | Means |
 | ------ | ----- |
-| `clear` | On the approved list, comfortably below the outreach cap. Good to go. |
-| `caution` | On the approved list but **approaching** the cap (within 2, e.g. 8–9 of 10). |
+| `clear` | On the approved list and below the outreach cap. Good to go. |
 | `cooldown` | On the approved list but the cap is reached — in its cooldown window. |
 | `alumni` | Alumni-affiliated — needs OAR clearance. |
 | `prohibited` | Prohibited (Annex A/B) **or** closed. Do not approach. |
@@ -337,7 +336,9 @@ One row, pinned by a boolean PK. Public-readable (students see the caps).
 
 ### `sponsor_outreach` — derived cap/cooldown state
 Computes each sponsor's current outreach state from `outreach_log` + `settings`.
-This is what the app reads to decide `clear` / `caution` / `cooldown`.
+This is what the app reads to decide `clear` / `cooldown`. The admin vetting
+screen also uses `approaching` to flag companies nearing the cap; the public
+checker deliberately does not, since a near-cap company is still contactable.
 
 | Column | Meaning |
 | ------ | ------- |

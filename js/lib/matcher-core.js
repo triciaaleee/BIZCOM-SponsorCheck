@@ -15,7 +15,7 @@
      today:    'YYYY-MM-DD'
    }
 
-   STATUS values: clear | caution | cooldown | alumni | prohibited | unverified | duplicate.
+   STATUS values: clear | cooldown | alumni | prohibited | unverified | duplicate.
    ============================================================ */
 (function () {
   'use strict';
@@ -160,10 +160,11 @@
             status = 'cooldown';
             reason = 'Outreach cap reached (' + capSt.cap + ' of ' + capSt.cap +
                      '). In cooldown until ' + formatDate(capSt.cooldownEndsAt) + '.';
-          } else if (capSt.approaching) {
-            status = 'caution';
-            reason = 'Approaching the outreach cap (' + capSt.count + ' of ' + capSt.cap + ').';
           } else {
+            // Nearing the cap used to report 'caution'. Dropped deliberately:
+            // the company is still contactable, so the club's next move is the
+            // same as 'clear'. Cap management is BIZCOM's job, not the club's.
+            // (capState.approaching is still used by the admin vetting screen.)
             status = 'clear';
             reason = 'Previously approved by BIZCOM.';
           }

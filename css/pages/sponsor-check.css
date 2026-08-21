@@ -391,10 +391,9 @@
 }
 
 .summary-stat--clear      { border-left-color: var(--color-green); }
-.summary-stat--caution    { border-left-color: var(--color-gold); }
 .summary-stat--alumni     { border-left-color: var(--color-navy); }
-.summary-stat--prohibited    { border-left-color: var(--color-orange); }
-.summary-stat--cooldown   { border-left-color: var(--color-orange-dark); }
+.summary-stat--prohibited    { border-left-color: var(--color-orange-dark); }
+.summary-stat--cooldown   { border-left-color: var(--color-orange); }
 .summary-stat--unverified { border-left-color: var(--text-muted); }
 .summary-stat--duplicate  { border-left-color: var(--border-default); }
 

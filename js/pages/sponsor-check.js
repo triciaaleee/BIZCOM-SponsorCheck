@@ -47,7 +47,6 @@
   const filterChips   = document.querySelectorAll('[data-filter]');
   const summary = {
     clear:      document.getElementById('count-clear'),
-    caution:    document.getElementById('count-caution'),
     alumni:     document.getElementById('count-alumni'),
     prohibited:    document.getElementById('count-prohibited'),
     cooldown:   document.getElementById('count-cooldown'),
@@ -400,7 +399,7 @@
     checkingState.classList.add('d-none');
     resultsState.classList.remove('d-none');
 
-    const counts = { clear: 0, caution: 0, alumni: 0, prohibited: 0, cooldown: 0, unverified: 0, duplicate: 0 };
+    const counts = { clear: 0, alumni: 0, prohibited: 0, cooldown: 0, unverified: 0, duplicate: 0 };
     results.forEach(function (r) {
       if (counts[r.status] !== undefined) counts[r.status]++;
     });
@@ -498,7 +497,6 @@
   function pillFor(status) {
     const map = {
       clear:      { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
-      caution:    { cls: 'pill--caution',  icon: 'bi-exclamation-circle-fill', label: 'Caution' },
       alumni:     { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
       prohibited:    { cls: 'pill--prohibited',  icon: 'bi-x-circle-fill',           label: 'Prohibited' },
       cooldown:   { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },

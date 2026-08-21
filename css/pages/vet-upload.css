@@ -90,8 +90,8 @@
 }
 
 .bulk-stat--approved { border-left-color: var(--color-green); }
-.bulk-stat--cooldown { border-left-color: var(--color-orange-dark); }
-.bulk-stat--prohibited   { border-left-color: var(--color-orange); }
+.bulk-stat--cooldown { border-left-color: var(--color-orange); }
+.bulk-stat--prohibited   { border-left-color: var(--color-orange-dark); }
 .bulk-stat--closed   { border-left-color: var(--text-muted); }
 .bulk-stat--alumni   { border-left-color: var(--color-navy); }
 .bulk-stat--review   { border-left-color: var(--color-gold); }
@@ -228,7 +228,7 @@
 }
 
 .vet-cap--near { color: #8C7212; }               /* approaching the cap */
-.vet-cap--over { color: var(--color-orange-dark); } /* at cap / in cooldown */
+.vet-cap--over { color: var(--color-orange); } /* at cap / in cooldown */
 
 .vet-cap__note {
   display: block;

@@ -407,7 +407,7 @@
   padding: var(--space-4) var(--space-5);
 }
 
-.annex-card--prohibited { border-left-color: var(--color-orange); }
+.annex-card--prohibited { border-left-color: var(--color-orange-dark); }
 .annex-card--restricted { border-left-color: var(--color-gold); }
 
 .annex-card__head {
@@ -427,7 +427,7 @@
   color: var(--text-primary);
 }
 
-.annex-card--prohibited .annex-card__title i { color: var(--color-orange); }
+.annex-card--prohibited .annex-card__title i { color: var(--color-orange-dark); }
 .annex-card--restricted .annex-card__title i { color: #8C7212; }
 
 .annex-card__body {
@@ -510,7 +510,7 @@
 
 .annex-card--prohibited .annex-tag {
   background-color: var(--status-prohibited-bg);
-  border-color: rgba(202, 88, 28, 0.25);
+  border-color: rgba(211, 58, 3, 0.25);
   color: var(--color-orange-dark);
 }
 
@@ -1022,8 +1022,8 @@
   color: var(--color-green-dark);
 }
 .status-filter__pill--prohibited.is-active {
-  background-color: rgba(202, 88, 28, 0.12);
-  border-color: rgba(202, 88, 28, 0.55);
+  background-color: rgba(211, 58, 3, 0.12);
+  border-color: rgba(211, 58, 3, 0.55);
   color: var(--color-orange-dark);
 }
 .status-filter__pill--closed.is-active {
