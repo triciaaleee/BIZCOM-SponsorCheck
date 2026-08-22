@@ -2,9 +2,24 @@
    js/admin/vet-upload-page.js
    Admin "Vet & Upload" page.
 
-   Every list vetted here belongs to a club submission. Step 1 stays
-   locked until one is chosen, from ?submission=<id> (the "Vet a list"
-   action on Home) or the picker at the top of the page.
+   Two screens.
+
+     A. Browse club submissions as cards, by year and then by month.
+        Year is the primary control because the tracker outlives any
+        one committee; the stepper mirrors the one on Home. Completed
+        and All band the cards by the month the club submitted;
+        Active stays a flat queue ordered by due date.
+
+     B. One submission: its cap meter, the WAVE HISTORY (every list
+        the club has sent and which companies were approached in it),
+        then steps 1 and 2. Reached by clicking a card or by
+        ?submission=<id> from the "Vet a list" action on Home.
+        "Add sponsors without a list" opens the same screen with
+        everything submission-specific stripped, leaving step 2 as
+        the standalone bulk entry screen for the sponsor list.
+
+   Every list vetted here belongs to a club submission, so step 1
+   only exists on screen B.
 
      * The list is measured against that club's event-size cap
        (settings.event_cap_small/medium/large).
@@ -151,10 +166,28 @@
     const reviewSelText = document.getElementById('review-sel-text');
     const sendToStaging = document.getElementById('send-to-staging');
 
-    // Submission context (the link to the Home calendar).
-    const subSelect     = document.getElementById('vet-sub-select');
-    const subDetail     = document.getElementById('vet-sub-detail');
-    const subNone       = document.getElementById('vet-sub-none');
+    // Screen A — browsing club submissions.
+    const browseEl      = document.getElementById('vet-browse');
+    const browseResults = document.getElementById('browse-results');
+    const yearPrev      = document.getElementById('year-prev');
+    const yearNext      = document.getElementById('year-next');
+    const yearLabel     = document.getElementById('year-label');
+    const yearCount     = document.getElementById('year-count');
+    const tabsEl        = document.getElementById('vet-tabs');
+    const standaloneBtn = document.getElementById('open-standalone');
+
+    // Screen B — one submission (or step 2 on its own).
+    const detailEl      = document.getElementById('vet-detail');
+    const backBtn       = document.getElementById('vet-back');
+    const sectionVet    = document.getElementById('section-vet');
+    const sectionWaves  = document.getElementById('section-waves');
+    const wavesList     = document.getElementById('waves-list');
+    const wavesEmpty    = document.getElementById('waves-empty');
+
+    const subCard       = document.getElementById('vet-sub');
+    const subEventEl    = document.getElementById('vet-sub-event');
+    const subClubEl     = document.getElementById('vet-sub-club');
+    const subStatusEl   = document.getElementById('vet-sub-status');
     const subMeta       = document.getElementById('vet-sub-meta');
     const subCountEl    = document.getElementById('vet-sub-count');
     const subWavesEl    = document.getElementById('vet-sub-waves');
@@ -193,6 +226,10 @@
     let submissionList = [];    // every submission, for the picker
     let submissionId = null;    // the one this run is attached to, or null
     let submission = null;      // its row (sponsor_count/wave_count are derived)
+    let screen = 'browse';             // 'browse' | 'detail' | 'standalone'
+    let browseYear = new Date().getFullYear();
+    let browseTab = 'active';          // 'active' | 'completed' | 'all'
+    let lastAppliedId = undefined;     // guards the results reset on a real change
     let recordedNorms = new Set();     // normalised names already on the submission
     let recordedByNorm = new Map();    // normalised -> line item (carries the outreach lock)
     let recordedRows = [];
@@ -368,43 +405,215 @@
       window.history.replaceState({}, '', url.toString());
     }
 
-    function fillSubmissionOptions() {
-      if (!subSelect) return;
-      const opts = ['<option value="">Choose a submission…</option>'];
-      submissionList.forEach(function (s) {
-        const when = formatDateShort(new Date(s.submitted_at));
-        const done = s.status === 'completed' ? ' — completed' : '';
-        opts.push(
-          '<option value="' + esc(s.id) + '">' +
-            esc(s.event_name) + ' — ' + esc(s.club) + ' (' + esc(when) + ')' + done +
-          '</option>'
-        );
+    // ---------- screen switching ----------
+    function showScreen(which) {
+      screen = which;
+      browseEl.hidden = which !== 'browse';
+      detailEl.hidden = which === 'browse';
+      // Step 2 doubles as the bulk entry screen for the sponsor list, so the
+      // standalone mode shows it with everything submission-specific stripped.
+      if (subCard) subCard.hidden = which !== 'detail';
+      if (sectionWaves) sectionWaves.hidden = which !== 'detail';
+      if (sectionVet) sectionVet.hidden = which !== 'detail';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showBrowse() {
+      applySubmission(null);
+      showScreen('browse');
+      renderBrowse();
+    }
+
+    function showStandalone() {
+      applySubmission(null);
+      showScreen('standalone');
+    }
+
+    // ---------- browse: year, then month ----------
+    const MONTHS_LONG = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+
+    function isActive(s) { return s.status !== 'completed'; }
+    function submissionYear(s) { return new Date(s.submitted_at).getFullYear(); }
+    function submissionMonth(s) { return new Date(s.submitted_at).getMonth(); }
+
+    function daysUntil(iso) {
+      const target = new Date(iso); target.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      return Math.round((target.getTime() - today.getTime()) / 86400000);
+    }
+
+    // Mirrors the due chip on Home so the same submission reads the same on both.
+    function dueFlagHtml(s) {
+      if (s.status === 'completed') return '';
+      if (!s.complete_by) return '<span class="vet-flag">No due date</span>';
+      const n = daysUntil(s.complete_by);
+      if (n < 0)   return '<span class="vet-flag vet-flag--due">Overdue ' + Math.abs(n) + 'd</span>';
+      if (n === 0) return '<span class="vet-flag vet-flag--due">Due today</span>';
+      if (n <= 3)  return '<span class="vet-flag vet-flag--due">Due in ' + n + 'd</span>';
+      return '<span class="vet-flag">Due ' + esc(formatDateShort(new Date(s.complete_by))) + '</span>';
+    }
+
+    function statusPillHtml(status) {
+      const label = { new: 'New', reviewing: 'Reviewing', completed: 'Completed' }[status] || status;
+      return '<span class="sub-status sub-status--' + esc(status) + '">' + label + '</span>';
+    }
+
+    function submissionCardHtml(s) {
+      const cap = capForSize(s.event_size);
+      const used = s.sponsor_count || 0;
+      const listed = s.listed_count || 0;
+      const waves = s.wave_count || 0;
+      const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
+
+      let barCls = 'sub-cap__bar';
+      if (cap > 0 && used >= cap) barCls += ' sub-cap__bar--full';
+      else if (cap > 0 && pct >= 80) barCls += ' sub-cap__bar--near';
+
+      return (
+        '<button type="button" class="sub-card sub-card--' + esc(s.status) + '" data-open="' + esc(s.id) + '">' +
+          '<div class="sub-card__top">' +
+            '<div>' +
+              '<div class="sub-card__event">' + esc(s.event_name) + '</div>' +
+              '<div class="sub-card__club">' + esc(s.club) + '</div>' +
+            '</div>' +
+            statusPillHtml(s.status) +
+          '</div>' +
+          '<div class="sub-card__cap">' +
+            '<div class="sub-card__figures">' +
+              '<span class="sub-card__count">' + used.toLocaleString() +
+                ' <small>/ ' + cap.toLocaleString() + '</small></span>' +
+              '<span class="sub-card__listed">' +
+                (listed ? listed.toLocaleString() + ' listed' : 'nothing recorded') + '</span>' +
+            '</div>' +
+            '<div class="sub-cap__meter"><span class="' + barCls + '" style="width:' + pct + '%"></span></div>' +
+          '</div>' +
+          '<div class="sub-card__meta">' +
+            '<span>' + (waves ? '<b>' + waves + '</b> ' + (waves === 1 ? 'wave' : 'waves') : 'No waves yet') + '</span>' +
+            '<span>' + esc(SIZE_LABEL[s.event_size] || s.event_size) + ' event</span>' +
+            dueFlagHtml(s) +
+          '</div>' +
+        '</button>'
+      );
+    }
+
+    function gridHtml(rows) {
+      return '<div class="sub-grid">' + rows.map(submissionCardHtml).join('') + '</div>';
+    }
+
+    function renderBrowse() {
+      const ofYear = submissionList.filter(function (s) { return submissionYear(s) === browseYear; });
+
+      yearLabel.textContent = browseYear;
+      yearCount.textContent = ofYear.length
+        ? ofYear.length + (ofYear.length === 1 ? ' submission' : ' submissions')
+        : 'nothing yet';
+
+      const activeCount = ofYear.filter(isActive).length;
+      document.getElementById('tab-count-active').textContent = activeCount;
+      document.getElementById('tab-count-completed').textContent = ofYear.length - activeCount;
+      document.getElementById('tab-count-all').textContent = ofYear.length;
+
+      let rows = ofYear.filter(function (s) {
+        if (browseTab === 'active') return isActive(s);
+        if (browseTab === 'completed') return !isActive(s);
+        return true;
       });
-      subSelect.innerHTML = opts.join('');
-      subSelect.value = submissionId || '';
+
+      if (!rows.length) {
+        browseResults.innerHTML =
+          '<div class="sub-empty"><b>Nothing here</b>No ' +
+          (browseTab === 'all' ? '' : browseTab + ' ') + 'submissions in ' + browseYear + '.</div>';
+        return;
+      }
+
+      if (browseTab === 'active') {
+        // A working queue, so it is ordered by what is due rather than banded
+        // by month. Submissions with no due date sink to the bottom.
+        rows.sort(function (a, b) {
+          if (!a.complete_by && !b.complete_by) return 0;
+          if (!a.complete_by) return 1;
+          if (!b.complete_by) return -1;
+          return new Date(a.complete_by) - new Date(b.complete_by);
+        });
+        browseResults.innerHTML = gridHtml(rows);
+        return;
+      }
+
+      // Archive views band by the month the club submitted, newest first.
+      const byMonth = new Map();
+      rows.forEach(function (s) {
+        const m = submissionMonth(s);
+        if (!byMonth.has(m)) byMonth.set(m, []);
+        byMonth.get(m).push(s);
+      });
+
+      browseResults.innerHTML = Array.from(byMonth.keys())
+        .sort(function (a, b) { return b - a; })
+        .map(function (m) {
+          const inMonth = byMonth.get(m);
+          return (
+            '<section class="sub-month">' +
+              '<div class="sub-month__head">' +
+                '<h3 class="sub-month__name">' + MONTHS_LONG[m] + ' ' + browseYear + '</h3>' +
+                '<span class="sub-month__count">' + inMonth.length +
+                  (inMonth.length === 1 ? ' submission' : ' submissions') + '</span>' +
+              '</div>' +
+              gridHtml(inMonth) +
+            '</section>'
+          );
+        }).join('');
+    }
+
+    if (browseResults) {
+      browseResults.addEventListener('click', function (e) {
+        const card = e.target.closest('[data-open]');
+        if (card) openSubmission(card.getAttribute('data-open'));
+      });
+    }
+
+    if (yearPrev) yearPrev.addEventListener('click', function () { browseYear--; renderBrowse(); });
+    if (yearNext) yearNext.addEventListener('click', function () { browseYear++; renderBrowse(); });
+
+    if (tabsEl) {
+      tabsEl.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-tab]');
+        if (!btn) return;
+        browseTab = btn.getAttribute('data-tab');
+        tabsEl.querySelectorAll('[data-tab]').forEach(function (b) {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        renderBrowse();
+      });
+    }
+
+    if (backBtn) backBtn.addEventListener('click', showBrowse);
+    if (standaloneBtn) standaloneBtn.addEventListener('click', showStandalone);
+
+    // Open one submission: attach it, switch screens, then load its line items.
+    function openSubmission(id) {
+      showScreen('detail');
+      return applySubmission(id);
     }
 
     function renderSubmissionCard() {
-      if (!subDetail) return;
 
-      if (!submission) {
-        subDetail.hidden = true;
-        if (subNone) subNone.hidden = false;
-        return;
-      }
-      subDetail.hidden = false;
-      if (subNone) subNone.hidden = true;
+      if (!submission) return;
 
       const cap = submissionCap();
       const used = submission.sponsor_count || 0;
       const waves = submission.wave_count || 0;
       const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
 
+      subEventEl.textContent = submission.event_name;
+      subClubEl.textContent = submission.club;
+      subStatusEl.innerHTML = statusPillHtml(submission.status);
+
       subMeta.innerHTML =
-        '<span><strong>' + esc(submission.club) + '</strong></span>' +
         '<span>' + esc(submission.contact_email) + '</span>' +
         '<span>' + esc(SIZE_LABEL[submission.event_size] || submission.event_size) +
           ' event · cap ' + cap.toLocaleString() + '</span>' +
+        '<span>Submitted ' + esc(formatDateShort(new Date(submission.submitted_at))) + '</span>' +
         (submission.complete_by
           ? '<span>Due ' + esc(formatDateShort(new Date(submission.complete_by))) + '</span>'
           : '') +
@@ -420,6 +629,134 @@
       subBar.style.width = pct + '%';
       subBar.classList.toggle('sub-cap__bar--full', cap > 0 && used >= cap);
       subBar.classList.toggle('sub-cap__bar--near', cap > 0 && used < cap && pct >= 80);
+    }
+
+    // ---------- wave history ----------
+    // Reads the line items already loaded for the outreach lock, so opening a
+    // submission costs no extra query. Nothing here is new data: wave,
+    // recorded_at and outreach_logged_at have been on submission_sponsors
+    // since 0012/0013.
+    function sponsorName(id) {
+      if (!id) return null;
+      const hit = sponsors.find(function (x) { return x.id === id; });
+      return hit ? hit.name : null;
+    }
+
+    // Why a company was not contacted, which is more useful than a blank cell.
+    function contactedCell(row) {
+      if (row.outreach_logged_at) {
+        return '<span class="wave-contacted">' +
+          esc(formatDateShort(new Date(row.outreach_logged_at))) + '</span>';
+      }
+      if (row.status === 'prohibited' || row.status === 'closed') {
+        return '<span class="wave-nope">Cannot be approached</span>';
+      }
+      if (row.status === 'cooldown') return '<span class="wave-nope">In cooldown</span>';
+      if (row.status === 'review')   return '<span class="wave-nope">Not vetted yet</span>';
+      return '<span class="wave-nope">Not contacted</span>';
+    }
+
+    function waveRowHtml(row) {
+      const matched = sponsorName(row.sponsor_id);
+      const counts = window.AdminAPI.countsTowardCap(row.status);
+      return (
+        '<tr>' +
+          '<td data-label="Company"><div class="table__cell-primary">' + esc(row.company_name) + '</div></td>' +
+          '<td data-label="Matched record">' +
+            (matched ? esc(matched) : '<span class="text-muted text-xs">-</span>') + '</td>' +
+          '<td data-label="Status">' + statusTagHtml(row.status) + '</td>' +
+          '<td data-label="Counts">' + (counts ? 'Yes' : 'No') + '</td>' +
+          '<td data-label="Contacted">' + contactedCell(row) + '</td>' +
+          '<td data-label="Logged by" class="text-secondary text-xs">' +
+            esc(row.outreach_logged_by || '—') + '</td>' +
+        '</tr>'
+      );
+    }
+
+    function statusTagHtml(status) {
+      const labels = {
+        approved: 'Approved', alumni: 'Alumni', prohibited: 'Prohibited',
+        closed: 'Closed', cooldown: 'Cooldown', review: 'Unvetted'
+      };
+      const cls = labels[status] ? status : 'review';
+      return '<span class="wave-tag wave-tag--' + esc(cls) + '">' +
+        esc(labels[status] || status || 'Unvetted') + '</span>';
+    }
+
+    function renderWaves() {
+      if (!wavesList) return;
+
+      if (!submission || !recordedRows.length) {
+        wavesList.innerHTML = '';
+        if (wavesEmpty) wavesEmpty.hidden = false;
+        return;
+      }
+      if (wavesEmpty) wavesEmpty.hidden = true;
+
+      const byWave = new Map();
+      recordedRows.forEach(function (r) {
+        const w = r.wave || 1;
+        if (!byWave.has(w)) byWave.set(w, []);
+        byWave.get(w).push(r);
+      });
+
+      wavesList.innerHTML = Array.from(byWave.keys())
+        .sort(function (a, b) { return b - a; })          // newest wave first
+        .map(function (w) {
+          const rows = byWave.get(w);
+          const counted = rows.filter(function (r) { return window.AdminAPI.countsTowardCap(r.status); }).length;
+          const unvetted = rows.filter(function (r) { return r.status === 'review'; }).length;
+          const contacted = rows.filter(function (r) { return !!r.outreach_logged_at; });
+
+          // A wave has no row of its own, so its dates come from its companies.
+          let first = null, lastContact = null;
+          rows.forEach(function (r) {
+            const d = new Date(r.recorded_at);
+            if (!first || d < first) first = d;
+            if (r.outreach_logged_at) {
+              const c = new Date(r.outreach_logged_at);
+              if (!lastContact || c > lastContact) lastContact = c;
+            }
+          });
+
+          const open = w === Math.max.apply(null, Array.from(byWave.keys()));
+          return (
+            '<div class="wave' + (open ? ' is-open' : '') + '" data-wave="' + w + '">' +
+              '<button type="button" class="wave__head">' +
+                '<span class="wave__no">Wave ' + w + '</span>' +
+                '<span class="wave__date">' + esc(first ? formatDateShort(first) : '') + '</span>' +
+                '<span class="wave__stats">' +
+                  '<span><b>' + rows.length + '</b> ' + (rows.length === 1 ? 'company' : 'companies') + '</span>' +
+                  '<span><b>' + counted + '</b> count</span>' +
+                  (unvetted ? '<span class="vet-flag vet-flag--todo">' + unvetted + ' unvetted</span>' : '') +
+                  (contacted.length
+                    ? '<span class="vet-flag vet-flag--done">' + contacted.length + ' contacted' +
+                      (lastContact ? ' ' + esc(formatDateShort(lastContact)) : '') + '</span>'
+                    : '<span class="vet-flag">Not contacted</span>') +
+                '</span>' +
+                '<i class="bi bi-chevron-right wave__chev"></i>' +
+              '</button>' +
+              '<div class="wave__body">' +
+                '<div class="table-wrapper table-wrapper--responsive">' +
+                  '<table class="table">' +
+                    '<thead><tr>' +
+                      '<th>Company</th><th>Matched record</th><th>Status</th>' +
+                      '<th>Counts</th><th>Contacted</th><th>Logged by</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + rows.map(waveRowHtml).join('') + '</tbody>' +
+                  '</table>' +
+                '</div>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+    }
+
+    if (wavesList) {
+      wavesList.addEventListener('click', function (e) {
+        const head = e.target.closest('.wave__head');
+        if (head) head.parentNode.classList.toggle('is-open');
+      });
     }
 
     // Every company on the uploaded list, minus the rows the matcher flagged as
@@ -614,12 +951,12 @@
       if (dropZoneTitle) {
         dropZoneTitle.textContent = open
           ? 'Drop a .csv list here'
-          : 'Choose a submission to start';
+          : 'Open a submission to start';
       }
       if (dropZoneHint) {
         dropZoneHint.textContent = open
           ? 'or click to browse'
-          : 'the picker is at the top of the page';
+          : 'every list belongs to a club submission';
       }
       if (sampleLink) {
         sampleLink.classList.toggle('is-disabled', !open);
@@ -653,17 +990,30 @@
         submissionId = null;
       }
 
+      // A different submission means a different list, so clear the last one
+      // rather than leaving another club's results on screen.
+      if (id !== lastAppliedId) {
+        results = [];
+        parsedRows = [];
+        linkedByNorm = new Map();
+        if (fileInput) fileInput.value = '';
+        if (uploadStatus) uploadStatus.innerHTML = '';
+        setCheckState('upload');
+      }
+      lastAppliedId = id || null;
+
       recordedRows = [];
       indexRecorded();
-      if (subSelect) subSelect.value = submissionId || '';
       syncUrl();
       setUploadGate();
       renderSubmissionCard();
+      renderWaves();
       renderRecordBar();
       renderMatchedIfShown();
 
       return loadRecorded().then(function () {
         renderSubmissionCard();
+        renderWaves();
         renderRecordBar();
         renderMatchedIfShown();
       });
@@ -673,12 +1023,6 @@
     // the submission changes under a list that is already on screen.
     function renderMatchedIfShown() {
       if (results.length) renderMatched();
-    }
-
-    if (subSelect) {
-      subSelect.addEventListener('change', function () {
-        applySubmission(subSelect.value || null);
-      });
     }
 
     if (recordBtn) {
@@ -710,8 +1054,9 @@
         await refreshSubmission();
         await loadRecorded();
         renderSubmissionCard();
+        renderWaves();            // the new wave appears in the history
         renderRecordBar();
-        renderMatchedIfShown();   // recorded companies can now be ticked for outreach
+        renderMatchedIfShown();   // recorded companies can now be logged for outreach
 
         res = res || {};
         const added = res.added || 0;
@@ -779,8 +1124,8 @@
     function submissionRequired() {
       if (submission) return false;
       toastMsg({ type: 'error', title: 'Choose a submission first',
-                 message: 'Every list vetted here is counted against a club submission. Pick one at the top of the page.' });
-      if (subSelect) subSelect.focus();
+                 message: 'Every list vetted here is counted against a club submission. Open one from the submission list.' });
+      showBrowse();
       return true;
     }
 
@@ -1312,7 +1657,8 @@
         // Reload the line items so the closed wave shows as closed.
         await Promise.all([refreshOutreach(), loadRecorded()]);
         logBtn.disabled = false;
-        revet();  // refresh status, remarks, outreach and panels consistently
+        renderWaves();   // the contacted stamps land in the history too
+        revet();         // refresh status, remarks, outreach and panels consistently
 
         if (window.toast) {
           let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';
@@ -1585,12 +1931,24 @@
 
     // ---------- boot ----------
     setCheckState('upload');
-    setUploadGate();                   // locked until a submission is chosen
+    setUploadGate();
     renderStaging();
     readyPromise = loadData().then(function () {
       if (loadError) return;           // nothing loaded, so nothing to attach to
-      fillSubmissionOptions();
-      return applySubmission(submissionIdFromUrl());
+
+      const deepLink = submissionIdFromUrl();
+      const target = deepLink
+        ? submissionList.find(function (x) { return x.id === deepLink; })
+        : null;
+
+      // A deep link from Home opens that submission and starts the browse view
+      // on its year, so going back lands where the submission actually lives.
+      if (target) browseYear = submissionYear(target);
+      renderBrowse();
+
+      if (deepLink) return openSubmission(deepLink);
+      showScreen('browse');
+      return applySubmission(null);
     });
   }
 

@@ -31,47 +31,110 @@
 <main class="admin-main">
 
   <!-- ============================================================
-       CONTEXT - which club submission this vetting belongs to
-       Set by ?submission=<id> from the Home calendar, or picked here.
-       Step 1 stays locked until one is chosen: every list vetted here
-       belongs to a club.
+       SCREEN A - browse club submissions
+       Year first, because the tracker outlives any one committee.
+       Completed/All band the cards by the month they were submitted;
+       Active stays a flat queue ordered by due date.
        ============================================================ -->
-  <section class="vet-sub" id="vet-sub">
-    <div class="vet-sub__pick">
-      <label class="vet-sub__pick-label" for="vet-sub-select">
-        <i class="bi bi-link-45deg"></i> Vetting for
-      </label>
-      <select class="form-input" id="vet-sub-select">
-        <option value="">Choose a submission&hellip;</option>
-      </select>
+  <section class="vet-browse" id="vet-browse">
+    <div class="admin-section__head">
+      <div>
+        <h2 class="admin-section__title">Club submissions</h2>
+        <p class="admin-section__sub">
+          Pick the submission you are vetting for. Every list checked here is counted
+          against that club's event cap, so the work always starts from a club.
+        </p>
+      </div>
+      <button type="button" class="btn btn--secondary btn--sm" id="open-standalone">
+        <i class="bi bi-database-add"></i> Add sponsors without a list
+      </button>
     </div>
 
-    <div class="vet-sub__detail" id="vet-sub-detail" hidden>
-      <div class="vet-sub__meta" id="vet-sub-meta"></div>
-      <div class="sub-cap">
-        <div class="sub-cap__head">
-          <span class="sub-cap__count" id="vet-sub-count">0 / 0</span>
-          <span class="sub-cap__waves" id="vet-sub-waves">No waves yet</span>
-        </div>
-        <div class="sub-cap__meter"><span class="sub-cap__bar" id="vet-sub-bar"></span></div>
-        <p class="sub-cap__hint" id="vet-sub-hint">
-          Only approved and alumni companies use up the cap. Prohibited, closed and
-          in-cooldown companies are kept on the record but do not count.
-        </p>
+    <div class="browse-bar">
+      <div class="year-nav">
+        <button type="button" class="year-nav__btn" id="year-prev" aria-label="Previous year">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <span class="year-nav__label">
+          <span class="year-nav__year" id="year-label">2026</span>
+          <span class="year-nav__count" id="year-count">&nbsp;</span>
+        </span>
+        <button type="button" class="year-nav__btn" id="year-next" aria-label="Next year">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+      <div class="vet-tabs" id="vet-tabs" role="group" aria-label="Filter submissions">
+        <button type="button" class="vet-tab" data-tab="active" aria-pressed="true">
+          Active <span class="vet-tab__count" id="tab-count-active">0</span>
+        </button>
+        <button type="button" class="vet-tab" data-tab="completed" aria-pressed="false">
+          Completed <span class="vet-tab__count" id="tab-count-completed">0</span>
+        </button>
+        <button type="button" class="vet-tab" data-tab="all" aria-pressed="false">
+          All <span class="vet-tab__count" id="tab-count-all">0</span>
+        </button>
       </div>
     </div>
 
-    <div class="vet-sub__none" id="vet-sub-none">
-      Pick the club submission this list belongs to. Every list vetted here is
-      counted against that club's event cap, so nothing can be checked until one
-      is chosen.
+    <div id="browse-results"></div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN B - one submission (or step 2 on its own)
+       ============================================================ -->
+  <div id="vet-detail" hidden>
+
+  <button type="button" class="vet-back" id="vet-back">
+    <i class="bi bi-arrow-left"></i> All submissions
+  </button>
+
+  <section class="vet-sub" id="vet-sub" hidden>
+    <div class="vet-sub__head">
+      <div>
+        <h2 class="vet-sub__event" id="vet-sub-event">&nbsp;</h2>
+        <div class="vet-sub__club" id="vet-sub-club">&nbsp;</div>
+      </div>
+      <span id="vet-sub-status"></span>
+    </div>
+    <div class="vet-sub__meta" id="vet-sub-meta"></div>
+    <div class="sub-cap">
+      <div class="sub-cap__head">
+        <span class="sub-cap__count" id="vet-sub-count">0 / 0</span>
+        <span class="sub-cap__waves" id="vet-sub-waves">No waves yet</span>
+      </div>
+      <div class="sub-cap__meter"><span class="sub-cap__bar" id="vet-sub-bar"></span></div>
+      <p class="sub-cap__hint" id="vet-sub-hint">
+        Only approved and alumni companies use up the cap. Prohibited, closed and
+        in-cooldown companies are kept on the record but do not count.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       WAVE HISTORY - what the club has sent, and who was approached
+       ============================================================ -->
+  <section class="admin-section" id="section-waves">
+    <div class="admin-section__head">
+      <div>
+        <h2 class="admin-section__title">Wave history</h2>
+        <p class="admin-section__sub">
+          Each list the club has sent, and which companies were approached in it. A company
+          appears once per submission, in the wave it first arrived.
+        </p>
+      </div>
+    </div>
+    <div class="bulk-card">
+      <div class="waves" id="waves-list"></div>
+      <div class="vet-panel__empty" id="waves-empty" hidden>
+        Nothing recorded against this submission yet. Vet a list below to start wave 1.
+      </div>
     </div>
   </section>
 
   <!-- ============================================================
        STEP 1 - Vet a list
        ============================================================ -->
-  <section class="admin-section">
+  <section class="admin-section" id="section-vet">
     <div class="admin-section__head">
       <div>
         <h2 class="admin-section__title"><span class="bulk-step">1</span>Vet a list</h2>
@@ -272,6 +335,8 @@
       </div>
     </div>
   </section>
+
+  </div><!-- /#vet-detail -->
 
 </main>
 

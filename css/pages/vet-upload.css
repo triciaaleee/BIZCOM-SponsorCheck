@@ -348,73 +348,465 @@
 }
 
 /* ============================================================
-   SUBMISSION CONTEXT BAR
-   Which club submission this vetting run belongs to. The cap meter
-   itself (.sub-cap) is shared with the Home side-panel and lives in
-   pages/admin.css, which loads first.
+   SCREEN A - BROWSING CLUB SUBMISSIONS
+   Year is the primary control, because the tracker outlives any one
+   committee. The year stepper deliberately mirrors the one on Home so
+   the two screens navigate alike. The cap meter (.sub-cap) is shared
+   with the Home side-panel and lives in pages/admin.css.
    ============================================================ */
+
+.browse-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.year-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.year-nav__btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-card);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.year-nav__btn:hover {
+  background-color: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+.year-nav__label {
+  display: flex;
+  flex-direction: column;
+  min-width: 104px;
+}
+
+.year-nav__year {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.year-nav__count {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.vet-tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.vet-tab {
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-card);
+  padding: 6px var(--space-4);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.vet-tab:hover { border-color: var(--border-default); }
+
+.vet-tab[aria-pressed="true"] {
+  background-color: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+.vet-tab__count { opacity: 0.7; font-weight: var(--font-weight-regular); }
+
+/* ---------- Month bands (Completed / All only) ---------- */
+/* Active stays a flat queue: it is short, and the due date matters more
+   there than the month the club happened to send the list. */
+
+.sub-month { margin-bottom: var(--space-6); }
+.sub-month:last-child { margin-bottom: 0; }
+
+.sub-month__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sub-month__name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.sub-month__count {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+/* ---------- Submission cards ---------- */
+
+.sub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: var(--space-4);
+}
+
+.sub-card {
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  padding-left: calc(var(--space-5) + 4px);
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.sub-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--border-default);
+}
+
+/* The stripe encodes status, so state reads before any number is parsed. */
+.sub-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--color-navy);
+}
+
+.sub-card--reviewing::before { background-color: var(--color-gold); }
+.sub-card--completed::before { background-color: var(--color-green-dark); }
+.sub-card--completed { background-color: #FCFCFB; }
+
+.sub-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sub-card__event {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.sub-card__club {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sub-card__cap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-card__figures {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.sub-card__count {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sub-card__count small {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
+}
+
+.sub-card__listed {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.sub-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.sub-card__meta b { font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+
+/* Status chip, shared by the card and the submission header. */
+.sub-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.sub-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+.sub-status--new       { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
+.sub-status--reviewing { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
+.sub-status--completed { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
+
+/* Small state flags on cards and wave headers. */
+.vet-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.vet-flag--todo { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
+.vet-flag--due  { background-color: rgba(202, 88, 28, 0.12); color: var(--color-orange-dark); }
+.vet-flag--done { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
+
+.sub-empty {
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  background-color: var(--surface-card);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.sub-empty b {
+  display: block;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   SCREEN B - ONE SUBMISSION
+   ============================================================ */
+
+.vet-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-bottom: var(--space-4);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-navy);
+}
+
+.vet-back:hover { text-decoration: underline; }
 
 .vet-sub {
   background-color: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-left: 4px solid var(--color-navy);
   border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-5);
   margin-bottom: var(--space-5);
 }
 
-.vet-sub__pick {
+.vet-sub[hidden] { display: none; }
+
+.vet-sub__head {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
   flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-.vet-sub__pick-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
+.vet-sub__event {
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  white-space: nowrap;
+  letter-spacing: var(--letter-spacing-tight);
+  margin: 0;
 }
 
-.vet-sub__pick-label i { color: var(--color-navy); font-size: var(--font-size-lg); }
-
-/* The select carries the page's context, so give it room but not the whole row. */
-.vet-sub__pick .form-input {
-  flex: 1;
-  min-width: 260px;
-  max-width: 520px;
-  margin-bottom: 0;
+.vet-sub__club {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
 }
-
-.vet-sub__detail { margin-top: var(--space-4); }
 
 .vet-sub__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2) var(--space-5);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-bottom: var(--space-3);
+  margin: var(--space-4) 0 var(--space-5);
 }
 
-.vet-sub__meta strong {
-  color: var(--text-primary);
+/* ---------- Wave history ---------- */
+
+.waves {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wave {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.wave__head {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-muted);
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.wave__head:hover { background-color: #F1EEE7; }
+
+.wave__no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-navy);
+  color: var(--text-inverse);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
 
-.vet-sub__none {
-  margin-top: var(--space-3);
+.wave__date {
   font-size: var(--font-size-sm);
-  color: var(--text-muted);
-  line-height: var(--line-height-normal);
-  max-width: 70ch;
+  font-weight: var(--font-weight-semibold);
 }
 
-.vet-sub__none[hidden] { display: none; }
+.wave__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.wave__stats b { font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+
+.wave__chev {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.wave.is-open .wave__chev { transform: rotate(90deg); }
+
+.wave__body { display: none; }
+.wave.is-open .wave__body { display: block; }
+
+/* Status of a company at the time its wave was recorded. */
+.wave-tag {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.wave-tag--approved   { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
+.wave-tag--alumni     { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
+.wave-tag--prohibited { background-color: rgba(211, 58, 3, 0.10); color: var(--color-orange-dark); }
+.wave-tag--closed     { background-color: var(--surface-muted); color: var(--text-muted); }
+.wave-tag--cooldown   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange); }
+.wave-tag--review     { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
+
+.wave-contacted {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-green-dark);
+  white-space: nowrap;
+}
+
+.wave-contacted::before { content: "\2713"; font-size: var(--font-size-sm); }
+
+.wave-nope {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 /* ---------- Record-a-wave bar (inside the results block) ---------- */
 
