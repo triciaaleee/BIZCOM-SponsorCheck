@@ -19,10 +19,10 @@
    client is not granted UPDATE on the column, so the old free-text
    input would have failed at the database anyway.
 
-   It counts only the companies the club may actually APPROACH, i.e.
-   approved and alumni. Prohibited, closed and in-cooldown companies
-   are recorded against the submission but do not consume the cap, so
-   listed_count is the larger "everything they sent" figure.
+   It counts only the companies actually CONTACTED — a company is
+   recorded against the submission for free, and consumes the cap the
+   moment outreach is logged for it (migration 0015). listed_count is
+   the larger "everything the club sent" figure.
    ============================================================ */
 
 (function () {
@@ -165,17 +165,17 @@
         if (!byWave.has(w)) byWave.set(w, { n: 0, counted: 0, at: r.recorded_at });
         const e = byWave.get(w);
         e.n++;
-        if (window.AdminAPI.countsTowardCap(r.status)) e.counted++;
+        if (r.outreach_logged_at) e.counted++;
         if (new Date(r.recorded_at) < new Date(e.at)) e.at = r.recorded_at;
       });
 
       panelWaveList.innerHTML = Array.from(byWave.keys()).sort(function (a, b) { return a - b; })
         .map(function (w) {
           const e = byWave.get(w);
-          // "9 of 14" when some were prohibited/closed/in cooldown, else just the count.
-          const label = (e.counted === e.n)
-            ? e.n + (e.n === 1 ? ' company' : ' companies')
-            : e.counted + ' of ' + e.n + ' count';
+          // "9 of 14 contacted" once some of the wave has been approached.
+          const label = e.counted
+            ? e.counted + ' of ' + e.n + ' contacted'
+            : e.n + (e.n === 1 ? ' company' : ' companies');
           return '<li class="wave-list__item">' +
               '<span class="wave-list__label">Wave ' + w + '</span>' +
               '<span class="wave-list__count">' + label + '</span>' +
@@ -208,8 +208,8 @@
       if (cap > 0 && used >= cap) cls += ' cap-chip--full';
       else if (cap > 0 && used / cap >= 0.8) cls += ' cap-chip--near';
       const listed = s.listed_count || 0;
-      const title = used + ' of ' + cap + ' approachable sponsors counted' +
-        (listed > used ? ' (' + listed + ' listed in all)' : '');
+      const title = used + ' of ' + cap + ' sponsors contacted' +
+        (listed ? ' (' + listed + ' recorded on this submission)' : '');
       return '<span class="' + cls + '" title="' + title + '">' + used + '/' + cap + '</span>';
     }
 

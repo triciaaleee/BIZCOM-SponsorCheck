@@ -743,10 +743,25 @@
 
 .vet-next[hidden] { display: none; }
 
-/* The result panels have sticky headers of their own. Without an offset they
-   stick at the very top and hide behind this bar; --vet-stick-offset is set
-   from the bar's measured height so they come to rest just below it instead. */
+/* The result panels have sticky headers of their own, but .table-wrapper sets
+   overflow:hidden for its rounded corners, and that makes the wrapper a scroll
+   container — so the headers were resolving against IT and never stuck to the
+   viewport at all. `clip` rounds the corners the same way without creating a
+   scroll container, which is what lets them stick.
+   --vet-stick-offset is measured from this bar so they come to rest just under
+   it rather than behind it. */
+#check-results .table-wrapper { overflow: clip; }
 #check-results .table thead th { top: var(--vet-stick-offset, 0px); }
+
+/* Step 2's staging table, same problem via overflow-x on its own wrapper.
+   Scoped to this page so the Sponsors list keeps its horizontal scroll. */
+#section-add .admin-table-wrap { overflow: clip; }
+
+#section-add .admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
 
 .vet-next__banner { border-radius: 0; }
 
@@ -755,7 +770,8 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-5);
+  min-height: 84px;
 }
 
 /* Two dots, so the admin can see there is a second step coming before they

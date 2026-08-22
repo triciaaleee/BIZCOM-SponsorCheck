@@ -121,9 +121,17 @@ instalments. Each instalment an admin vets against a submission is a **wave**.
   is written.
 
 ### 2.6 What actually consumes the cap
-The cap is *"how many sponsors this event may **approach**"*, not *"how many
-names the club may send"*. A club listing 14 companies of which 5 are
-prohibited or closed has used **9** of its cap, not 14.
+The cap is *"how many sponsors this event may **approach**"* — not how many
+names the club sent, and not how many were written down. A company consumes
+the cap **only once outreach is logged for it** (migration 0015). Recording a
+club's list is free, so a submission can hold far more companies than its cap
+allows it to contact.
+
+- `sponsor_count` — companies **contacted**. This is what the cap limits.
+- `listed_count` — everything the club sent.
+
+The table below is therefore about **eligibility**: which companies may be
+contacted at all, and so may ever consume the cap.
 
 | Vetting result | Counts towards the cap? | Why |
 | -------------- | ----------------------- | --- |
@@ -387,7 +395,7 @@ only** — the public checker emails BIZCOM rather than writing here.
 | `event_name` | text | e.g. "Bizad Charity Run 2026". |
 | `club` | text | Submitting club. |
 | `event_size` | text | `small` \| `medium` \| `large`. Picks which `event_cap_*` applies. |
-| `sponsor_count` | int | **Derived.** Companies on this submission that **count towards the cap** (approved + alumni). Trigger-maintained; the client has no `UPDATE` grant on the column. |
+| `sponsor_count` | int | **Derived.** Companies on this submission with outreach logged, i.e. how many sponsors the event has actually **contacted**. This is what the cap limits. Trigger-maintained; the client has no `UPDATE` grant on the column. |
 | `listed_count` | int | **Derived.** Every company the club listed, including the ones that do not consume cap. Same trigger, same lockdown. |
 | `wave_count` | int | **Derived.** Highest wave number recorded. Same trigger, same lockdown. |
 | `submitted_at` | timestamptz | Drives the calendar bucket. |
@@ -467,8 +475,8 @@ rows stay admin-only.
 
 | Function | Returns | Who | What it does |
 | -------- | ------- | --- | ------------ |
-| `log_outreach(sponsor_id, note?, submission_id?)` | `'logged'` \| `'capped'` \| `'skipped'` \| `'duplicate'` \| `'not_recorded'` | admin | The one place the outreach cap rule lives on the server. Rejects contacts during an active cooldown (`skipped`), resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` when the cap is reached (`capped`). Given a `submission_id` it also enforces one contact per company per event (`duplicate`) and refuses a company not recorded against it (`not_recorded`). **Always use this instead of inserting into `outreach_log` directly.** |
-| `record_submission_wave(submission_id, entries)` | `{ wave, added, refreshed, skipped, counted, listed, cap, event_size }` | admin | The one place the **event cap** rule lives. De-dupes the payload, refreshes the status of companies already on the submission (unless they have been contacted), inserts the new ones as the next wave, and **rejects the whole wave** if the approachable total would exceed the event cap. The only way to write `submission_sponsors` — the client is granted `select` and `delete` on that table, never `insert`. |
+| `log_outreach(sponsor_id, note?, submission_id?)` | `'logged'` \| `'capped'` \| `'skipped'` \| `'duplicate'` \| `'not_recorded'` \| `'not_approachable'` \| `'event_capped'` | admin | The one place **both** cap rules live. Rejects contacts during an active cooldown (`skipped`), resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` when the per-sponsor cap is reached (`capped`). Given a `submission_id` it also enforces one contact per company per event (`duplicate`), refuses a company not recorded against it (`not_recorded`) or not approachable (`not_approachable`), and — since 0015 — refuses a contact that would push the event past its cap (`event_capped`). **Always use this instead of inserting into `outreach_log` directly.** |
+| `record_submission_wave(submission_id, entries)` | `{ wave, added, refreshed, skipped, counted, listed, cap, event_size }` | admin | De-dupes the payload, refreshes the status of companies already on the submission (unless they have been contacted), and inserts the new ones as the next wave. Since 0015 it does **not** check the event cap: recording is not approaching, so it cannot breach it. The only way to write `submission_sponsors` — the client is granted `select` and `delete` on that table, never `insert`. |
 | `counts_toward_cap(status)` | bool | internal | The single definition of which vetting results consume an event cap. |
 | `recalc_submission_totals(submission_id)` | void | internal | Re-derives `submissions.sponsor_count`, `listed_count` + `wave_count`. Called by the trigger on `submission_sponsors`. |
 | `transfer_super_admin(target_email)` | void | super-admin | Atomically moves the single super-admin seat (demotes the current holder first, so the one-super-admin rule is never briefly violated). |

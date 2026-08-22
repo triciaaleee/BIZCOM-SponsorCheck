@@ -684,7 +684,7 @@
                 '<span class="wave__date">' + esc(first ? formatDateShort(first) : '') + '</span>' +
                 '<span class="wave__stats">' +
                   '<span><b>' + rows.length + '</b> ' + (rows.length === 1 ? 'company' : 'companies') + '</span>' +
-                  '<span><b>' + counted + '</b> count</span>' +
+                  '<span><b>' + counted + '</b> approachable</span>' +
                   (unvetted ? '<span class="vet-flag vet-flag--todo">' + unvetted + ' unvetted</span>' : '') +
                   (contacted.length
                     ? '<span class="vet-flag vet-flag--done">' + contacted.length + ' outreach logged' +
@@ -816,35 +816,27 @@
       }
       actionsBar.hidden = false;
 
-      const listed = listedCompanies().length;
       const fresh = unrecordedCompanies().length;
       const refreshable = refreshableCompanies().length;
       const cap = submissionCap();
+      // sponsor_count is now the CONTACTED count (migration 0015), so the cap
+      // is only ever moved by logging outreach. Recording is free.
       const used = submission.sponsor_count || 0;
       const out = outreachTotals();
 
-      // Only the approachable ones move the cap: the new companies that count,
-      // plus any already-recorded row whose verdict has since become countable.
-      const freshCounting = unrecordedCompanies()
-        .filter(function (r) { return countsTowardCap(classify(r)); }).length;
-      const newlyCounting = refreshableCompanies().filter(function (r) {
-        const line = lineFor(r);
-        return countsTowardCap(classify(r)) && !countsTowardCap(line.status);
-      }).length;
-      const wouldBe = used + freshCounting + newlyCounting;
+      const wouldBe = used + out.loggable;
       const over = cap > 0 && wouldBe > cap;
 
-      // Unresolved companies are recorded at zero, so they never block.
       const recordDone = fresh === 0 && refreshable === 0;
 
-      // Over cap keeps the button visible but disabled, so the banner below has
-      // something to point at.
       recordBtn.hidden = recordDone;
-      recordBtn.disabled = over;
+      recordBtn.disabled = false;   // recording cannot breach the cap
       recordCountEl.textContent = fresh || refreshable;
 
       logBtn.hidden = recordDone ? out.loggable === 0 : true;
-      logBtn.disabled = false;
+      // Over cap keeps the button visible but disabled, so the banner has
+      // something to point at.
+      logBtn.disabled = over;
       if (logCountEl) logCountEl.textContent = out.loggable;
 
       let step;   // 1 = record, 2 = outreach, 3 = both finished
@@ -874,14 +866,16 @@
       }
 
       if (capBanner) {
-        capBanner.hidden = !over;
-        if (over) {
+        // Only meaningful at the outreach step: nothing else moves the cap.
+        const show = over && step === 2;
+        capBanner.hidden = !show;
+        if (show) {
           capBannerMsg.textContent =
             submission.event_name + ' is a ' + (SIZE_LABEL[submission.event_size] || submission.event_size).toLowerCase() +
-            ' event, capped at ' + cap + ' approachable sponsors. It already has ' + used +
-            ' and this list adds ' + freshCounting + ' more (' + wouldBe + ' in total). ' +
-            'Trim the list by ' + (wouldBe - cap) +
-            ', or change the event size on Home if the cap is wrong.';
+            ' event, capped at ' + cap + ' sponsors contacted. It has already contacted ' +
+            used + ', and this would add ' + out.loggable + ' more (' + wouldBe + ' in total). ' +
+            'Contact ' + (wouldBe - cap) + ' fewer, or change the event size on Home ' +
+            'if the cap is wrong.';
         }
       }
     }
@@ -1564,7 +1558,8 @@
                      ' for outreach. It cannot be undone.')) return;
 
         logBtn.disabled = true;
-        let logged = 0, capped = 0, skipped = 0, duplicate = 0, notRecorded = 0, failed = 0;
+        let logged = 0, capped = 0, skipped = 0, duplicate = 0, notRecorded = 0,
+            eventCapped = 0, notApproachable = 0, failed = 0;
         for (const t of targets) {
           let res;
           try {
@@ -1578,13 +1573,19 @@
           else if (res === 'skipped') skipped++;
           else if (res === 'duplicate') duplicate++;
           else if (res === 'not_recorded') notRecorded++;
+          else if (res === 'event_capped') eventCapped++;
+          else if (res === 'not_approachable') notApproachable++;
         }
 
-        // Reload the line items so the closed wave shows as closed.
-        await Promise.all([refreshOutreach(), loadRecorded()]);
+        // Reload the line items so the closed wave shows as closed. The
+        // submission itself has to be re-read as well: since 0015 the cap is
+        // moved by logging outreach, not by recording, so this is the write
+        // that changes sponsor_count.
+        await Promise.all([refreshOutreach(), loadRecorded(), refreshSubmission()]);
         logBtn.disabled = false;
-        renderWaves();   // the contacted stamps land in the history too
-        revet();         // refresh status, remarks, outreach and panels consistently
+        renderSubmissionCard();   // the meter moves on THIS action now
+        renderWaves();            // the contacted stamps land in the history too
+        revet();                  // refresh status, remarks, outreach and panels
 
         if (window.toast) {
           let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';
@@ -1592,9 +1593,11 @@
           if (skipped) msg += ' ' + skipped + ' skipped (already in cooldown).';
           if (duplicate) msg += ' ' + duplicate + ' skipped (already logged for this event).';
           if (notRecorded) msg += ' ' + notRecorded + ' skipped (not recorded against this submission yet).';
+          if (eventCapped) msg += ' ' + eventCapped + ' skipped (the event cap is full).';
+          if (notApproachable) msg += ' ' + notApproachable + ' skipped (cannot be approached).';
           if (failed) msg += ' ' + failed + ' failed.';
           window.toast({
-            type: (failed || notRecorded) ? 'warning' : 'success',
+            type: (failed || notRecorded || eventCapped) ? 'warning' : 'success',
             title: 'Outreach logged', message: msg
           });
         }

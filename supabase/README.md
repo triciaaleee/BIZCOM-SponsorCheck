@@ -116,6 +116,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Moved the event cap from "recorded" to "contacted" (0015). `sponsor_count` now counts companies with outreach logged, so recording a club's list is free and only an actual approach consumes the cap. `record_submission_wave()` no longer rejects on the cap; `log_outreach()` enforces it and returns `event_capped`.
 - Dropped `submissions.contact_email` (0014): nothing ever read it. The app sends no mail (the public checker composes a message in the student's own mail client and writes nothing here), so the column only ever displayed an address back to whoever typed it in.
 - Corrected what an event cap counts, and locked outreach per event (0013). The cap now counts sponsors the event may APPROACH (approved + alumni), not every name the club sent, so a 14-name list with 5 prohibited uses 9 of the cap. Every listed company is still stored (`listed_count` carries the raw total). `log_outreach()` takes an optional `submission_id`, stamps `submission_sponsors.outreach_logged_at`, and refuses a second contact for the same company and event.
 - Brought `submission_sponsors` back (0012), this time wired up: one row per company vetted under a submission, written only by `record_submission_wave()`. Gives clubs multi-wave submissions, moves the event cap server-side, and makes `submissions.sponsor_count` derived and non-editable (column-level grants, not just a disabled input).
