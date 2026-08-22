@@ -143,11 +143,9 @@
       const waves = sub ? (sub.wave_count || 0) : 0;
       const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
 
-      const listed = sub ? (sub.listed_count || 0) : 0;
       panelCapCount.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString();
       panelCapWaves.textContent =
-        (waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves')) +
-        (listed > used ? ' · ' + listed.toLocaleString() + ' listed' : '');
+        waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves');
 
       panelCapBar.style.width = pct + '%';
       panelCapBar.classList.toggle('sub-cap__bar--full', cap > 0 && used >= cap);

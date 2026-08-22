@@ -174,7 +174,6 @@
     const actionsBar    = document.getElementById('vet-actions');
     const actionsTrack  = document.getElementById('vet-next-track');
     const actionsTitle  = document.getElementById('vet-next-title');
-    const actionsMsg    = document.getElementById('vet-next-msg');
     const recordCountEl = document.getElementById('vet-record-count');
     const recordBtn     = document.getElementById('vet-record-btn');
     const capBanner     = document.getElementById('cap-banner');
@@ -417,12 +416,13 @@
     // Mirrors the due chip on Home so the same submission reads the same on both.
     function dueFlagHtml(s) {
       if (s.status === 'completed') return '';
-      if (!s.complete_by) return '<span class="vet-flag">No due date</span>';
+      const cls = 'vet-flag vet-flag--line';
+      if (!s.complete_by) return '<span class="' + cls + '">No due date</span>';
       const n = daysUntil(s.complete_by);
-      if (n < 0)   return '<span class="vet-flag vet-flag--due">Overdue ' + Math.abs(n) + 'd</span>';
-      if (n === 0) return '<span class="vet-flag vet-flag--due">Due today</span>';
-      if (n <= 3)  return '<span class="vet-flag vet-flag--due">Due in ' + n + 'd</span>';
-      return '<span class="vet-flag">Due ' + esc(formatDateShort(new Date(s.complete_by))) + '</span>';
+      if (n < 0)   return '<span class="' + cls + ' vet-flag--overdue">Overdue ' + Math.abs(n) + 'd</span>';
+      if (n === 0) return '<span class="' + cls + ' vet-flag--soon">Due today</span>';
+      if (n <= 3)  return '<span class="' + cls + ' vet-flag--soon">Due in ' + n + 'd</span>';
+      return '<span class="' + cls + '">Due ' + esc(formatDateShort(new Date(s.complete_by))) + '</span>';
     }
 
     function statusPillHtml(status) {
@@ -433,7 +433,6 @@
     function submissionCardHtml(s) {
       const cap = capForSize(s.event_size);
       const used = s.sponsor_count || 0;
-      const listed = s.listed_count || 0;
       const waves = s.wave_count || 0;
       const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
 
@@ -454,8 +453,6 @@
             '<div class="sub-card__figures">' +
               '<span class="sub-card__count">' + used.toLocaleString() +
                 ' <small>/ ' + cap.toLocaleString() + '</small></span>' +
-              '<span class="sub-card__listed">' +
-                (listed ? listed.toLocaleString() + ' listed' : 'nothing recorded') + '</span>' +
             '</div>' +
             '<div class="sub-cap__meter"><span class="' + barCls + '" style="width:' + pct + '%"></span></div>' +
           '</div>' +
@@ -579,12 +576,9 @@
       subClubEl.textContent = submission.club;
       subStatusEl.innerHTML = statusPillHtml(submission.status);
 
-      const listed = submission.listed_count || 0;
       subCountEl.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString() + ' sponsors';
       subWavesEl.textContent =
-        (waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves')) +
-        (listed > used ? ' · ' + listed.toLocaleString() + ' listed, ' +
-                         (listed - used).toLocaleString() + ' not approachable' : '');
+        waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves');
 
       subBar.style.width = pct + '%';
       subBar.classList.toggle('sub-cap__bar--full', cap > 0 && used >= cap);
@@ -748,19 +742,6 @@
       return listedCompanies().filter(function (r) { return countsTowardCap(classify(r)); });
     }
 
-    // Companies with no verdict yet. These do NOT block recording: the
-    // submission should say what the club actually sent, on the day they sent
-    // it, and vetting is work that happens afterwards. They are stored with
-    // status 'review' and count zero towards the cap until someone resolves
-    // them, either by adding them in step 2 or by confirming a possible match.
-    //
-    // Forcing them to be resolved first was a dead end: a company with a
-    // possible match cannot be "resolved" by adding it, because that creates
-    // the duplicate panel B exists to prevent.
-    function unresolvedCompanies() {
-      return listedCompanies().filter(function (r) { return classify(r) === 'review'; });
-    }
-
     // Companies already on the submission whose verdict has moved since they
     // were recorded: an unknown that has since been added or linked, or a
     // cooldown that has lapsed. Re-recording refreshes them, which is how they
@@ -799,6 +780,25 @@
       return { approachable: approachable, loggable: loggable, locked: locked, logged: logged };
     }
 
+    // Park the panels' sticky headers below this bar rather than under it.
+    // Measured rather than hard-coded: the bar wraps to two rows on narrow
+    // viewports, and a stale constant would leave a gap or an overlap.
+    // getBoundingClientRect forces layout, so this is accurate whenever the bar
+    // actually has a box. Callers must reach it AFTER the results block is out
+    // of d-none, otherwise the measurement is zero.
+    function syncStickOffset() {
+      if (!actionsBar || !checkResults) return;
+      const h = (actionsBar.hidden || checkResults.classList.contains('d-none'))
+        ? 0 : actionsBar.getBoundingClientRect().height;
+      // Plus the bar's own sticky top and a small breathing gap.
+      checkResults.style.setProperty('--vet-stick-offset', (h ? Math.round(h) + 16 : 0) + 'px');
+    }
+
+    // Catches the bar wrapping to a second row when the viewport narrows.
+    if (window.ResizeObserver && actionsBar) {
+      new ResizeObserver(syncStickOffset).observe(actionsBar);
+    }
+
     // ---------- the next action ----------
     // Recording and logging outreach are two writes that must happen in order,
     // and the admin only ever has one of them to do. Showing both at once (or
@@ -818,7 +818,6 @@
 
       const listed = listedCompanies().length;
       const fresh = unrecordedCompanies().length;
-      const unresolved = unresolvedCompanies().length;
       const refreshable = refreshableCompanies().length;
       const cap = submissionCap();
       const used = submission.sponsor_count || 0;
@@ -848,64 +847,24 @@
       logBtn.disabled = false;
       if (logCountEl) logCountEl.textContent = out.loggable;
 
-      const pending = unresolved
-        ? ' ' + unresolved + (unresolved === 1 ? ' company is' : ' companies are') +
-          ' still unvetted, recorded at zero until you add ' +
-          (unresolved === 1 ? 'it' : 'them') + ' in step 2 or confirm a possible match.'
-        : '';
-
       let step;   // 1 = record, 2 = outreach, 3 = both finished
 
       if (!recordDone) {
         step = 1;
-        if (fresh === 0) {
+        actionsTitle.textContent = fresh === 0
           // Nothing new, but verdicts have moved since these were recorded.
-          actionsTitle.textContent = 'Update ' + refreshable +
-            (refreshable === 1 ? ' company' : ' companies');
-          actionsMsg.textContent =
-            refreshable + (refreshable === 1 ? ' company on this list has' : ' companies on this list have') +
-            ' a new verdict since ' + (refreshable === 1 ? 'it was' : 'they were') + ' recorded' +
-            (newlyCounting ? ', ' + newlyCounting + ' of which now count towards the cap' : '') +
-            '. Record again to update ' + submission.event_name + ' to ' + wouldBe +
-            ' of ' + cap + '.' + pending;
-        } else {
-          const notCounting = fresh - freshCounting;
-          actionsTitle.textContent = 'Record this list as wave ' + ((submission.wave_count || 0) + 1);
-          actionsMsg.textContent =
-            fresh + (fresh === 1 ? ' new company' : ' new companies') + ', of which ' +
-            freshCounting + ' count' + (freshCounting === 1 ? 's' : '') + ' towards the cap' +
-            (notCounting
-              ? ' (' + notCounting + ' prohibited, closed, in cooldown or unvetted, recorded but not counted)'
-              : '') +
-            (refreshable ? ', plus ' + refreshable + ' updated' : '') +
-            '. That takes ' + submission.event_name + ' to ' + wouldBe + ' of ' + cap + '.' + pending;
-        }
+          ? 'Update ' + refreshable + (refreshable === 1 ? ' company' : ' companies')
+          : 'Record this list as wave ' + ((submission.wave_count || 0) + 1);
       } else if (out.loggable > 0) {
         step = 2;
-        const waves = waveLabel(openWaves());
-        actionsTitle.textContent = 'Log outreach for ' + waves;
-        actionsMsg.textContent =
-          'Records one outreach for all ' + out.loggable + ' approved ' +
-          (out.loggable === 1 ? 'company' : 'companies') + ' on ' + waves +
-          ', adding 1 to each running count. Companies that reach the cap move into ' +
-          'cooldown. This cannot be undone.' +
-          (out.logged ? ' ' + out.logged + ' already logged for this event.' : '') + pending;
+        actionsTitle.textContent = 'Log outreach for ' + waveLabel(openWaves());
       } else {
         step = 3;
-        const on = loggedOnDate();
         actionsTitle.textContent = out.logged ? 'This list is done' : 'Recorded';
-        actionsMsg.textContent = (out.logged
-          ? 'Recorded against ' + submission.event_name + ', and outreach logged for ' +
-            out.logged + (out.logged === 1 ? ' company' : ' companies') +
-            (on ? ' on ' + formatDateShort(on) : '') + '.'
-          : (listed === 0
-              ? 'Nothing on this list to record.'
-              : 'Every company on this list is on ' + submission.event_name +
-                ' (' + used + ' of ' + cap + ' counting towards the cap). ' +
-                'None of them can be contacted for this event.')) + pending;
       }
 
       actionsBar.classList.toggle('is-done', step === 3);
+      syncStickOffset();
       if (actionsTrack) {
         actionsTrack.querySelectorAll('[data-step]').forEach(function (li) {
           const n = parseInt(li.getAttribute('data-step'), 10);
@@ -1104,6 +1063,9 @@
       checkUpload.classList.toggle('d-none',  which !== 'upload');
       checkLoading.classList.toggle('d-none', which !== 'loading');
       checkResults.classList.toggle('d-none', which !== 'results');
+      // renderActions runs before this, while the block is still d-none and the
+      // bar has no box, so the offset has to be taken again here.
+      syncStickOffset();
     }
 
     // ---- drag & drop ----
@@ -1393,18 +1355,6 @@
     function waveLabel(waves) {
       if (!waves.length) return '';
       return waves.length === 1 ? 'wave ' + waves[0] : 'waves ' + waves.join(', ');
-    }
-
-    // When outreach was logged for the list already on screen.
-    function loggedOnDate() {
-      let latest = null;
-      results.forEach(function (r) {
-        const line = lineFor(r);
-        if (!line || !line.outreach_logged_at) return;
-        const d = new Date(line.outreach_logged_at);
-        if (!latest || d > latest) latest = d;
-      });
-      return latest;
     }
 
     function updateReviewTile(n) {

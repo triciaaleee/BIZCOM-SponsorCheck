@@ -1395,27 +1395,32 @@
   line-height: var(--line-height-normal);
 }
 
-/* ---------- Per-wave breakdown under the meter ---------- */
+/* ---------- Per-wave breakdown, inside the meter panel ---------- */
+/* One panel, not one per wave: the rows are a continuation of the meter above
+   them, so they sit on its ground and are separated by rules rather than by
+   their own backgrounds. */
 
 .wave-list {
   list-style: none;
   margin: var(--space-3) 0 0;
-  padding: 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
+
+.wave-list:empty { display: none; }
 
 .wave-list__item {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   font-size: var(--font-size-xs);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--border-subtle);
 }
 
-.wave-list__item:nth-child(odd) { background-color: var(--surface-muted); }
+.wave-list__item:last-child { border-bottom: 0; padding-bottom: 0; }
 
 .wave-list__label {
   font-weight: var(--font-weight-semibold);

@@ -480,11 +480,6 @@
   color: var(--text-muted);
 }
 
-.sub-card__listed {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
 .sub-card__meta {
   display: flex;
   flex-wrap: wrap;
@@ -529,8 +524,19 @@
 }
 
 .vet-flag--todo { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
-.vet-flag--due  { background-color: rgba(202, 88, 28, 0.12); color: var(--color-orange-dark); }
 .vet-flag--done { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
+
+/* Due chips mirror .due-chip on Home: gold means "coming up", orange is
+   reserved for actually late, so the two screens read the same. */
+.vet-flag--soon    { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
+.vet-flag--overdue { background-color: rgba(202, 88, 28, 0.12); color: var(--color-orange-dark); }
+
+/* The due date is the thing you scan a card for, so it gets its own row
+   instead of wrapping unpredictably after the wave count. */
+.vet-flag--line {
+  flex-basis: 100%;
+  margin-right: auto;
+}
 
 .sub-empty {
   padding: var(--space-7) var(--space-5);
@@ -723,7 +729,9 @@
 .vet-next {
   position: sticky;
   top: var(--space-3);
-  z-index: 5;
+  /* Above .table thead th, which is sticky at --z-sticky and would otherwise
+     scroll up through this bar. */
+  z-index: var(--z-fixed);
   margin-bottom: var(--space-4);
   border-radius: var(--radius-md);
   background-color: var(--surface-card);
@@ -734,6 +742,11 @@
 }
 
 .vet-next[hidden] { display: none; }
+
+/* The result panels have sticky headers of their own. Without an offset they
+   stick at the very top and hide behind this bar; --vet-stick-offset is set
+   from the bar's measured height so they come to rest just below it instead. */
+#check-results .table thead th { top: var(--vet-stick-offset, 0px); }
 
 .vet-next__banner { border-radius: 0; }
 
@@ -812,13 +825,6 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-}
-
-.vet-next__msg {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  max-width: 74ch;
-  margin-top: 2px;
 }
 
 .vet-next__btn { flex: 0 0 auto; margin-left: auto; }
