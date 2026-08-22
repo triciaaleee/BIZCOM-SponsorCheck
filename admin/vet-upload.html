@@ -155,13 +155,13 @@
         <div class="vet-panel">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
-            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Prohibited and approved are flagged. Record the list against the submission first, then tick the approved companies you are contacting for this event. A company can only be logged once per event.</span>
+            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Prohibited and approved are flagged. Record the list against the submission first. Outreach is then logged in one go for every approved company on the wave, which closes that wave: a company is contacted once per event.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
               <thead>
                 <tr>
-                  <th style="width: 40px"><input type="checkbox" id="log-all" class="bulk-staging__check" aria-label="Select all approved companies"></th>
+                  <th style="width: 44px">Contacted</th>
                   <th style="width: 44px">#</th>
                   <th>Company (from list)</th>
                   <th>Matched in database</th>
@@ -178,7 +178,7 @@
           <div class="vet-panel__foot" id="matched-foot" style="display: none">
             <span class="vet-panel__foot-note" id="matched-foot-note">Logging adds 1 to each ticked company's outreach count. Companies that reach the cap move into cooldown. Once logged for this event, a company cannot be logged again.</span>
             <button type="button" class="btn btn--primary btn--sm" id="log-outreach-btn" disabled>
-              <i class="bi bi-graph-up-arrow"></i> Log outreach for <span id="log-count">0</span>
+              <i class="bi bi-graph-up-arrow"></i> Log outreach for all <span id="log-count">0</span>
             </button>
           </div>
         </div>
@@ -187,7 +187,7 @@
         <div class="vet-panel vet-panel--review">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>
-            <span class="vet-panel__sub">No confident match was found. Where a close record exists it is shown as a possible match, so you can catch a company that is already on record under another name and avoid a duplicate. Tick the genuinely new companies and stage them for adding in step 2.</span>
+            <span class="vet-panel__sub">No confident match was found. Where a close record exists it is shown as a possible match. If it is the same company, use &ldquo;Same company&rdquo; to confirm it, do not add it again or you will duplicate the record it already has. Tick the genuinely new companies and stage them for adding in step 2. None of this blocks recording: unvetted companies are recorded at zero and start counting once resolved.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
@@ -198,6 +198,7 @@
                   <th>Company (from list)</th>
                   <th>Suggested industry</th>
                   <th>Possible match in database</th>
+                  <th style="width: 150px">Same company?</th>
                 </tr>
               </thead>
               <tbody id="review-tbody"></tbody>

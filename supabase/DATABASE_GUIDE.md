@@ -132,7 +132,7 @@ prohibited or closed has used **9** of its cap, not 14.
 | `prohibited` | No | Must not be approached at all. |
 | `closed` | No | Company no longer exists. |
 | `cooldown` | No | Cannot be contacted right now. Counts later if it reopens. |
-| not on the database | No | Nothing is known about it yet. Resolve it first. |
+| not on the database | No | Nothing is known about it yet. Recorded at zero until resolved. |
 
 `counts_toward_cap(status)` is the single server-side definition. Every listed
 company is still **stored** either way, so you keep the record of what the club
@@ -153,11 +153,24 @@ This is deliberately per-submission, not per-company: if two clubs both want
 the same sponsor, those are two genuine contacts and each adds +1 to that
 sponsor's global outreach count.
 
-It also fixes the ordering of admin work, because a contact cannot be logged
-for an event the company was never recorded against:
+In the admin console this is one action per wave rather than a per-row
+selection: logging covers every approved company on the wave at once, so none
+can be left unticked and then locked out. A company on that wave that only
+becomes approachable **later** (it was unvetted, or in cooldown) gets its own
+action at that point; the ones already contacted stay locked.
 
-1. pick the submission → 2. vet the list → 3. resolve unknowns in step 2 →
-4. record the wave → 5. log outreach.
+A contact cannot be logged for an event the company was never recorded
+against, which fixes the order of work:
+
+1. pick the submission → 2. vet the list → 3. **record the wave** →
+4. resolve the unknowns → 5. log outreach.
+
+Note that **recording is not gated on the list being fully vetted**. The
+submission should say what the club actually sent, on the day they sent it.
+Unknown companies are recorded at zero and start counting once resolved and
+the list is recorded again. Gating it would also be a dead end for a company
+with a *possible match*: adding it to "resolve" it would duplicate the record
+it already has, so confirming the match is the only correct move there.
 
 ### 2.8 Admin roles
 | Role | Can do |
@@ -500,7 +513,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | **Home** (submissions calendar) | `submissions`, `submission_sponsors` | `submissions` (create/edit, **not** the derived counts) | Year calendar of club submissions + a "pending" list by due date. Every card shows `recorded / cap` and links straight into Vet & Upload for that submission. The side panel shows the per-wave breakdown. |
 | **Sponsors list** | `sponsors`, `sponsor_outreach`, `annex_a_categories` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (`annex_a_categories` + prohibited sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (prohibited sponsors with a `contract_ends`, add/remove). |
 | **Sponsor detail / add-edit** | `sponsors`, `sponsor_outreach` | `sponsors` (create/update/delete) | The single-company form. Sidebar shows outreach count / cap and cooldown. |
-| **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach`, `submissions`, `submission_sponsors` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add), `submission_sponsors` (via `record_submission_wave`) | Always attached to a club submission (`?submission=<id>` or the picker); step 1 is locked until one is chosen. Upload a CSV, vet against the DB, resolve unknowns by bulk-adding them, record the list as a wave against the club's cap, then log outreach for the approved companies. Step 2 also works standalone as the bulk entry screen for the sponsor list, and records no outreach of its own. |
+| **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach`, `submissions`, `submission_sponsors` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add), `submission_sponsors` (via `record_submission_wave`) | Always attached to a club submission (`?submission=<id>` or the picker); step 1 is locked until one is chosen. Upload a CSV, vet against the DB, resolve unknowns by bulk-adding them, record the list as a wave against the club's cap (not gated on the list being fully vetted), resolve unknowns by bulk-adding them or confirming a possible match, then log outreach for the whole wave at once. Step 2 also works standalone as the bulk entry screen for the sponsor list, and records no outreach of its own. |
 | **Settings** *(super-admin only)* | `admins`, `settings` | `admins` (invite/remove, `transfer_super_admin`), `settings` (update) | Team management + cap/cooldown/event-cap configuration. |
 
 ---

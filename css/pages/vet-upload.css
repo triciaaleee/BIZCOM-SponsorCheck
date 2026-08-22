@@ -486,3 +486,42 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* ---------- Confirming a possible match (Panel B) ---------- */
+
+/* A near-miss that is genuinely the same company must be CONFIRMED, not added:
+   adding it again would duplicate the record it already has. */
+.vet-link-btn {
+  white-space: nowrap;
+}
+
+/* The confirmed result, shown on the row once it moves up into Panel A. */
+.vet-linked {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-navy);
+  background-color: rgba(46, 82, 157, 0.12);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* Undo, available only until the wave is recorded. */
+.vet-unlink {
+  border: 0;
+  background: transparent;
+  padding: 0 2px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.vet-unlink:hover { color: var(--color-orange-dark); }
+
+/* Queued for the wave's single outreach action. Not a control: there is no
+   per-row selection, so this only reports what the button will cover. */
+.vet-pending {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
