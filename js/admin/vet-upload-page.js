@@ -658,7 +658,7 @@
       });
 
       wavesList.innerHTML = Array.from(byWave.keys())
-        .sort(function (a, b) { return b - a; })          // newest wave first
+        .sort(function (a, b) { return a - b; })          // wave 1 first
         .map(function (w) {
           const rows = byWave.get(w);
           const counted = rows.filter(function (r) { return window.AdminAPI.countsTowardCap(r.status); }).length;
@@ -676,9 +676,10 @@
             }
           });
 
-          const open = w === Math.max.apply(null, Array.from(byWave.keys()));
+          // Every wave starts collapsed: the history is a reference, and
+          // opening one on arrival buries the rest of the page.
           return (
-            '<div class="wave' + (open ? ' is-open' : '') + '" data-wave="' + w + '">' +
+            '<div class="wave" data-wave="' + w + '">' +
               '<button type="button" class="wave__head">' +
                 '<span class="wave__no">Wave ' + w + '</span>' +
                 '<span class="wave__date">' + esc(first ? formatDateShort(first) : '') + '</span>' +
@@ -780,25 +781,6 @@
       return { approachable: approachable, loggable: loggable, locked: locked, logged: logged };
     }
 
-    // Park the panels' sticky headers below this bar rather than under it.
-    // Measured rather than hard-coded: the bar wraps to two rows on narrow
-    // viewports, and a stale constant would leave a gap or an overlap.
-    // getBoundingClientRect forces layout, so this is accurate whenever the bar
-    // actually has a box. Callers must reach it AFTER the results block is out
-    // of d-none, otherwise the measurement is zero.
-    function syncStickOffset() {
-      if (!actionsBar || !checkResults) return;
-      const h = (actionsBar.hidden || checkResults.classList.contains('d-none'))
-        ? 0 : actionsBar.getBoundingClientRect().height;
-      // Plus the bar's own sticky top and a small breathing gap.
-      checkResults.style.setProperty('--vet-stick-offset', (h ? Math.round(h) + 16 : 0) + 'px');
-    }
-
-    // Catches the bar wrapping to a second row when the viewport narrows.
-    if (window.ResizeObserver && actionsBar) {
-      new ResizeObserver(syncStickOffset).observe(actionsBar);
-    }
-
     // ---------- the next action ----------
     // Recording and logging outreach are two writes that must happen in order,
     // and the admin only ever has one of them to do. Showing both at once (or
@@ -856,7 +838,6 @@
       }
 
       actionsBar.classList.toggle('is-done', step === 3);
-      syncStickOffset();
       if (actionsTrack) {
         actionsTrack.querySelectorAll('[data-step]').forEach(function (li) {
           const n = parseInt(li.getAttribute('data-step'), 10);
@@ -1057,9 +1038,6 @@
       checkUpload.classList.toggle('d-none',  which !== 'upload');
       checkLoading.classList.toggle('d-none', which !== 'loading');
       checkResults.classList.toggle('d-none', which !== 'results');
-      // renderActions runs before this, while the block is still d-none and the
-      // bar has no box, so the offset has to be taken again here.
-      syncStickOffset();
     }
 
     // ---- drag & drop ----

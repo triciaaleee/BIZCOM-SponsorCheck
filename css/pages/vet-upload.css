@@ -743,24 +743,33 @@
 
 .vet-next[hidden] { display: none; }
 
-/* The result panels have sticky headers of their own, but .table-wrapper sets
-   overflow:hidden for its rounded corners, and that makes the wrapper a scroll
-   container — so the headers were resolving against IT and never stuck to the
-   viewport at all. `clip` rounds the corners the same way without creating a
-   scroll container, which is what lets them stick.
-   --vet-stick-offset is measured from this bar so they come to rest just under
-   it rather than behind it. */
-#check-results .table-wrapper { overflow: clip; }
-#check-results .table thead th { top: var(--vet-stick-offset, 0px); }
+/* Only this bar is sticky. The tables' own headers scroll away with their rows,
+   so they can never reach the top of the viewport and collide with it. */
+#vet-detail .table thead th,
+#vet-detail .admin-table thead th {
+  position: static;
+}
 
-/* Step 2's staging table, same problem via overflow-x on its own wrapper.
-   Scoped to this page so the Sponsors list keeps its horizontal scroll. */
-#section-add .admin-table-wrap { overflow: clip; }
+/* Panel A carries eight columns and needs ~990px; the content column is
+   narrower than that on anything but a very wide screen. .table-wrapper sets
+   overflow:hidden, which was silently cutting the last columns off with no way
+   to reach them. Scroll them instead. */
+#vet-detail .table-wrapper { overflow-x: auto; }
 
-#section-add .admin-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
+/* One header height across all three tables on this page. Panel A's cells are
+   text only, while panel B's and step 2's carry a select-all checkbox whose
+   margin was making those rows ~10px taller than panel A's. */
+#vet-detail .table thead th,
+#vet-detail .admin-table thead th {
+  height: 46px;
+  padding-top: 0;
+  padding-bottom: 0;
+  vertical-align: middle;
+}
+
+#vet-detail thead .bulk-staging__check {
+  margin-top: 0;
+  vertical-align: middle;
 }
 
 .vet-next__banner { border-radius: 0; }
