@@ -1,0 +1,107 @@
+/* ============================================================
+   components/staging-table.css
+   The bulk "add sponsors" table, shared by Vet & Upload step 2 and
+   the Add sponsors dialog on the Sponsors page. Paired with
+   js/admin/staging-table.js — load both together.
+   ============================================================ */
+
+/* Inputs/selects inside the grid drop the stacked-form margin and shrink
+   to fit the dense table row. */
+.bulk-staging td .form-input {
+  margin-bottom: 0;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.bulk-staging td { vertical-align: top; }
+
+.bulk-staging__check {
+  width: 16px;
+  height: 16px;
+  margin-top: var(--space-2);
+  cursor: pointer;
+  accent-color: var(--color-navy);
+}
+
+/* A row the admin has un-ticked: dim it so it reads as "won't be added". */
+.bulk-staging tr.is-excluded td .form-input {
+  opacity: 0.5;
+}
+
+/* Remove-row icon button. */
+.bulk-staging__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.bulk-staging__remove:hover {
+  background-color: rgba(202, 88, 28, 0.10);
+  color: var(--color-orange-dark);
+}
+
+/* Field flagged as invalid on save (e.g. missing ban reason). */
+.bulk-staging .form-input.is-invalid {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 2px rgba(202, 88, 28, 0.12);
+}
+
+.bulk-staging__empty {
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.bulk-add-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.bulk-add-foot__count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.bulk-add-foot__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ---------- In a modal (Sponsors page) ---------- */
+
+/* The dialog is a form, not a page, so the footer rule would double up on the
+   modal's own. The row here just holds "Add row" and the count. */
+.modal .bulk-add-foot {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+/* A table needs far more width than the default dialog. */
+.modal--wide .modal__dialog { max-width: 900px; }
+
+.modal__sub {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: var(--space-2) 0 0;
+  max-width: 66ch;
+}

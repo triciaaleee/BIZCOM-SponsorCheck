@@ -11,7 +11,9 @@ body:not(.admin-shell-mounted) > main.admin-main {
 .admin-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  min-height: calc(100vh - 36px);
+  /* Full viewport. The old calc(100vh - 36px) budgeted for the demo banner,
+     which was removed, leaving a blank strip under short pages. */
+  min-height: 100vh;
   background-color: var(--surface-muted);
 }
 

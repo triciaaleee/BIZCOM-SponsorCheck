@@ -9,7 +9,7 @@
 
   function init() {
     // Wait for the client + data layer + canonical normalise() to be ready.
-    if (!window.sb || !window.AdminAPI || !window.Matcher) {
+    if (!window.sb || !window.AdminAPI || !window.Matcher || !window.StagingTable) {
       requestAnimationFrame(init);
       return;
     }
@@ -552,6 +552,43 @@
       });
     }
 
+    // ----------------- add sponsors (bulk) -----------------
+    // The same table as Vet & Upload step 2, so the approved list can be built
+    // several companies at a time rather than one form per company.
+    const addStaging = window.StagingTable.create({
+      tbody:       document.getElementById('add-staging-tbody'),
+      empty:       document.getElementById('add-staging-empty'),
+      selectAll:   document.getElementById('add-staging-all'),
+      countEl:     document.getElementById('add-staging-count'),
+      saveCountEl: document.getElementById('add-staging-save-count'),
+      addBtn:      document.getElementById('add-staging-row'),
+      clearBtn:    document.getElementById('add-staging-clear'),
+      saveBtn:     document.getElementById('add-staging-save'),
+      industries: function () { return industries; },
+      // The list is paged server-side, so there is no full local copy to check
+      // against. bulkAddSponsors upserts on the unique normalised name, which
+      // already skips anything that exists; this only catches repeats typed
+      // into the table itself.
+      existingNormalised: function () { return new Set(); },
+      onCommitted: function (summary) {
+        const parts = ['Added ' + summary.added +
+          (summary.added === 1 ? ' sponsor' : ' sponsors') + '.'];
+        if (summary.skipped) parts.push(summary.skipped + ' skipped (already in the database).');
+        toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
+        if (addStaging.count() === 0 && window.closeModal) window.closeModal('add-sponsors-modal');
+        render();
+        renderCapAlert();
+        renderAnnexes();
+      }
+    });
+
+    // Open with one blank row ready, so the dialog is never an empty box.
+    document.querySelectorAll('[data-modal-open="add-sponsors-modal"]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (addStaging.count() === 0) addStaging.addRows([{}]);
+      });
+    });
+
     // ----------------- boot -----------------
     (async function boot() {
       try {
@@ -562,6 +599,7 @@
       }
       buildIndustryPanel();
       populateAnnexIndustry();
+      addStaging.render();
 
       renderCapAlert();
       renderAnnexes();

@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
+  <link rel="stylesheet" href="../css/components/staging-table.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
 <body>
@@ -80,7 +81,7 @@
         <div class="annex-card__headings">
           <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
         </div>
-        <button type="button" class="btn btn--secondary btn--sm" id="annex-b-add-btn">
+        <button type="button" class="btn btn--primary btn--sm" id="annex-b-add-btn">
           <i class="bi bi-plus-lg"></i> Add
         </button>
       </div>
@@ -113,9 +114,9 @@
         Showing <strong id="sponsors-count">0</strong> sponsors
       </span>
     </div>
-    <a href="sponsor.html" class="btn btn--primary btn--sm">
-      <i class="bi bi-plus-lg"></i> Add sponsor
-    </a>
+    <button type="button" class="btn btn--primary btn--sm" data-modal-open="add-sponsors-modal">
+      <i class="bi bi-plus-lg"></i> Add sponsors
+    </button>
   </div>
 
   <div class="page-filters">
@@ -159,9 +160,9 @@
       <i class="bi bi-inbox"></i>
       <div class="empty-card__title" id="sponsors-empty-title">No sponsors yet</div>
       <div class="empty-card__sub" id="sponsors-empty-sub">Add your first sponsor to get started.</div>
-      <a href="sponsor.html" class="btn btn--primary btn--sm">
-        <i class="bi bi-plus-lg"></i> Add sponsor
-      </a>
+      <button type="button" class="btn btn--primary btn--sm" data-modal-open="add-sponsors-modal">
+        <i class="bi bi-plus-lg"></i> Add sponsors
+      </button>
     </div>
     <div class="admin-table-footer" id="sponsors-pager" hidden>
       <div class="admin-table-footer__range" id="sponsors-range"></div>
@@ -231,9 +232,62 @@
   </div>
 </div>
 
+<!-- Add sponsors: the bulk table, shared with Vet & Upload step 2 -->
+<div class="modal modal--wide" id="add-sponsors-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="add-sponsors-title">
+  <div class="modal__dialog">
+    <header class="modal__header">
+      <div>
+        <h2 class="modal__title" id="add-sponsors-title">Add sponsors</h2>
+        <p class="modal__sub">
+          Add as many companies as you like at once. Set each one's status and industry,
+          untick any you do not want, then add them all together. Names already on the
+          database are skipped.
+        </p>
+      </div>
+      <button class="modal__close" data-modal-close aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </header>
+    <div class="modal__body">
+      <div class="admin-table-wrap">
+        <table class="admin-table bulk-staging">
+          <thead>
+            <tr>
+              <th style="width: 40px"><input type="checkbox" id="add-staging-all" class="bulk-staging__check" checked aria-label="Select all rows"></th>
+              <th>Company name</th>
+              <th style="width: 150px">Status</th>
+              <th style="width: 200px">Industry</th>
+              <th>Reason / notes</th>
+              <th style="width: 48px"></th>
+            </tr>
+          </thead>
+          <tbody id="add-staging-tbody"></tbody>
+        </table>
+        <div class="bulk-staging__empty" id="add-staging-empty">
+          Nothing to add yet. Click &ldquo;Add row&rdquo; to start.
+        </div>
+      </div>
+      <div class="bulk-add-foot">
+        <button type="button" class="btn btn--secondary btn--sm" id="add-staging-row">
+          <i class="bi bi-plus-lg"></i> Add row
+        </button>
+        <div class="bulk-add-foot__count" id="add-staging-count">0 selected</div>
+      </div>
+    </div>
+    <footer class="modal__footer">
+      <button type="button" class="btn btn--tertiary btn--sm" id="add-staging-clear">Clear all</button>
+      <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn--primary btn--sm" id="add-staging-save">
+        <i class="bi bi-database-add"></i> Add <span id="add-staging-save-count">0</span> to database
+      </button>
+    </footer>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <script src="../js/lib/supabase-client.js" defer></script>
 <script src="../js/admin/admin-api.js" defer></script>
+<script src="../js/admin/staging-table.js" defer></script>
 <script src="../js/lib/matcher-core.js" defer></script>
 <script src="../js/components/toast.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>

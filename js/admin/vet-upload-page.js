@@ -14,9 +14,8 @@
         the club has sent and which companies were approached in it),
         then steps 1 and 2. Reached by clicking a card or by
         ?submission=<id> from the "Vet a list" action on Home.
-        "Add sponsors without a list" opens the same screen with
-        everything submission-specific stripped, leaving step 2 as
-        the standalone bulk entry screen for the sponsor list.
+        Step 2's table is shared with the Sponsors page, which is
+        where sponsors are added outside a club list.
 
    Every list vetted here belongs to a club submission, so step 1
    only exists on screen B.
@@ -88,23 +87,6 @@
 (function () {
   'use strict';
 
-  // Sponsor categories, mirroring sponsor-page.js / the DB check constraint.
-  const STATUS_OPTIONS = [
-    { value: 'approved', label: 'Approved' },
-    { value: 'prohibited', label: 'Prohibited'   },
-    { value: 'closed', label: 'Closed'   },
-    { value: 'alumni', label: 'Alumni'   }
-  ];
-
-  // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (approved/closed/alumni) or ban_reason (prohibited).
-  const DETAIL_META = {
-    approved: { placeholder: 'Notes (optional)',                 required: false },
-    prohibited: { placeholder: 'Prohibited reason, e.g. Annex A, Gaming', required: true },
-    closed: { placeholder: 'Closed notes (optional)',          required: false },
-    alumni: { placeholder: 'Notes (optional)',                 required: false }
-  };
-
   const SAMPLE_TEXT =
     'company_name,industry_code\n' +
     'KOI,food_beverage\n' +
@@ -122,7 +104,7 @@
   }
 
   function init() {
-    if (!window.sb || !window.AdminAPI || !window.Matcher) {
+    if (!window.sb || !window.AdminAPI || !window.Matcher || !window.StagingTable) {
       requestAnimationFrame(init);
       return;
     }
@@ -174,7 +156,6 @@
     const yearLabel     = document.getElementById('year-label');
     const yearCount     = document.getElementById('year-count');
     const tabsEl        = document.getElementById('vet-tabs');
-    const standaloneBtn = document.getElementById('open-standalone');
 
     // Screen B — one submission (or step 2 on its own).
     const detailEl      = document.getElementById('vet-detail');
@@ -212,8 +193,6 @@
     // ---------- state ----------
     let results = [];          // Matcher output for the uploaded list
     let parsedRows = [];        // the parsed CSV rows, kept so we can re-vet in place
-    let stagingRows = [];       // [{ uid, name, category, industry, detail, include }]
-    let uidSeq = 0;
 
     // Live data (loaded from Supabase at boot / refreshed after writes).
     let sponsors = [];
@@ -226,7 +205,7 @@
     let submissionList = [];    // every submission, for the picker
     let submissionId = null;    // the one this run is attached to, or null
     let submission = null;      // its row (sponsor_count/wave_count are derived)
-    let screen = 'browse';             // 'browse' | 'detail' | 'standalone'
+    let screen = 'browse';             // 'browse' | 'detail'
     let browseYear = new Date().getFullYear();
     let browseTab = 'active';          // 'active' | 'completed' | 'all'
     let lastAppliedId = undefined;     // guards the results reset on a real change
@@ -410,8 +389,6 @@
       screen = which;
       browseEl.hidden = which !== 'browse';
       detailEl.hidden = which === 'browse';
-      // Step 2 doubles as the bulk entry screen for the sponsor list, so the
-      // standalone mode shows it with everything submission-specific stripped.
       if (subCard) subCard.hidden = which !== 'detail';
       if (sectionWaves) sectionWaves.hidden = which !== 'detail';
       if (sectionVet) sectionVet.hidden = which !== 'detail';
@@ -422,11 +399,6 @@
       applySubmission(null);
       showScreen('browse');
       renderBrowse();
-    }
-
-    function showStandalone() {
-      applySubmission(null);
-      showScreen('standalone');
     }
 
     // ---------- browse: year, then month ----------
@@ -522,7 +494,7 @@
 
       if (!rows.length) {
         browseResults.innerHTML =
-          '<div class="sub-empty"><b>Nothing here</b>No ' +
+          '<div class="sub-empty"><b>Nothing yet</b>No ' +
           (browseTab === 'all' ? '' : browseTab + ' ') + 'submissions in ' + browseYear + '.</div>';
         return;
       }
@@ -588,7 +560,6 @@
     }
 
     if (backBtn) backBtn.addEventListener('click', showBrowse);
-    if (standaloneBtn) standaloneBtn.addEventListener('click', showStandalone);
 
     // Open one submission: attach it, switch screens, then load its line items.
     function openSubmission(id) {
@@ -1238,11 +1209,14 @@
       });
     }
 
+    function industryDisplay(code) {
+      const ind = industries.find(function (i) { return i.code === code; });
+      return ind ? ind.display_name : code;
+    }
+
     // ---- render step-1 results ----
     function reviewCompanies() {
-      const staged = new Set(stagingRows.map(function (r) {
-        return window.Matcher.normalise(r.name);
-      }).filter(Boolean));
+      const staged = staging.stagedNormalised();
       return results.filter(function (r) {
         return classify(r) === 'review' && !staged.has(window.Matcher.normalise(r.input));
       });
@@ -1606,16 +1580,16 @@
       sendToStaging.addEventListener('click', function () {
         const sel = selectedReviewResults();
         if (sel.length === 0) return;
-        const staged = new Set(stagingRows.map(function (r) { return window.Matcher.normalise(r.name); }));
-        let added = 0;
+        const staged = staging.stagedNormalised();
+        const seeds = [];
         sel.forEach(function (r) {
           const norm = window.Matcher.normalise(r.input);
           if (staged.has(norm)) return;
           staged.add(norm);
-          stagingRows.push(makeRow({ name: r.input, industry: r.industry || 'other' }));
-          added++;
+          seeds.push({ name: r.input, industry: r.industry || 'other' });
         });
-        renderStaging();
+        const added = seeds.length;
+        staging.addRows(seeds);
         renderReview();
         document.getElementById('section-add').scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.toast) {
@@ -1677,262 +1651,48 @@
 
     // ============================================================
     // STEP 2 — staging table (bulk add)
+    // The table itself lives in js/admin/staging-table.js, shared with
+    // the Sponsors page so the approved list can be built several
+    // companies at a time from either screen.
     // ============================================================
 
-    function makeRow(seed) {
-      seed = seed || {};
-      const category = seed.category || 'approved';
-      return {
-        uid: 'r' + (uidSeq++),
-        name: seed.name || '',
-        category: category,
-        industry: seed.industry || 'other',
-        detail: seed.detail || '',
-        include: true
-      };
-    }
+    const staging = window.StagingTable.create({
+      tbody:       stagingTbody,
+      empty:       stagingEmpty,
+      selectAll:   stagingAll,
+      countEl:     stagingCount,
+      saveCountEl: stagingSaveCt,
+      addBtn:      addRowBtn,
+      clearBtn:    clearBtn,
+      saveBtn:     saveBtn,
+      industries: function () { return industries; },
+      existingNormalised: function () {
+        return new Set(sponsors.map(function (s) {
+          return s.normalised || window.Matcher.normalise(s.name);
+        }));
+      },
+      // Staged companies drop out of panel B, so it always shows what is
+      // still outstanding.
+      onChange: function () { renderReview(); },
+      onCommitted: async function (summary) {
+        // Refresh the local snapshot so the re-vet below sees the new rows.
+        await refreshSponsors();
 
-    function industryOptions(selected) {
-      return industries.map(function (ind) {
-        return '<option value="' + ind.code + '"' + (ind.code === selected ? ' selected' : '') + '>' +
-          esc(ind.display_name) + '</option>';
-      }).join('');
-    }
+        const parts = ['Added ' + summary.added +
+          (summary.added === 1 ? ' sponsor' : ' sponsors') + '.'];
+        if (summary.skipped) parts.push(summary.skipped + ' skipped (already in the database).');
+        if (submission) parts.push('Record the list against the submission to count them.');
+        toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
 
-    function statusOptions(selected) {
-      return STATUS_OPTIONS.map(function (o) {
-        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
-          o.label + '</option>';
-      }).join('');
-    }
-
-    function industryDisplay(code) {
-      const ind = industries.find(function (i) { return i.code === code; });
-      return ind ? ind.display_name : code;
-    }
-
-    function renderStaging() {
-      if (stagingRows.length === 0) {
-        stagingTbody.innerHTML = '';
-        stagingEmpty.style.display = '';
-      } else {
-        stagingEmpty.style.display = 'none';
-        stagingTbody.innerHTML = stagingRows.map(function (row) {
-          const meta = DETAIL_META[row.category];
-          return (
-            '<tr data-uid="' + row.uid + '" class="' + (row.include ? '' : 'is-excluded') + '">' +
-              '<td><input type="checkbox" class="bulk-staging__check" data-field="include"' +
-                (row.include ? ' checked' : '') + ' aria-label="Include this row"></td>' +
-              '<td><input type="text" class="form-input" data-field="name" value="' + esc(row.name) + '" placeholder="Company name"></td>' +
-              '<td><select class="form-input" data-field="category">' + statusOptions(row.category) + '</select></td>' +
-              '<td><select class="form-input" data-field="industry">' + industryOptions(row.industry) + '</select></td>' +
-              '<td><input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) + '" placeholder="' + esc(meta.placeholder) + '"></td>' +
-              '<td><button type="button" class="bulk-staging__remove" data-field="remove" title="Remove row"><i class="bi bi-trash"></i></button></td>' +
-            '</tr>'
-          );
-        }).join('');
-      }
-      updateStagingCount();
-    }
-
-    function rowByUid(uid) {
-      return stagingRows.find(function (r) { return r.uid === uid; });
-    }
-
-    stagingTbody.addEventListener('input', function (e) {
-      const tr = e.target.closest('tr');
-      if (!tr) return;
-      const row = rowByUid(tr.getAttribute('data-uid'));
-      if (!row) return;
-      const field = e.target.getAttribute('data-field');
-      if (field === 'name')   row.name = e.target.value;
-      if (field === 'detail') row.detail = e.target.value;
-      e.target.classList.remove('is-invalid');
-    });
-
-    stagingTbody.addEventListener('change', function (e) {
-      const tr = e.target.closest('tr');
-      if (!tr) return;
-      const row = rowByUid(tr.getAttribute('data-uid'));
-      if (!row) return;
-      const field = e.target.getAttribute('data-field');
-
-      if (field === 'include') {
-        row.include = e.target.checked;
-        tr.classList.toggle('is-excluded', !row.include);
-        syncSelectAll();
-        updateStagingCount();
-      }
-      if (field === 'industry') row.industry = e.target.value;
-      if (field === 'category') {
-        row.category = e.target.value;
-        const detailInput = tr.querySelector('[data-field="detail"]');
-        if (detailInput) {
-          detailInput.placeholder = DETAIL_META[row.category].placeholder;
-          detailInput.classList.remove('is-invalid');
-        }
+        // Re-vet so anything just added moves up into "Found in the database".
+        revet();
       }
     });
-
-    stagingTbody.addEventListener('click', function (e) {
-      const btn = e.target.closest('[data-field="remove"]');
-      if (!btn) return;
-      const tr = btn.closest('tr');
-      const uid = tr.getAttribute('data-uid');
-      stagingRows = stagingRows.filter(function (r) { return r.uid !== uid; });
-      renderStaging();
-      renderReview();
-    });
-
-    function updateStagingCount() {
-      const included = stagingRows.filter(function (r) { return r.include; }).length;
-      stagingCount.textContent = included + ' selected';
-      stagingSaveCt.textContent = included;
-      saveBtn.disabled = included === 0;
-    }
-
-    function syncSelectAll() {
-      if (stagingRows.length === 0) { stagingAll.checked = false; return; }
-      stagingAll.checked = stagingRows.every(function (r) { return r.include; });
-    }
-
-    if (stagingAll) {
-      stagingAll.addEventListener('change', function () {
-        const on = stagingAll.checked;
-        stagingTbody.querySelectorAll('tr').forEach(function (tr) {
-          const row = rowByUid(tr.getAttribute('data-uid'));
-          if (!row) return;
-          row.include = on;
-          const cb = tr.querySelector('[data-field="include"]');
-          if (cb) cb.checked = on;
-          tr.classList.toggle('is-excluded', !on);
-        });
-        updateStagingCount();
-      });
-    }
-
-    if (addRowBtn) {
-      addRowBtn.addEventListener('click', function () {
-        stagingRows.push(makeRow());
-        renderStaging();
-        const rows = stagingTbody.querySelectorAll('tr');
-        const last = rows[rows.length - 1];
-        if (last) { const nm = last.querySelector('[data-field="name"]'); if (nm) nm.focus(); }
-      });
-    }
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        if (stagingRows.length === 0) return;
-        if (!confirm('Clear all staged rows? This does not touch the database.')) return;
-        stagingRows = [];
-        renderStaging();
-        renderReview();
-      });
-    }
-
-    // ---- commit: validate, dedupe, bulk-insert, log first outreach ----
-    if (saveBtn) {
-      saveBtn.addEventListener('click', commitStaging);
-    }
-
-    async function commitStaging() {
-      const included = stagingRows.filter(function (r) { return r.include; });
-      if (included.length === 0) return;
-
-      // 1. Validate.
-      let firstError = null;
-      included.forEach(function (row) {
-        const tr = stagingTbody.querySelector('[data-uid="' + row.uid + '"]');
-        const nameInput = tr && tr.querySelector('[data-field="name"]');
-        const detailInput = tr && tr.querySelector('[data-field="detail"]');
-        if (!row.name.trim()) {
-          if (nameInput) nameInput.classList.add('is-invalid');
-          firstError = firstError || { el: nameInput, msg: 'Every included row needs a company name.' };
-        }
-        if (DETAIL_META[row.category].required && !row.detail.trim()) {
-          if (detailInput) detailInput.classList.add('is-invalid');
-          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a prohibited reason.' };
-        }
-      });
-      if (firstError) {
-        toastMsg({ type: 'error', title: 'Check the highlighted rows', message: firstError.msg });
-        if (firstError.el) firstError.el.focus();
-        return;
-      }
-
-      // 2. Dedupe within the batch and against the loaded sponsors, by normalised name.
-      const existing = new Set(sponsors.map(function (s) {
-        return s.normalised || window.Matcher.normalise(s.name);
-      }));
-      const seen = new Set();
-      const payloads = [];
-      const skipped = [];
-
-      included.forEach(function (row) {
-        const norm = window.Matcher.normalise(row.name);
-        if (existing.has(norm) || seen.has(norm)) {
-          skipped.push(row.name.trim());
-          return;
-        }
-        seen.add(norm);
-        const payload = {
-          name: row.name.trim(),
-          normalised: norm,
-          industry: row.industry,
-          category: row.category,
-          notes: '',
-          ban_reason: null
-        };
-        if (row.category === 'approved' || row.category === 'alumni') payload.notes = row.detail.trim();
-        else if (row.category === 'closed') payload.notes = row.detail.trim();
-        else if (row.category === 'prohibited') payload.ban_reason = row.detail.trim();
-        payloads.push(payload);
-      });
-
-      if (payloads.length === 0) {
-        toastMsg({ type: 'info', title: 'Nothing added', message: 'All selected companies are already in the database.' });
-        return;
-      }
-
-      // 3. Bulk insert (skips any that already exist by normalised).
-      saveBtn.disabled = true;
-      let inserted;
-      try {
-        inserted = await window.AdminAPI.bulkAddSponsors(payloads);
-      } catch (e) {
-        saveBtn.disabled = false;
-        toastError('Could not add sponsors', e);
-        return;
-      }
-      const added = inserted.length;
-      const dbSkipped = payloads.length - added;
-
-      // 4. Refresh the local snapshot so the re-vet below sees the new rows.
-      //    No outreach is logged here on purpose: a contact belongs to an event,
-      //    so it is logged in step 1 against a recorded submission. Logging it at
-      //    add time would bypass the once-per-event lock and double-count.
-      await refreshSponsors();
-
-      // 5. Remove the committed rows; keep only unticked ones.
-      stagingRows = stagingRows.filter(function (r) { return !r.include; });
-      renderStaging();
-      saveBtn.disabled = false;
-
-      const totalSkipped = skipped.length + dbSkipped;
-      const parts = ['Added ' + added + (added === 1 ? ' sponsor' : ' sponsors') + '.'];
-      if (totalSkipped) parts.push(totalSkipped + ' skipped (already in the database).');
-      if (submission) parts.push('Record the list against the submission to count them.');
-      toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
-
-      // Re-vet so anything just added moves up into "Found in the database".
-      revet();
-    }
 
     // ---------- boot ----------
     setCheckState('upload');
     setUploadGate();
-    renderStaging();
+    staging.render();
     readyPromise = loadData().then(function () {
       if (loadError) return;           // nothing loaded, so nothing to attach to
 
