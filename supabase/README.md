@@ -47,7 +47,7 @@ installs from `0001` already have the final shape and can skip it.
 
 **Functions (RPC)**
 
-- `log_outreach(sponsor_id, note?)` → `'logged' | 'capped' | 'skipped'`. The server-side twin of the app's cap logic: rejects contacts during an active cooldown, resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` on reaching the cap. **Use this instead of inserting into `outreach_log` directly** so the rule lives in one place.
+- `log_outreach(sponsor_id, note?, submission_id?)` → `'logged' | 'capped' | 'skipped' | 'duplicate' | 'not_recorded'`. The server-side twin of the app's cap logic: rejects contacts during an active cooldown, resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` on reaching the cap. **Use this instead of inserting into `outreach_log` directly** so the rule lives in one place.
 - `transfer_super_admin(target_email)` — atomically moves the single super-admin seat (demotes the current holder first so the one-super-admin index is never violated).
 - `is_admin()` / `is_super_admin()` — RLS helpers, matching the JWT `email` claim against `admins`.
 
@@ -107,7 +107,8 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 | ---- | ------------- | --------------- |
 | industries, sponsors, settings, annex_a_categories | read | read + write¹ |
 | `sponsor_outreach` view | read | read |
-| submissions | none | full |
+| submissions | none | full, except `sponsor_count` / `listed_count` / `wave_count` (derived; no column grant) |
+| submission_sponsors | none | read + delete (write via `record_submission_wave`; the outreach stamp only via `log_outreach`) |
 | outreach_log | none | full (write via `log_outreach`) |
 | admins | none | read; **super-admin** writes |
 | settings updates | none | **super-admin** only |
@@ -115,6 +116,8 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Corrected what an event cap counts, and locked outreach per event (0013). The cap now counts sponsors the event may APPROACH (approved + alumni), not every name the club sent, so a 14-name list with 5 prohibited uses 9 of the cap. Every listed company is still stored (`listed_count` carries the raw total). `log_outreach()` takes an optional `submission_id`, stamps `submission_sponsors.outreach_logged_at`, and refuses a second contact for the same company and event.
+- Brought `submission_sponsors` back (0012), this time wired up: one row per company vetted under a submission, written only by `record_submission_wave()`. Gives clubs multi-wave submissions, moves the event cap server-side, and makes `submissions.sponsor_count` derived and non-editable (column-level grants, not just a disabled input).
 - Dropped `submission_sponsors` (0009): never read or written by the app, so it only ever held seed rows.
 - Widened the `admins.email` domain check (0007): any `smu.edu.sg` address or subdomain, not just `@sa.smu.edu.sg`.
 - Renamed `sponsors.category` `banned` -> `prohibited` (0006), standardising the term across both sites. (0006 also renamed `submission_sponsors.status`; that table was later dropped in 0009.)

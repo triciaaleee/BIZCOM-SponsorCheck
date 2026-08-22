@@ -235,10 +235,22 @@
     },
 
     // Record one outreach against a sponsor via the server-side rule (the single
-    // place the cap/cooldown logic lives). Returns 'logged' | 'capped' | 'skipped'.
-    logOutreach: function (sponsorId, note) {
+    // place the cap/cooldown logic lives).
+    //
+    // Pass submissionId to scope the contact to a club submission: the RPC then
+    // stamps the submission_sponsors line item so the same company cannot be
+    // contacted twice for the same event, and records which event it was for.
+    //
+    // Returns 'logged' | 'capped' | 'skipped'
+    //       | 'duplicate'    (already logged for this submission)
+    //       | 'not_recorded' (company is not on this submission yet).
+    logOutreach: function (sponsorId, note, submissionId) {
       return Promise.resolve(
-        sb().rpc('log_outreach', { p_sponsor_id: sponsorId, p_note: note || null })
+        sb().rpc('log_outreach', {
+          p_sponsor_id: sponsorId,
+          p_note: note || null,
+          p_submission_id: submissionId || null
+        })
       ).then(unwrap);
     },
 
@@ -274,11 +286,66 @@
       ).then(unwrap);
     },
 
+    getSubmission: function (id) {
+      return Promise.resolve(
+        sb().from('submissions').select('*').eq('id', id).maybeSingle()
+      ).then(unwrap);
+    },
+
     // Permanent: submissions carry no soft-delete flag, so the row is gone.
     // RLS (submissions_all) already allows this for any signed-in admin.
+    // The submission_sponsors line items go with it (FK on delete cascade).
     deleteSubmission: function (id) {
       return Promise.resolve(
         sb().from('submissions').delete().eq('id', id)
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
+    // Statuses that consume an event's sponsor cap. The server's
+    // counts_toward_cap() (migration 0013) is the authority; this mirrors it so
+    // the page can show the same numbers before it commits anything. Keep the
+    // two in step.
+    countsTowardCap: function (status) {
+      return status === 'approved' || status === 'alumni';
+    },
+
+    // ---------- submission line items (the vetting link) ----------
+    // Every company recorded against a submission, oldest wave first. Drives
+    // the "already counted" set on Vet & Upload so a re-uploaded company is not
+    // double-counted, the per-company outreach lock, and the wave history on Home.
+    listSubmissionSponsors: function (submissionId) {
+      return Promise.resolve(
+        sb().from('submission_sponsors')
+          .select('id, wave, company_name, normalised, sponsor_id, status, ' +
+                  'recorded_by, recorded_at, outreach_logged_at, outreach_logged_by')
+          .eq('submission_id', submissionId)
+          .order('wave', { ascending: true })
+          .order('company_name', { ascending: true })
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    // Record one wave of a club's list against a submission. The event cap lives
+    // server-side in record_submission_wave (see 0012), which de-dupes the
+    // payload, skips companies already on the submission, and rejects the whole
+    // wave if it would push the total past the cap for the event size.
+    // Only approved and alumni companies consume the cap; prohibited, closed,
+    // cooldown and not-yet-vetted ones are stored for the record but not counted.
+    // entries: [{ company_name, normalised, sponsor_id, status }]
+    // returns: { wave, added, refreshed, skipped, counted, listed, cap, event_size }
+    recordSubmissionWave: function (submissionId, entries) {
+      return Promise.resolve(
+        sb().rpc('record_submission_wave', {
+          p_submission_id: submissionId,
+          p_entries: entries || []
+        })
+      ).then(unwrap);
+    },
+
+    // Remove one company from a submission (recorded against the wrong club, or
+    // withdrawn). The trigger re-derives submissions.sponsor_count.
+    deleteSubmissionSponsor: function (id) {
+      return Promise.resolve(
+        sb().from('submission_sponsors').delete().eq('id', id)
       ).then(function (res) { if (res.error) throw res.error; });
     },
 

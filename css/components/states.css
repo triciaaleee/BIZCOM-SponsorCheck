@@ -78,7 +78,14 @@
   font-size: var(--font-size-sm);
 }
 
+/* An author `display` always beats the UA sheet's [hidden] rule, so banners
+   toggled with the hidden attribute need this to actually disappear. */
+.banner[hidden] { display: none; }
+
 .banner--info { background-color: rgba(46, 82, 157, 0.05); border-left-color: var(--color-navy); }
+
+/* Something is blocked or needs a decision before the admin can carry on. */
+.banner--warn { background-color: rgba(202, 88, 28, 0.06); border-left-color: var(--color-orange); }
 
 .banner__icon {
   flex-shrink: 0;
@@ -86,6 +93,8 @@
   color: var(--color-navy);
   margin-top: 1px;
 }
+
+.banner--warn .banner__icon { color: var(--color-orange); }
 
 .banner__body {
   flex: 1;

@@ -1,6 +1,37 @@
 /* ============================================================
    js/admin/vet-upload-page.js
-   Admin "Vet & Upload" page. Two connected steps:
+   Admin "Vet & Upload" page.
+
+   Every list vetted here belongs to a club submission. Step 1 stays
+   locked until one is chosen, from ?submission=<id> (the "Vet a list"
+   action on Home) or the picker at the top of the page.
+
+     * The list is measured against that club's event-size cap
+       (settings.event_cap_small/medium/large).
+     * Only companies the club may actually APPROACH consume the cap:
+       approved and alumni. Prohibited, closed and in-cooldown ones
+       are recorded for the record but counted at zero. So a list of
+       14 names where 5 are prohibited uses 9 of the cap, not 14.
+     * Recording writes one WAVE of submission_sponsors rows, so a
+       club sending its list in instalments accumulates towards one
+       cap rather than starting over each time.
+     * A company already on the submission is not counted twice, so
+       re-uploading a list is safe. Its status is refreshed though,
+       which is how a lapsed cooldown or a newly-added company starts
+       counting.
+     * submissions.sponsor_count is re-derived by a trigger — this
+       page is the only thing that moves it (migrations 0012, 0013).
+
+   Order of work, enforced rather than suggested:
+
+     1. pick the submission
+     2. upload and vet
+     3. resolve anything not on the database in step 2
+     4. record the list as a wave
+     5. log outreach — only for companies on the submission, and only
+        once each per event (submission_sponsors.outreach_logged_at)
+
+   Two connected steps:
 
      1. Vet a list — upload a CSV of company names (company_name +
         optional industry_code, the same template the public checker
@@ -10,13 +41,22 @@
 
      2. Add to database — an editable staging table. The admin sets
         each company's status + industry and adds them all at once via
-        a bulk insert. Approved companies can log their first outreach.
+        a bulk insert. This step works without a submission attached,
+        so it doubles as the bulk entry screen for the sponsor list.
+        It records no outreach: a contact belongs to an event, so it
+        is logged in step 1 against a recorded submission.
 
    Data layer (Supabase, no MOCK_DATA):
      * Matching:      AdminMatcher.checkBatch(rows, ctx) over live data
                       loaded by AdminAPI (reuses Matcher.normalise).
-     * Log outreach:  AdminAPI.logOutreach() -> log_outreach RPC.
+     * Log outreach:  AdminAPI.logOutreach() -> log_outreach RPC,
+                      passed the submission so it stamps the line item
+                      and refuses a second log for the same event.
      * Bulk add:      AdminAPI.bulkAddSponsors() -> insert (skip dupes).
+     * Record a wave: AdminAPI.recordSubmissionWave() -> the
+                      record_submission_wave RPC, which owns the
+                      event cap the same way log_outreach owns the
+                      outreach cap.
    ============================================================ */
 
 (function () {
@@ -71,6 +111,8 @@
 
     // ---------- element refs ----------
     const dropZone      = document.getElementById('drop-zone');
+    const dropZoneTitle = document.getElementById('drop-zone-title');
+    const dropZoneHint  = document.getElementById('drop-zone-hint');
     const fileInput     = document.getElementById('file-input');
     const sampleLink    = document.getElementById('load-sample-link');
     const uploadStatus  = document.getElementById('upload-status');
@@ -88,6 +130,7 @@
     const matchedTbody  = document.getElementById('matched-tbody');
     const matchedEmpty  = document.getElementById('matched-empty');
     const matchedFoot   = document.getElementById('matched-foot');
+    const matchedFootNote = document.getElementById('matched-foot-note');
     const logAll        = document.getElementById('log-all');
     const logBtn        = document.getElementById('log-outreach-btn');
     const logCountEl    = document.getElementById('log-count');
@@ -97,6 +140,22 @@
     const reviewAll     = document.getElementById('review-all');
     const reviewSelText = document.getElementById('review-sel-text');
     const sendToStaging = document.getElementById('send-to-staging');
+
+    // Submission context (the link to the Home calendar).
+    const subSelect     = document.getElementById('vet-sub-select');
+    const subDetail     = document.getElementById('vet-sub-detail');
+    const subNone       = document.getElementById('vet-sub-none');
+    const subMeta       = document.getElementById('vet-sub-meta');
+    const subCountEl    = document.getElementById('vet-sub-count');
+    const subWavesEl    = document.getElementById('vet-sub-waves');
+    const subBar        = document.getElementById('vet-sub-bar');
+    const recordBar     = document.getElementById('vet-record');
+    const recordTitle   = document.getElementById('vet-record-title');
+    const recordMsg     = document.getElementById('vet-record-msg');
+    const recordCountEl = document.getElementById('vet-record-count');
+    const recordBtn     = document.getElementById('vet-record-btn');
+    const capBanner     = document.getElementById('cap-banner');
+    const capBannerMsg  = document.getElementById('cap-banner-msg');
 
     const stagingTbody  = document.getElementById('staging-tbody');
     const stagingEmpty  = document.getElementById('staging-empty');
@@ -119,6 +178,14 @@
     let outreachMap = {};       // { sponsorId: { count, cooldown_started_at, in_cooldown } }
     let settings = {};
     let loadError = false;
+
+    // Submission context.
+    let submissionList = [];    // every submission, for the picker
+    let submissionId = null;    // the one this run is attached to, or null
+    let submission = null;      // its row (sponsor_count/wave_count are derived)
+    let recordedNorms = new Set();     // normalised names already on the submission
+    let recordedByNorm = new Map();    // normalised -> line item (carries the outreach lock)
+    let recordedRows = [];
     const todayStr = todayISODate();
     let readyPromise = null;
 
@@ -160,12 +227,14 @@
         window.AdminAPI.listIndustries(),
         window.AdminAPI.allSponsors(),
         window.AdminAPI.outreachSnapshot(),
-        window.AdminAPI.getSettings()
+        window.AdminAPI.getSettings(),
+        window.AdminAPI.listSubmissions()
       ]).then(function (out) {
         industries = out[0] || [];
         sponsors = out[1] || [];
         outreachMap = out[2] || {};
         settings = out[3] || {};
+        submissionList = out[4] || [];
         // Reuse the shared normalise for the lookup key so it can't drift.
         sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
       }).catch(function (e) {
@@ -198,6 +267,362 @@
         }
         default: return 'review';
       }
+    }
+
+    // ============================================================
+    // SUBMISSION CONTEXT — which club list this run is counted against
+    // ============================================================
+
+    const SIZE_LABEL = { small: 'Small', medium: 'Medium', large: 'Large' };
+
+    function capForSize(size) {
+      const caps = {
+        small:  settings.event_cap_small,
+        medium: settings.event_cap_medium,
+        large:  settings.event_cap_large
+      };
+      const fallbacks = { small: 300, medium: 600, large: 1000 };
+      const v = caps[size];
+      return (v != null) ? Number(v) : (fallbacks[size] || 0);
+    }
+
+    function submissionCap() {
+      return submission ? capForSize(submission.event_size) : 0;
+    }
+
+    function submissionIdFromUrl() {
+      try {
+        return new URLSearchParams(window.location.search).get('submission') || null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Keep ?submission= in step with the picker so a refresh (or a bookmark)
+    // lands back on the same submission.
+    function syncUrl() {
+      if (!window.history || !window.history.replaceState) return;
+      const url = new URL(window.location.href);
+      if (submissionId) url.searchParams.set('submission', submissionId);
+      else url.searchParams.delete('submission');
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    function fillSubmissionOptions() {
+      if (!subSelect) return;
+      const opts = ['<option value="">Choose a submission…</option>'];
+      submissionList.forEach(function (s) {
+        const when = formatDateShort(new Date(s.submitted_at));
+        const done = s.status === 'completed' ? ' — completed' : '';
+        opts.push(
+          '<option value="' + esc(s.id) + '">' +
+            esc(s.event_name) + ' — ' + esc(s.club) + ' (' + esc(when) + ')' + done +
+          '</option>'
+        );
+      });
+      subSelect.innerHTML = opts.join('');
+      subSelect.value = submissionId || '';
+    }
+
+    function renderSubmissionCard() {
+      if (!subDetail) return;
+
+      if (!submission) {
+        subDetail.hidden = true;
+        if (subNone) subNone.hidden = false;
+        return;
+      }
+      subDetail.hidden = false;
+      if (subNone) subNone.hidden = true;
+
+      const cap = submissionCap();
+      const used = submission.sponsor_count || 0;
+      const waves = submission.wave_count || 0;
+      const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
+
+      subMeta.innerHTML =
+        '<span><strong>' + esc(submission.club) + '</strong></span>' +
+        '<span>' + esc(submission.contact_email) + '</span>' +
+        '<span>' + esc(SIZE_LABEL[submission.event_size] || submission.event_size) +
+          ' event · cap ' + cap.toLocaleString() + '</span>' +
+        (submission.complete_by
+          ? '<span>Due ' + esc(formatDateShort(new Date(submission.complete_by))) + '</span>'
+          : '') +
+        '<span><a href="home.html">View on Home</a></span>';
+
+      const listed = submission.listed_count || 0;
+      subCountEl.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString() + ' sponsors';
+      subWavesEl.textContent =
+        (waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves')) +
+        (listed > used ? ' · ' + listed.toLocaleString() + ' listed, ' +
+                         (listed - used).toLocaleString() + ' not approachable' : '');
+
+      subBar.style.width = pct + '%';
+      subBar.classList.toggle('sub-cap__bar--full', cap > 0 && used >= cap);
+      subBar.classList.toggle('sub-cap__bar--near', cap > 0 && used < cap && pct >= 80);
+    }
+
+    // Every company on the uploaded list, minus the rows the matcher flagged as
+    // duplicates of an earlier row — those are the club listing one company
+    // twice, not two sponsors.
+    function listedCompanies() {
+      return results.filter(function (r) { return r.status !== 'duplicate'; });
+    }
+
+    // Of those, the ones not already on this submission.
+    function unrecordedCompanies() {
+      return listedCompanies().filter(function (r) {
+        return !recordedNorms.has(window.Matcher.normalise(r.input));
+      });
+    }
+
+    // The cap counts sponsors the event may APPROACH, not names the club sent.
+    // Approved and alumni consume it; prohibited, closed, in-cooldown and
+    // not-yet-vetted companies are recorded but do not. Mirrors the server's
+    // counts_toward_cap() (migration 0013).
+    function countsTowardCap(bucket) {
+      return window.AdminAPI.countsTowardCap(bucket);
+    }
+
+    function countedCompanies() {
+      return listedCompanies().filter(function (r) { return countsTowardCap(classify(r)); });
+    }
+
+    // Companies with no verdict yet. These must be added to the database in
+    // step 2 before the wave can be recorded, otherwise they would sit on the
+    // submission as permanent unknowns consuming nothing.
+    function unresolvedCompanies() {
+      return listedCompanies().filter(function (r) { return classify(r) === 'review'; });
+    }
+
+    // The whole list is sent, not just the new ones: the RPC de-dupes and skips
+    // anything already recorded, so a stale local snapshot cannot double-count.
+    function waveEntries() {
+      return listedCompanies().map(function (r) {
+        return {
+          company_name: r.input,
+          normalised: window.Matcher.normalise(r.input),
+          sponsor_id: r.matchedId || null,
+          status: classify(r)
+        };
+      });
+    }
+
+    function renderRecordBar() {
+      if (!recordBar) return;
+
+      if (!submission) {
+        recordBar.hidden = true;
+        if (capBanner) capBanner.hidden = true;
+        return;
+      }
+      recordBar.hidden = false;
+
+      const listed = listedCompanies().length;
+      const fresh = unrecordedCompanies().length;
+      const unresolved = unresolvedCompanies().length;
+      const cap = submissionCap();
+      const used = submission.sponsor_count || 0;
+
+      // Only the approachable ones among the new companies move the cap.
+      const freshCounting = unrecordedCompanies()
+        .filter(function (r) { return countsTowardCap(classify(r)); }).length;
+      const wouldBe = used + freshCounting;
+      const over = cap > 0 && wouldBe > cap;
+
+      recordCountEl.textContent = fresh;
+      recordBtn.disabled = fresh === 0 || over || unresolved > 0;
+      recordBar.classList.toggle('is-done', fresh === 0 && unresolved === 0);
+
+      if (unresolved > 0) {
+        // Deliberately blocking: an unvetted company has no verdict, so it can
+        // neither consume cap nor be contacted. Resolve it in step 2 first.
+        recordTitle.textContent = 'Resolve ' + unresolved +
+          (unresolved === 1 ? ' company' : ' companies') + ' first';
+        recordMsg.textContent =
+          unresolved + (unresolved === 1 ? ' company on this list is' : ' companies on this list are') +
+          ' not on the database yet. Add ' + (unresolved === 1 ? 'it' : 'them') +
+          ' in step 2 below with a status, then this list can be recorded.';
+      } else if (fresh === 0) {
+        recordTitle.textContent = 'Already recorded';
+        recordMsg.textContent = listed === 0
+          ? 'Nothing on this list to record.'
+          : 'Every company on this list is already on ' + submission.event_name +
+            ' (' + used + ' of ' + cap + ' counting towards the cap).';
+      } else {
+        const notCounting = fresh - freshCounting;
+        recordTitle.textContent = 'Record this list as wave ' + ((submission.wave_count || 0) + 1);
+        recordMsg.textContent =
+          fresh + (fresh === 1 ? ' new company' : ' new companies') + ', of which ' +
+          freshCounting + ' count' + (freshCounting === 1 ? 's' : '') + ' towards the cap' +
+          (notCounting
+            ? ' (' + notCounting + ' prohibited, closed or in cooldown, recorded but not counted)'
+            : '') +
+          '. That takes ' + submission.event_name + ' to ' + wouldBe + ' of ' + cap + '.';
+      }
+
+      if (capBanner) {
+        capBanner.hidden = !over;
+        if (over) {
+          capBannerMsg.textContent =
+            submission.event_name + ' is a ' + (SIZE_LABEL[submission.event_size] || submission.event_size).toLowerCase() +
+            ' event, capped at ' + cap + ' approachable sponsors. It already has ' + used +
+            ' and this list adds ' + freshCounting + ' more (' + wouldBe + ' in total). ' +
+            'Trim the list by ' + (wouldBe - cap) +
+            ', or change the event size on Home if the cap is wrong.';
+        }
+      }
+    }
+
+    function indexRecorded() {
+      recordedNorms = new Set(recordedRows.map(function (r) { return r.normalised; }));
+      recordedByNorm = new Map();
+      recordedRows.forEach(function (r) { recordedByNorm.set(r.normalised, r); });
+    }
+
+    function loadRecorded() {
+      const forId = submissionId;
+      if (!forId) {
+        recordedRows = [];
+        indexRecorded();
+        return Promise.resolve();
+      }
+      return window.AdminAPI.listSubmissionSponsors(forId).then(function (rows) {
+        if (submissionId !== forId) return;   // the admin switched while this was in flight
+        recordedRows = rows || [];
+        indexRecorded();
+      }, function (e) {
+        toastError('Could not load what is already recorded', e);
+      });
+    }
+
+    // The line item for an uploaded row, if this company is already on the
+    // submission. Carries outreach_logged_at, which locks its tick box.
+    function lineFor(r) {
+      return recordedByNorm.get(window.Matcher.normalise(r.input)) || null;
+    }
+
+    // Step 1 is locked until a submission is chosen: every list vetted here
+    // belongs to a club, so there is nothing sensible to do without one.
+    function setUploadGate() {
+      const open = !!submission;
+      if (dropZone) dropZone.classList.toggle('is-locked', !open);
+      if (fileInput) fileInput.disabled = !open;
+      if (dropZoneTitle) {
+        dropZoneTitle.textContent = open
+          ? 'Drop a .csv list here'
+          : 'Choose a submission to start';
+      }
+      if (dropZoneHint) {
+        dropZoneHint.textContent = open
+          ? 'or click to browse'
+          : 'the picker is at the top of the page';
+      }
+      if (sampleLink) {
+        sampleLink.classList.toggle('is-disabled', !open);
+        sampleLink.setAttribute('aria-disabled', String(!open));
+      }
+    }
+
+    // Re-read the parent row so the trigger-derived sponsor_count/wave_count
+    // shown here match the database after a wave is recorded.
+    function refreshSubmission() {
+      if (!submissionId) return Promise.resolve();
+      const forId = submissionId;
+      return window.AdminAPI.getSubmission(forId).then(function (row) {
+        if (!row || submissionId !== forId) return;
+        submission = row;
+        const i = submissionList.findIndex(function (s) { return s.id === forId; });
+        if (i !== -1) submissionList[i] = row;
+      }, function () {});
+    }
+
+    function applySubmission(id) {
+      submissionId = id || null;
+      submission = submissionId
+        ? (submissionList.find(function (s) { return s.id === submissionId; }) || null)
+        : null;
+
+      if (submissionId && !submission) {
+        // Linked from a stale tab, or the submission was deleted meanwhile.
+        toastMsg({ type: 'warning', title: 'Submission not found',
+                   message: 'That submission no longer exists. Pick one to carry on.' });
+        submissionId = null;
+      }
+
+      recordedRows = [];
+      indexRecorded();
+      if (subSelect) subSelect.value = submissionId || '';
+      syncUrl();
+      setUploadGate();
+      renderSubmissionCard();
+      renderRecordBar();
+      renderMatchedIfShown();
+
+      return loadRecorded().then(function () {
+        renderSubmissionCard();
+        renderRecordBar();
+        renderMatchedIfShown();
+      });
+    }
+
+    // Panel A's tick boxes depend on what is recorded, so re-render them when
+    // the submission changes under a list that is already on screen.
+    function renderMatchedIfShown() {
+      if (results.length) renderMatched();
+    }
+
+    if (subSelect) {
+      subSelect.addEventListener('change', function () {
+        applySubmission(subSelect.value || null);
+      });
+    }
+
+    if (recordBtn) {
+      recordBtn.addEventListener('click', async function () {
+        if (!submission) return;
+        const entries = waveEntries();
+        if (!entries.length) return;
+
+        const fresh = unrecordedCompanies().length;
+        const counting = unrecordedCompanies()
+          .filter(function (r) { return countsTowardCap(classify(r)); }).length;
+        const wave = (submission.wave_count || 0) + 1;
+        if (!confirm('Record ' + fresh + (fresh === 1 ? ' company' : ' companies') +
+                     ' against "' + submission.event_name + '" as wave ' + wave + '?\n\n' +
+                     counting + ' of them count towards the cap. The rest are kept on the ' +
+                     'record but do not use it up.')) return;
+
+        recordBtn.disabled = true;
+        let res;
+        try {
+          res = await window.AdminAPI.recordSubmissionWave(submission.id, entries);
+        } catch (e) {
+          recordBtn.disabled = false;
+          // The cap rejection is a deliberate, readable message from the RPC.
+          toastError('Could not record this list', e);
+          return;
+        }
+
+        await refreshSubmission();
+        await loadRecorded();
+        renderSubmissionCard();
+        renderRecordBar();
+        renderMatchedIfShown();   // recorded companies can now be ticked for outreach
+
+        res = res || {};
+        const added = res.added || 0;
+        let msg = 'Wave ' + (res.wave || wave) + ': ' + added +
+                  (added === 1 ? ' company' : ' companies') + ' recorded.';
+        if (res.refreshed) msg += ' ' + res.refreshed + ' updated.';
+        if (res.skipped) msg += ' ' + res.skipped + ' already on the list.';
+        msg += ' ' + submission.event_name + ' is at ' + (res.counted || 0) +
+               ' of ' + (res.cap || submissionCap()) + ' towards the cap';
+        msg += (res.listed && res.listed !== res.counted)
+          ? ' (' + res.listed + ' listed in all).'
+          : '.';
+        toastMsg({ type: 'success', title: 'Recorded to submission', message: msg });
+      });
     }
 
     // ============================================================
@@ -241,11 +666,23 @@
     if (sampleLink) {
       sampleLink.addEventListener('click', function (e) {
         e.preventDefault();
+        if (submissionRequired()) return;
         parseAndCheck(SAMPLE_TEXT);
       });
     }
 
+    // Refuse anything that arrives before a submission is chosen (a drop lands
+    // on the zone regardless of the disabled input, so guard here too).
+    function submissionRequired() {
+      if (submission) return false;
+      toastMsg({ type: 'error', title: 'Choose a submission first',
+                 message: 'Every list vetted here is counted against a club submission. Pick one at the top of the page.' });
+      if (subSelect) subSelect.focus();
+      return true;
+    }
+
     function handleFile(file) {
+      if (submissionRequired()) return;
       if (!/\.csv$/i.test(file.name)) {
         toastMsg({ type: 'error', title: 'Wrong file type', message: 'Only .csv is accepted. Save your Excel file as CSV first.' });
         return;
@@ -388,6 +825,7 @@
 
       renderMatched();
       renderReview();
+      renderRecordBar();
     }
 
     function statTile(mod, value, label) {
@@ -414,17 +852,34 @@
       }
       matchedEmpty.hidden = true;
 
-      let eligible = 0;
+      let eligible = 0, approachableTotal = 0, lockedTotal = 0, loggedTotal = 0;
       matchedTbody.innerHTML = rows.map(function (r) {
         const bucket = classify(r);
         const idx = results.indexOf(r) + 1;         // original row number in the file
         const flaggedCls = (bucket === 'prohibited' || bucket === 'closed' || bucket === 'cooldown') ? 'is-flagged' : '';
         const industryLabel = r.industry ? industryDisplay(r.industry) : '';
-        const canLog = bucket === 'approved' && r.matchedId;
+        // Outreach is scoped to the submission: a company must be recorded on
+        // it, and can only be logged once for that event.
+        const line = lineFor(r);
+        const approachable = bucket === 'approved' && r.matchedId;
+        const canLog = approachable && line && !line.outreach_logged_at;
+        if (approachable) approachableTotal++;
         if (canLog) eligible++;
-        const checkCell = canLog
-          ? '<input type="checkbox" class="vet-log-check bulk-staging__check" data-id="' + esc(r.matchedId) + '" aria-label="Select for outreach">'
-          : '';
+        else if (approachable && line) loggedTotal++;
+        else if (approachable) lockedTotal++;
+
+        let checkCell = '';
+        if (canLog) {
+          checkCell = '<input type="checkbox" class="vet-log-check bulk-staging__check" data-id="' +
+            esc(r.matchedId) + '" aria-label="Select for outreach">';
+        } else if (approachable && line && line.outreach_logged_at) {
+          checkCell = '<span class="vet-logged" title="Outreach already logged for this event on ' +
+            esc(formatDateShort(new Date(line.outreach_logged_at))) + '">' +
+            '<i class="bi bi-check-circle-fill"></i></span>';
+        } else if (approachable && !line) {
+          checkCell = '<span class="vet-locked" title="Record this list against the submission first">' +
+            '<i class="bi bi-lock-fill"></i></span>';
+        }
         return (
           '<tr class="' + flaggedCls + '">' +
             '<td data-label="Log">' + checkCell + '</td>' +
@@ -441,7 +896,23 @@
         );
       }).join('');
 
-      matchedFoot.style.display = eligible ? '' : 'none';
+      matchedFoot.style.display = approachableTotal ? '' : 'none';
+      if (matchedFootNote) {
+        if (lockedTotal) {
+          matchedFootNote.textContent =
+            lockedTotal + (lockedTotal === 1 ? ' approved company is' : ' approved companies are') +
+            ' not on this submission yet. Record the list above first, then log outreach.';
+        } else if (!eligible && loggedTotal) {
+          matchedFootNote.textContent =
+            'Outreach is already logged for every approved company on this list. ' +
+            'A company can only be logged once per event.';
+        } else {
+          matchedFootNote.textContent =
+            'Logging adds 1 to each ticked company’s outreach count. Companies that reach the cap ' +
+            'move into cooldown.' +
+            (loggedTotal ? ' ' + loggedTotal + ' already logged for this event.' : '');
+        }
+      }
       if (logAll) logAll.checked = false;
       updateLogCount();
     }
@@ -635,11 +1106,11 @@
         if (!confirm('Log an outreach for ' + label + '? This adds 1 to each running count and cannot be undone here.')) return;
 
         logBtn.disabled = true;
-        let logged = 0, capped = 0, skipped = 0, failed = 0;
+        let logged = 0, capped = 0, skipped = 0, duplicate = 0, notRecorded = 0, failed = 0;
         for (const b of boxes) {
           let res;
           try {
-            res = await window.AdminAPI.logOutreach(b.getAttribute('data-id'));
+            res = await window.AdminAPI.logOutreach(b.getAttribute('data-id'), null, submissionId);
           } catch (e) {
             failed++;
             continue;
@@ -647,18 +1118,25 @@
           if (res === 'logged') logged++;
           else if (res === 'capped') { logged++; capped++; }
           else if (res === 'skipped') skipped++;
+          else if (res === 'duplicate') duplicate++;
+          else if (res === 'not_recorded') notRecorded++;
         }
 
-
-        await refreshOutreach();
+        // Reload the line items so the newly-logged companies show as locked.
+        await Promise.all([refreshOutreach(), loadRecorded()]);
         revet();  // refresh status, remarks, outreach and panels consistently
 
         if (window.toast) {
           let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';
           if (capped) msg += ' ' + (capped === 1 ? '1 reached its cap and is now in cooldown.' : capped + ' reached their cap and are now in cooldown.');
           if (skipped) msg += ' ' + skipped + ' skipped (already in cooldown).';
+          if (duplicate) msg += ' ' + duplicate + ' skipped (already logged for this event).';
+          if (notRecorded) msg += ' ' + notRecorded + ' skipped (not recorded against this submission yet).';
           if (failed) msg += ' ' + failed + ' failed.';
-          window.toast({ type: failed ? 'warning' : 'success', title: 'Outreach logged', message: msg });
+          window.toast({
+            type: (failed || notRecorded) ? 'warning' : 'success',
+            title: 'Outreach logged', message: msg
+          });
         }
       });
     }
@@ -676,8 +1154,7 @@
         category: category,
         industry: seed.industry || 'other',
         detail: seed.detail || '',
-        include: true,
-        logOutreach: category === 'approved'   // default on for approved companies only
+        include: true
       };
     }
 
@@ -714,9 +1191,6 @@
                 (row.include ? ' checked' : '') + ' aria-label="Include this row"></td>' +
               '<td><input type="text" class="form-input" data-field="name" value="' + esc(row.name) + '" placeholder="Company name"></td>' +
               '<td><select class="form-input" data-field="category">' + statusOptions(row.category) + '</select></td>' +
-              '<td class="bulk-staging__log"><input type="checkbox" class="bulk-staging__check" data-field="logOutreach"' +
-                (row.include && row.category === 'approved' && row.logOutreach ? ' checked' : '') +
-                (row.include && row.category === 'approved' ? '' : ' disabled') + ' aria-label="Log first outreach"></td>' +
               '<td><select class="form-input" data-field="industry">' + industryOptions(row.industry) + '</select></td>' +
               '<td><input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) + '" placeholder="' + esc(meta.placeholder) + '"></td>' +
               '<td><button type="button" class="bulk-staging__remove" data-field="remove" title="Remove row"><i class="bi bi-trash"></i></button></td>' +
@@ -742,15 +1216,6 @@
       e.target.classList.remove('is-invalid');
     });
 
-    function applyLogState(tr, row) {
-      const logInput = tr.querySelector('[data-field="logOutreach"]');
-      if (!logInput) return;
-      const canLog = row.include && row.category === 'approved';
-      row.logOutreach = canLog;
-      logInput.checked = canLog;
-      logInput.disabled = !canLog;
-    }
-
     stagingTbody.addEventListener('change', function (e) {
       const tr = e.target.closest('tr');
       if (!tr) return;
@@ -761,12 +1226,10 @@
       if (field === 'include') {
         row.include = e.target.checked;
         tr.classList.toggle('is-excluded', !row.include);
-        applyLogState(tr, row);
         syncSelectAll();
         updateStagingCount();
       }
       if (field === 'industry') row.industry = e.target.value;
-      if (field === 'logOutreach') row.logOutreach = e.target.checked;
       if (field === 'category') {
         row.category = e.target.value;
         const detailInput = tr.querySelector('[data-field="detail"]');
@@ -774,7 +1237,6 @@
           detailInput.placeholder = DETAIL_META[row.category].placeholder;
           detailInput.classList.remove('is-invalid');
         }
-        applyLogState(tr, row);
       }
     });
 
@@ -810,7 +1272,6 @@
           const cb = tr.querySelector('[data-field="include"]');
           if (cb) cb.checked = on;
           tr.classList.toggle('is-excluded', !on);
-          applyLogState(tr, row);
         });
         updateStagingCount();
       });
@@ -872,7 +1333,6 @@
       }));
       const seen = new Set();
       const payloads = [];
-      const logFlags = [];       // parallel to payloads: whether to log first outreach
       const skipped = [];
 
       included.forEach(function (row) {
@@ -894,7 +1354,6 @@
         else if (row.category === 'closed') payload.notes = row.detail.trim();
         else if (row.category === 'prohibited') payload.ban_reason = row.detail.trim();
         payloads.push(payload);
-        logFlags.push(row.category === 'approved' && row.logOutreach);
       });
 
       if (payloads.length === 0) {
@@ -915,23 +1374,11 @@
       const added = inserted.length;
       const dbSkipped = payloads.length - added;
 
-      // 4. Refresh the local snapshot, then resolve ids for first-outreach logging.
+      // 4. Refresh the local snapshot so the re-vet below sees the new rows.
+      //    No outreach is logged here on purpose: a contact belongs to an event,
+      //    so it is logged in step 1 against a recorded submission. Logging it at
+      //    add time would bypass the once-per-event lock and double-count.
       await refreshSponsors();
-      const byNorm = {};
-      sponsors.forEach(function (s) { byNorm[s.normalised] = s; });
-      const toLogIds = [];
-      payloads.forEach(function (p, i) {
-        if (logFlags[i] && byNorm[p.normalised]) toLogIds.push(byNorm[p.normalised].id);
-      });
-
-      let loggedCount = 0;
-      let outreachFailed = 0;
-      for (const id of toLogIds) {
-        try { const res = await window.AdminAPI.logOutreach(id); if (res !== 'skipped') loggedCount++; }
-        catch (e) { outreachFailed++; }   // non-fatal: the sponsor itself is still added
-      }
-      await refreshOutreach();
-
 
       // 5. Remove the committed rows; keep only unticked ones.
       stagingRows = stagingRows.filter(function (r) { return !r.include; });
@@ -940,17 +1387,9 @@
 
       const totalSkipped = skipped.length + dbSkipped;
       const parts = ['Added ' + added + (added === 1 ? ' sponsor' : ' sponsors') + '.'];
-      if (loggedCount) parts.push('First outreach recorded for ' + loggedCount + '.');
       if (totalSkipped) parts.push(totalSkipped + ' skipped (already in the database).');
-      if (outreachFailed) {
-        parts.push('Outreach could not be recorded for ' + outreachFailed +
-          (outreachFailed === 1 ? ' company.' : ' companies.'));
-      }
-      toastMsg({
-        type: outreachFailed ? 'warning' : 'success',
-        title: 'Database updated',
-        message: parts.join(' ')
-      });
+      if (submission) parts.push('Record the list against the submission to count them.');
+      toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
 
       // Re-vet so anything just added moves up into "Found in the database".
       revet();
@@ -958,8 +1397,13 @@
 
     // ---------- boot ----------
     setCheckState('upload');
+    setUploadGate();                   // locked until a submission is chosen
     renderStaging();
-    readyPromise = loadData();
+    readyPromise = loadData().then(function () {
+      if (loadError) return;           // nothing loaded, so nothing to attach to
+      fillSubmissionOptions();
+      return applySubmission(submissionIdFromUrl());
+    });
   }
 
   if (document.readyState === 'loading') {

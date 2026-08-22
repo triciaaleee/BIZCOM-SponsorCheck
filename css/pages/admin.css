@@ -1330,3 +1330,168 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
 }
+
+/* ============================================================
+   SUBMISSION <-> VETTING LINK
+   Shared by the Home side-panel and the Vet & Upload context bar
+   (vet-upload.html loads this file first, so both get these).
+   ============================================================ */
+
+/* ---------- Cap meter: sponsors recorded vs the event-size cap ---------- */
+
+.sub-cap {
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.sub-cap__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.sub-cap__count {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.sub-cap__waves {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sub-cap__meter {
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--surface-card);
+  overflow: hidden;
+}
+
+.sub-cap__bar {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background-color: var(--color-green);
+  transition: width var(--duration-base) var(--ease-out);
+}
+
+.sub-cap__bar--near { background-color: var(--color-gold); }
+.sub-cap__bar--full { background-color: var(--color-orange); }
+
+.sub-cap__hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: var(--line-height-normal);
+}
+
+/* ---------- Per-wave breakdown under the meter ---------- */
+
+.wave-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.wave-list__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.wave-list__item:nth-child(odd) { background-color: var(--surface-muted); }
+
+.wave-list__label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-navy);
+  min-width: 62px;
+}
+
+.wave-list__count { color: var(--text-primary); }
+
+.wave-list__date {
+  margin-left: auto;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- Compact n/cap chip on calendar + pending cards ---------- */
+
+.cap-chip {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  background-color: var(--surface-muted);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.cap-chip--near {
+  background-color: rgba(214, 178, 56, 0.18);
+  color: #8C7212;
+}
+
+.cap-chip--full {
+  background-color: rgba(202, 88, 28, 0.12);
+  color: var(--color-orange-dark);
+}
+
+/* ---------- "Vet a list" shortcut on every submission card ---------- */
+
+.sub-vet-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+/* Always visible on touch, where there is no hover to reveal it. */
+.cal-sub:hover .sub-vet-btn,
+.pending-item:hover .sub-vet-btn,
+.sub-vet-btn:focus-visible {
+  opacity: 1;
+}
+
+.sub-vet-btn:hover {
+  background-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+@media (hover: none) {
+  .sub-vet-btn { opacity: 1; }
+}
+
+/* The chip and shortcut sit on the same row as the card text. Centring the
+   calendar row means the status dot no longer needs its first-line nudge. */
+.cal-sub { align-items: center; }
+.cal-sub .cal-sub__dot { margin-top: 0; }
+.cal-sub__text { flex: 1; }
+.cal-sub .cap-chip { margin-left: auto; }
+.cal-sub .cap-chip + .sub-vet-btn,
+.pending-item .sub-vet-btn { margin-left: var(--space-1); }

@@ -6,9 +6,23 @@
         by the date each submission was submitted. Past months are
         greyed out but stay fully editable. Click + on a month to
         add a submission to it; click a submission to edit it.
+     3. The link to vetting: every submission carries a "Vet a list"
+        action that opens vet-upload.html?submission=<id>, and the
+        panel shows how many sponsors have been recorded against it
+        across all waves, measured against the event-size cap.
 
    Reads/writes live via window.AdminAPI (the `submissions` table).
    Submissions are admin-only under RLS. No MOCK_DATA on this page.
+
+   sponsor_count is READ-ONLY here by design. It is derived from
+   submission_sponsors by a trigger (migrations 0012, 0013) and the
+   client is not granted UPDATE on the column, so the old free-text
+   input would have failed at the database anyway.
+
+   It counts only the companies the club may actually APPROACH, i.e.
+   approved and alumni. Prohibited, closed and in-cooldown companies
+   are recorded against the submission but do not consume the cap, so
+   listed_count is the larger "everything they sent" figure.
    ============================================================ */
 
 (function () {
@@ -59,6 +73,7 @@
     const saveBtn = document.getElementById('panel-save');
     const saveLabel = document.getElementById('panel-save-label');
     const deleteBtn = document.getElementById('panel-delete');
+    const vetBtn = document.getElementById('panel-vet');
 
     const panelTitle = document.getElementById('panel-title');
     const panelSub = document.getElementById('panel-sub');
@@ -66,8 +81,11 @@
     const panelClubInput = document.getElementById('panel-club-input');
     const panelContactInput = document.getElementById('panel-contact-input');
     const panelSizeInput = document.getElementById('panel-size-input');
-    const panelSpcountInput = document.getElementById('panel-spcount-input');
     const panelCompleteByInput = document.getElementById('panel-complete-by-input');
+    const panelCapCount = document.getElementById('panel-cap-count');
+    const panelCapWaves = document.getElementById('panel-cap-waves');
+    const panelCapBar = document.getElementById('panel-cap-bar');
+    const panelWaveList = document.getElementById('panel-wave-list');
     const panelSubmittedEl = document.getElementById('panel-submitted');
     const panelSubmittedLine = document.getElementById('panel-submitted-line');
     const panelNotes = document.getElementById('panel-notes');
@@ -103,6 +121,109 @@
           return d.getFullYear() === year && d.getMonth() === month;
         })
         .sort(function (a, b) { return new Date(b.submitted_at) - new Date(a.submitted_at); });
+    }
+
+    // ---------- event-size caps ----------
+    // The cap the submission is measured against. Falls back to the public
+    // checker's defaults if Settings has not been read yet.
+    function capForSize(size) {
+      const caps = {
+        small:  settings.event_cap_small,
+        medium: settings.event_cap_medium,
+        large:  settings.event_cap_large
+      };
+      const fallbacks = { small: 300, medium: 600, large: 1000 };
+      const v = caps[size];
+      return (v != null) ? Number(v) : fallbacks[size] || 0;
+    }
+
+    // Paint the read-only "sponsors vetted" meter. `size` is read from the form
+    // rather than the row so switching the event size previews its cap live.
+    function renderCap(sub, size) {
+      const cap = capForSize(size || (sub && sub.event_size) || 'medium');
+      const used = sub ? (sub.sponsor_count || 0) : 0;
+      const waves = sub ? (sub.wave_count || 0) : 0;
+      const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
+
+      const listed = sub ? (sub.listed_count || 0) : 0;
+      panelCapCount.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString();
+      panelCapWaves.textContent =
+        (waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves')) +
+        (listed > used ? ' · ' + listed.toLocaleString() + ' listed' : '');
+
+      panelCapBar.style.width = pct + '%';
+      panelCapBar.classList.toggle('sub-cap__bar--full', cap > 0 && used >= cap);
+      panelCapBar.classList.toggle('sub-cap__bar--near', cap > 0 && used < cap && pct >= 80);
+    }
+
+    // The per-wave breakdown under the meter. Loaded on demand so opening a
+    // submission does not wait on it — the meter is already correct from the
+    // trigger-maintained columns on the row itself.
+    function renderWaves(rows) {
+      if (!panelWaveList) return;
+      if (!rows || !rows.length) { panelWaveList.innerHTML = ''; return; }
+
+      const byWave = new Map();
+      rows.forEach(function (r) {
+        const w = r.wave || 1;
+        if (!byWave.has(w)) byWave.set(w, { n: 0, counted: 0, at: r.recorded_at });
+        const e = byWave.get(w);
+        e.n++;
+        if (window.AdminAPI.countsTowardCap(r.status)) e.counted++;
+        if (new Date(r.recorded_at) < new Date(e.at)) e.at = r.recorded_at;
+      });
+
+      panelWaveList.innerHTML = Array.from(byWave.keys()).sort(function (a, b) { return a - b; })
+        .map(function (w) {
+          const e = byWave.get(w);
+          // "9 of 14" when some were prohibited/closed/in cooldown, else just the count.
+          const label = (e.counted === e.n)
+            ? e.n + (e.n === 1 ? ' company' : ' companies')
+            : e.counted + ' of ' + e.n + ' count';
+          return '<li class="wave-list__item">' +
+              '<span class="wave-list__label">Wave ' + w + '</span>' +
+              '<span class="wave-list__count">' + label + '</span>' +
+              '<span class="wave-list__date">' + esc(formatDate(e.at)) + '</span>' +
+            '</li>';
+        }).join('');
+    }
+
+    function loadWaves(submissionId) {
+      if (panelWaveList) panelWaveList.innerHTML = '';
+      window.AdminAPI.listSubmissionSponsors(submissionId).then(function (rows) {
+        // The panel may have been closed or moved on while this was in flight.
+        if (openSubmissionId !== submissionId) return;
+        renderWaves(rows);
+      }, function (e) {
+        console.warn('[home] could not load the wave breakdown', e);
+      });
+    }
+
+    function goToVetting(submissionId) {
+      window.location.href = 'vet-upload.html?submission=' + encodeURIComponent(submissionId);
+    }
+
+    // Compact "12/300" progress, shown beside the club on every card so the
+    // calendar reads as a cap dashboard rather than a list of names.
+    function capChipHtml(s) {
+      const cap = capForSize(s.event_size);
+      const used = s.sponsor_count || 0;
+      let cls = 'cap-chip';
+      if (cap > 0 && used >= cap) cls += ' cap-chip--full';
+      else if (cap > 0 && used / cap >= 0.8) cls += ' cap-chip--near';
+      const listed = s.listed_count || 0;
+      const title = used + ' of ' + cap + ' approachable sponsors counted' +
+        (listed > used ? ' (' + listed + ' listed in all)' : '');
+      return '<span class="' + cls + '" title="' + title + '">' + used + '/' + cap + '</span>';
+    }
+
+    // The shortcut straight into vetting, on every submission card.
+    function vetBtnHtml(s) {
+      const label = 'Vet a list for ' + s.event_name;
+      return '<button type="button" class="sub-vet-btn" data-vet="' + esc(s.id) + '" ' +
+             'title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
+               '<i class="bi bi-clipboard-check"></i>' +
+             '</button>';
     }
 
     // ---------- banner: pending submissions ----------
@@ -156,13 +277,17 @@
               '<span class="pending-item__event">' + esc(s.event_name) + '</span>' +
               '<span class="pending-item__club">' + esc(s.club) + '</span>' +
             '</span>' +
+            capChipHtml(s) +
             dueChipHtml(s) +
+            vetBtnHtml(s) +
           '</li>'
         );
       }).join('');
     }
 
     pendingList.addEventListener('click', function (e) {
+      const vet = e.target.closest('[data-vet]');
+      if (vet) { goToVetting(vet.getAttribute('data-vet')); return; }
       const row = e.target.closest('.pending-item');
       if (row) openPanel(row.getAttribute('data-sub-id'));
     });
@@ -195,6 +320,8 @@
                   '<span class="cal-sub__name">' + esc(s.event_name) + '</span>' +
                   '<span class="cal-sub__club">' + esc(s.club) + '</span>' +
                 '</span>' +
+                capChipHtml(s) +
+                vetBtnHtml(s) +
               '</li>'
             );
           }).join('') + '</ul>';
@@ -233,6 +360,8 @@
         openCreatePanel(parseInt(cell.dataset.year, 10), parseInt(cell.dataset.month, 10));
         return;
       }
+      const vet = e.target.closest('[data-vet]');
+      if (vet) { goToVetting(vet.getAttribute('data-vet')); return; }
       const subEl = e.target.closest('.cal-sub');
       if (subEl) {
         openPanel(subEl.getAttribute('data-sub-id'));
@@ -266,7 +395,6 @@
       panelClubInput.value = sub.club;
       panelContactInput.value = sub.contact_email;
       panelSizeInput.value = sub.event_size;
-      panelSpcountInput.value = sub.sponsor_count;
       panelCompleteByInput.value = sub.complete_by || '';
       panelNotes.value = sub.notes || '';
       setPanelStatus(sub.status);
@@ -274,8 +402,12 @@
       panelSubmittedEl.textContent = formatDate(sub.submitted_at);
       panelSubmittedLine.style.display = '';
 
+      renderCap(sub, sub.event_size);
+      loadWaves(sub.id);
+
       saveLabel.textContent = 'Save';
       if (deleteBtn) deleteBtn.hidden = false;   // existing row, so deletable
+      if (vetBtn) vetBtn.hidden = false;         // saved row, so it can hold a list
       openPanelUi();
     }
 
@@ -290,15 +422,18 @@
       panelClubInput.value = '';
       panelContactInput.value = '';
       panelSizeInput.value = 'medium';
-      panelSpcountInput.value = '';
       panelCompleteByInput.value = '';
       panelNotes.value = '';
       setPanelStatus('new');
 
       panelSubmittedLine.style.display = 'none';
 
+      renderCap(null, 'medium');
+      renderWaves([]);
+
       saveLabel.textContent = 'Create';
       if (deleteBtn) deleteBtn.hidden = true;    // nothing saved yet to delete
+      if (vetBtn) vetBtn.hidden = true;          // nothing to attach a list to yet
       openPanelUi();
     }
 
@@ -318,15 +453,17 @@
       mode = 'edit';
       saveBtn.disabled = false;
       if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.hidden = true; }
+      if (vetBtn) vetBtn.hidden = true;
     }
 
+    // sponsor_count is absent on purpose: it is derived from the recorded
+    // waves and the client has no UPDATE grant on the column.
     function readPanelForm() {
       return {
         event_name: panelEventInput.value.trim(),
         club: panelClubInput.value.trim(),
         contact_email: panelContactInput.value.trim(),
         event_size: panelSizeInput.value,
-        sponsor_count: parseInt(panelSpcountInput.value, 10) || 0,
         complete_by: panelCompleteByInput.value,
         notes: panelNotes.value,
         status: pendingStatus
@@ -353,7 +490,7 @@
 
       const statusChanged = sub.status !== form.status;
       let anyChanged = statusChanged;
-      ['event_name', 'club', 'contact_email', 'event_size', 'sponsor_count', 'complete_by', 'notes'].forEach(function (k) {
+      ['event_name', 'club', 'contact_email', 'event_size', 'complete_by', 'notes'].forEach(function (k) {
         if ((sub[k] || '') !== (form[k] || '')) anyChanged = true;
       });
 
@@ -397,7 +534,6 @@
         club: form.club,
         contact_email: form.contact_email,
         event_size: form.event_size,
-        sponsor_count: form.sponsor_count,
         submitted_at: pendingSubmittedAt || new Date().toISOString(),
         complete_by: form.complete_by,
         status: form.status,
@@ -457,6 +593,18 @@
         setPanelStatus(btn.getAttribute('data-panel-status'));
       });
     });
+
+    // Switching the event size changes which cap applies, so preview it live.
+    panelSizeInput.addEventListener('change', function () {
+      const sub = submissions.find(function (s) { return s.id === openSubmissionId; });
+      renderCap(sub || null, panelSizeInput.value);
+    });
+
+    if (vetBtn) {
+      vetBtn.addEventListener('click', function () {
+        if (openSubmissionId) goToVetting(openSubmissionId);
+      });
+    }
 
     closeBtn.addEventListener('click', closePanel);
     cancelBtn.addEventListener('click', closePanel);

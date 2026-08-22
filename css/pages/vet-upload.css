@@ -346,3 +346,143 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   SUBMISSION CONTEXT BAR
+   Which club submission this vetting run belongs to. The cap meter
+   itself (.sub-cap) is shared with the Home side-panel and lives in
+   pages/admin.css, which loads first.
+   ============================================================ */
+
+.vet-sub {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--color-navy);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.vet-sub__pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.vet-sub__pick-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.vet-sub__pick-label i { color: var(--color-navy); font-size: var(--font-size-lg); }
+
+/* The select carries the page's context, so give it room but not the whole row. */
+.vet-sub__pick .form-input {
+  flex: 1;
+  min-width: 260px;
+  max-width: 520px;
+  margin-bottom: 0;
+}
+
+.vet-sub__detail { margin-top: var(--space-4); }
+
+.vet-sub__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+.vet-sub__meta strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.vet-sub__none {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  line-height: var(--line-height-normal);
+  max-width: 70ch;
+}
+
+.vet-sub__none[hidden] { display: none; }
+
+/* ---------- Record-a-wave bar (inside the results block) ---------- */
+
+.vet-record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: rgba(46, 82, 157, 0.05);
+  border-left: 3px solid var(--color-navy);
+}
+
+.vet-record[hidden] { display: none; }
+
+.vet-record__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.vet-record__msg {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 70ch;
+  margin-top: 2px;
+}
+
+/* Already recorded in full: nothing to do, so read as done rather than pending. */
+.vet-record.is-done {
+  background-color: rgba(42, 148, 99, 0.06);
+  border-left-color: var(--color-green);
+}
+
+/* ---------- Step 1 locked until a submission is chosen ---------- */
+
+/* The file input covers the whole zone, so dim and neutralise both. */
+.drop-zone.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-style: solid;
+  background-color: var(--surface-muted);
+}
+
+.drop-zone.is-locked input[type="file"] { cursor: not-allowed; }
+.drop-zone.is-locked:hover { border-color: var(--border-default); }
+
+.bulk-format-hint a.is-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+/* ---------- Per-company outreach state (Panel A) ---------- */
+
+/* Outreach already logged for this event: the tick box is replaced, not
+   disabled, so the row reads as done rather than unavailable. */
+.vet-logged {
+  color: var(--color-green-dark);
+  font-size: var(--font-size-base);
+}
+
+/* Approved, but not yet recorded against the submission, so it cannot be
+   contacted for this event yet. */
+.vet-locked {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

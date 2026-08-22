@@ -31,6 +31,44 @@
 <main class="admin-main">
 
   <!-- ============================================================
+       CONTEXT - which club submission this vetting belongs to
+       Set by ?submission=<id> from the Home calendar, or picked here.
+       Step 1 stays locked until one is chosen: every list vetted here
+       belongs to a club.
+       ============================================================ -->
+  <section class="vet-sub" id="vet-sub">
+    <div class="vet-sub__pick">
+      <label class="vet-sub__pick-label" for="vet-sub-select">
+        <i class="bi bi-link-45deg"></i> Vetting for
+      </label>
+      <select class="form-input" id="vet-sub-select">
+        <option value="">Choose a submission&hellip;</option>
+      </select>
+    </div>
+
+    <div class="vet-sub__detail" id="vet-sub-detail" hidden>
+      <div class="vet-sub__meta" id="vet-sub-meta"></div>
+      <div class="sub-cap">
+        <div class="sub-cap__head">
+          <span class="sub-cap__count" id="vet-sub-count">0 / 0</span>
+          <span class="sub-cap__waves" id="vet-sub-waves">No waves yet</span>
+        </div>
+        <div class="sub-cap__meter"><span class="sub-cap__bar" id="vet-sub-bar"></span></div>
+        <p class="sub-cap__hint" id="vet-sub-hint">
+          Only approved and alumni companies use up the cap. Prohibited, closed and
+          in-cooldown companies are kept on the record but do not count.
+        </p>
+      </div>
+    </div>
+
+    <div class="vet-sub__none" id="vet-sub-none">
+      Pick the club submission this list belongs to. Every list vetted here is
+      counted against that club's event cap, so nothing can be checked until one
+      is chosen.
+    </div>
+  </section>
+
+  <!-- ============================================================
        STEP 1 - Vet a list
        ============================================================ -->
   <section class="admin-section">
@@ -48,11 +86,11 @@
 
       <!-- Upload state -->
       <div id="check-upload">
-        <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone is-locked" id="drop-zone">
           <input type="file" id="file-input" accept=".csv" aria-label="Upload sponsor list">
           <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
-          <div class="drop-zone__title">Drop a .csv list here</div>
-          <div class="drop-zone__hint">or click to browse</div>
+          <div class="drop-zone__title" id="drop-zone-title">Drop a .csv list here</div>
+          <div class="drop-zone__hint" id="drop-zone-hint">or click to browse</div>
           <div class="drop-zone__divider">
             <span>CSV only, up to 5 MB</span>
           </div>
@@ -85,6 +123,26 @@
 
         <div class="bulk-summary" id="bulk-summary"></div>
 
+        <!-- Record this list against the linked submission (one wave). Hidden
+             entirely when no submission is attached. -->
+        <div class="vet-record" id="vet-record" hidden>
+          <div class="vet-record__text">
+            <div class="vet-record__title" id="vet-record-title">Record this list</div>
+            <div class="vet-record__msg" id="vet-record-msg"></div>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm" id="vet-record-btn">
+            <i class="bi bi-journal-plus"></i> Record <span id="vet-record-count">0</span> to submission
+          </button>
+        </div>
+
+        <div class="banner banner--warn" id="cap-banner" hidden>
+          <i class="bi bi-exclamation-triangle-fill banner__icon"></i>
+          <div class="banner__body">
+            <div class="banner__title">Over the event cap</div>
+            <div class="banner__message" id="cap-banner-msg"></div>
+          </div>
+        </div>
+
         <div class="banner banner--info" id="dup-banner" hidden>
           <i class="bi bi-info-circle-fill banner__icon"></i>
           <div class="banner__body">
@@ -97,7 +155,7 @@
         <div class="vet-panel">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
-            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Prohibited and approved are flagged. Tick the approved companies being contacted for this event, then log the outreach to add to their cap counts.</span>
+            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Prohibited and approved are flagged. Record the list against the submission first, then tick the approved companies you are contacting for this event. A company can only be logged once per event.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
@@ -118,7 +176,7 @@
           </div>
           <div class="vet-panel__empty" id="matched-empty" hidden>None of the uploaded companies were found in the database.</div>
           <div class="vet-panel__foot" id="matched-foot" style="display: none">
-            <span class="vet-panel__foot-note">Logging adds 1 to each ticked company's outreach count. Companies that reach the cap move into cooldown.</span>
+            <span class="vet-panel__foot-note" id="matched-foot-note">Logging adds 1 to each ticked company's outreach count. Companies that reach the cap move into cooldown. Once logged for this event, a company cannot be logged again.</span>
             <button type="button" class="btn btn--primary btn--sm" id="log-outreach-btn" disabled>
               <i class="bi bi-graph-up-arrow"></i> Log outreach for <span id="log-count">0</span>
             </button>
@@ -171,8 +229,10 @@
         <h2 class="admin-section__title"><span class="bulk-step">2</span>Add sponsors to the database</h2>
         <p class="admin-section__sub">
           Set each company's status and industry, untick any you do not want, then add them all at once.
-          Approved companies also record their first outreach when added, unless you untick Log outreach.
-          You can also click &ldquo;Add row&rdquo; to enter sponsors without uploading a list.
+          Adding a company records no outreach: vet the list again once they are on the database,
+          record it against the submission, then log outreach from step 1.
+          This step works on its own too, so you can click &ldquo;Add row&rdquo; to enter sponsors
+          without a club list.
         </p>
       </div>
       <button type="button" class="btn btn--secondary btn--sm" id="add-row">
@@ -188,7 +248,6 @@
               <th style="width: 40px"><input type="checkbox" id="staging-all" class="bulk-staging__check" checked aria-label="Select all rows"></th>
               <th>Company name</th>
               <th style="width: 150px">Status</th>
-              <th style="width: 110px">Log outreach</th>
               <th style="width: 200px">Industry</th>
               <th>Reason / notes</th>
               <th style="width: 48px"></th>

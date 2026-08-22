@@ -117,13 +117,28 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label" for="panel-spcount-input">Sponsor count</label>
-        <input type="number" class="form-input" id="panel-spcount-input" min="0" placeholder="0">
-      </div>
-      <div class="form-group">
         <label class="form-label" for="panel-complete-by-input">Complete by <span class="form-label__required">*</span></label>
         <input type="date" class="form-input" id="panel-complete-by-input">
       </div>
+    </div>
+
+    <!-- Derived from the lists recorded on Vet & Upload — never typed in here. -->
+    <div class="side-panel__section">
+      <div class="side-panel__section-title">Sponsors vetted</div>
+      <div class="sub-cap" id="panel-cap">
+        <div class="sub-cap__head">
+          <span class="sub-cap__count" id="panel-cap-count">0 / 0</span>
+          <span class="sub-cap__waves" id="panel-cap-waves">No waves yet</span>
+        </div>
+        <div class="sub-cap__meter"><span class="sub-cap__bar" id="panel-cap-bar"></span></div>
+        <p class="sub-cap__hint" id="panel-cap-hint">
+          Counted from the lists recorded against this submission on Vet &amp; Upload.
+          Each list the club sends is a new wave, and the same company is only counted once.
+          Only approved and alumni companies use up the cap: prohibited, closed and
+          in-cooldown ones are kept on the record but do not count.
+        </p>
+      </div>
+      <ul class="wave-list" id="panel-wave-list"></ul>
     </div>
 
     <div class="side-panel__section">
@@ -136,6 +151,10 @@
     <!-- Edit mode only; hidden while creating. Pushed left, away from Save. -->
     <button type="button" class="btn btn--tertiary btn--sm side-panel__footer-danger" id="panel-delete" hidden>
       <i class="bi bi-trash"></i> Delete
+    </button>
+    <!-- Edit mode only: jumps to Vet & Upload with this submission attached. -->
+    <button type="button" class="btn btn--secondary btn--sm" id="panel-vet" hidden>
+      <i class="bi bi-clipboard-check"></i> Vet a list
     </button>
     <button type="button" class="btn btn--secondary btn--sm" id="panel-cancel">Close</button>
     <button type="button" class="btn btn--primary btn--sm" id="panel-save">
