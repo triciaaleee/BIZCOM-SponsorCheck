@@ -244,7 +244,6 @@ erDiagram
         uuid id PK
         text event_name
         text club
-        text contact_email
         text event_size "small|medium|large"
         int  sponsor_count "derived: counts to cap"
         int  listed_count "derived: everything sent"
@@ -387,7 +386,6 @@ only** — the public checker emails BIZCOM rather than writing here.
 | `id` | uuid | **PK.** |
 | `event_name` | text | e.g. "Bizad Charity Run 2026". |
 | `club` | text | Submitting club. |
-| `contact_email` | text | Club contact. |
 | `event_size` | text | `small` \| `medium` \| `large`. Picks which `event_cap_*` applies. |
 | `sponsor_count` | int | **Derived.** Companies on this submission that **count towards the cap** (approved + alumni). Trigger-maintained; the client has no `UPDATE` grant on the column. |
 | `listed_count` | int | **Derived.** Every company the club listed, including the ones that do not consume cap. Same trigger, same lockdown. |

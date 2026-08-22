@@ -582,6 +582,7 @@
 .vet-sub[hidden] { display: none; }
 
 .vet-sub__head {
+  margin-bottom: var(--space-5);
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -600,15 +601,6 @@
   font-size: var(--font-size-sm);
   color: var(--text-muted);
   margin-top: 2px;
-}
-
-.vet-sub__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin: var(--space-4) 0 var(--space-5);
 }
 
 /* ---------- Wave history ---------- */
@@ -720,40 +712,122 @@
   white-space: nowrap;
 }
 
-/* ---------- Record-a-wave bar (inside the results block) ---------- */
+/* ---------- The next action ---------- */
+/* Recording and logging outreach are two ordered writes, and only one of them
+   is ever the admin's next move. Rendering both at once read as a pile of
+   controls; parking them in a section below the results put them out of sight
+   of the thing they act on. So: one bar, docked under the summary, showing the
+   current step only, and sticky so it stays in reach while the two result
+   panels are read. */
 
-.vet-record {
+.vet-next {
+  position: sticky;
+  top: var(--space-3);
+  z-index: 5;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--color-navy);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.vet-next[hidden] { display: none; }
+
+.vet-next__banner { border-radius: 0; }
+
+.vet-next__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
   padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
-  border-radius: var(--radius-md);
-  background-color: rgba(46, 82, 157, 0.05);
-  border-left: 3px solid var(--color-navy);
 }
 
-.vet-record[hidden] { display: none; }
+/* Two dots, so the admin can see there is a second step coming before they
+   commit to the first one. */
+.vet-next__track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
 
-.vet-record__title {
+.vet-next__dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.vet-next__dot span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background-color: var(--surface-card);
+  font-size: var(--font-size-xs);
+}
+
+.vet-next__dot.is-current { color: var(--text-primary); }
+
+.vet-next__dot.is-current span {
+  background-color: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--text-inverse);
+}
+
+.vet-next__dot.is-done { color: var(--color-green-dark); }
+
+.vet-next__dot.is-done span {
+  background-color: var(--color-green-dark);
+  border-color: var(--color-green-dark);
+  color: var(--text-inverse);
+  /* The number is replaced by a tick once the step is behind you. */
+  font-size: 0;
+}
+
+.vet-next__dot.is-done span::before {
+  content: "\2713";
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 720px) {
+  .vet-next__track { display: none; }
+}
+
+.vet-next__text { flex: 1 1 300px; min-width: 0; }
+
+.vet-next__title {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
 }
 
-.vet-record__msg {
+.vet-next__msg {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  max-width: 70ch;
+  max-width: 74ch;
   margin-top: 2px;
 }
 
-/* Already recorded in full: nothing to do, so read as done rather than pending. */
-.vet-record.is-done {
-  background-color: rgba(42, 148, 99, 0.06);
+.vet-next__btn { flex: 0 0 auto; margin-left: auto; }
+
+/* Both writes done: stop competing for attention. */
+.vet-next.is-done {
   border-left-color: var(--color-green);
+  box-shadow: var(--shadow-sm);
+  background-color: rgba(42, 148, 99, 0.04);
 }
 
 /* ---------- Step 1 locked until a submission is chosen ---------- */

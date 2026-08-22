@@ -79,7 +79,6 @@
     const panelSub = document.getElementById('panel-sub');
     const panelEventInput = document.getElementById('panel-event-input');
     const panelClubInput = document.getElementById('panel-club-input');
-    const panelContactInput = document.getElementById('panel-contact-input');
     const panelSizeInput = document.getElementById('panel-size-input');
     const panelCompleteByInput = document.getElementById('panel-complete-by-input');
     const panelCapCount = document.getElementById('panel-cap-count');
@@ -88,7 +87,6 @@
     const panelWaveList = document.getElementById('panel-wave-list');
     const panelSubmittedEl = document.getElementById('panel-submitted');
     const panelSubmittedLine = document.getElementById('panel-submitted-line');
-    const panelNotes = document.getElementById('panel-notes');
     const panelStatusBtns = document.querySelectorAll('[data-panel-status]');
 
     // ---------- helpers ----------
@@ -140,7 +138,7 @@
     // Paint the read-only "sponsors vetted" meter. `size` is read from the form
     // rather than the row so switching the event size previews its cap live.
     function renderCap(sub, size) {
-      const cap = capForSize(size || (sub && sub.event_size) || 'medium');
+      const cap = capForSize(size || (sub && sub.event_size) || 'small');
       const used = sub ? (sub.sponsor_count || 0) : 0;
       const waves = sub ? (sub.wave_count || 0) : 0;
       const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
@@ -264,9 +262,13 @@
 
       if (!pending.length) {
         pendingList.innerHTML = '';
+        // Hide the list as well as emptying it: it holds flex space either way,
+        // which would push the empty message below the panel's centre.
+        pendingList.hidden = true;
         pendingEmpty.hidden = false;
         return;
       }
+      pendingList.hidden = false;
       pendingEmpty.hidden = true;
 
       pendingList.innerHTML = pending.map(function (s) {
@@ -393,10 +395,8 @@
       panelSub.textContent = sub.club;
       panelEventInput.value = sub.event_name;
       panelClubInput.value = sub.club;
-      panelContactInput.value = sub.contact_email;
       panelSizeInput.value = sub.event_size;
       panelCompleteByInput.value = sub.complete_by || '';
-      panelNotes.value = sub.notes || '';
       setPanelStatus(sub.status);
 
       panelSubmittedEl.textContent = formatDate(sub.submitted_at);
@@ -420,15 +420,13 @@
       panelSub.textContent = 'Adding to ' + MONTHS_LONG[month] + ' ' + year;
       panelEventInput.value = '';
       panelClubInput.value = '';
-      panelContactInput.value = '';
-      panelSizeInput.value = 'medium';
+      panelSizeInput.value = 'small';
       panelCompleteByInput.value = '';
-      panelNotes.value = '';
       setPanelStatus('new');
 
       panelSubmittedLine.style.display = 'none';
 
-      renderCap(null, 'medium');
+      renderCap(null, 'small');
       renderWaves([]);
 
       saveLabel.textContent = 'Create';
@@ -462,10 +460,8 @@
       return {
         event_name: panelEventInput.value.trim(),
         club: panelClubInput.value.trim(),
-        contact_email: panelContactInput.value.trim(),
         event_size: panelSizeInput.value,
         complete_by: panelCompleteByInput.value,
-        notes: panelNotes.value,
         status: pendingStatus
       };
     }
@@ -473,7 +469,6 @@
     function validateForm(form) {
       if (!form.event_name) return 'Event name is required.';
       if (!form.club) return 'Club is required.';
-      if (!form.contact_email) return 'Contact email is required.';
       if (!form.complete_by) return 'Complete by date is required.';
       return null;
     }
@@ -490,7 +485,7 @@
 
       const statusChanged = sub.status !== form.status;
       let anyChanged = statusChanged;
-      ['event_name', 'club', 'contact_email', 'event_size', 'complete_by', 'notes'].forEach(function (k) {
+      ['event_name', 'club', 'event_size', 'complete_by'].forEach(function (k) {
         if ((sub[k] || '') !== (form[k] || '')) anyChanged = true;
       });
 
@@ -532,12 +527,10 @@
       const payload = {
         event_name: form.event_name,
         club: form.club,
-        contact_email: form.contact_email,
         event_size: form.event_size,
         submitted_at: pendingSubmittedAt || new Date().toISOString(),
         complete_by: form.complete_by,
-        status: form.status,
-        notes: form.notes
+        status: form.status
       };
 
       saveBtn.disabled = true;
@@ -634,7 +627,7 @@
         const k = opt.value;
         if (!names[k]) return;
         const cap = (caps[k] != null) ? Number(caps[k]).toLocaleString() : '?';
-        opt.textContent = names[k] + ' (' + ranges[k] + ') · cap ' + cap;
+        opt.textContent = names[k] + ' (' + ranges[k] + ') · Cap ' + cap;
       });
     }
 

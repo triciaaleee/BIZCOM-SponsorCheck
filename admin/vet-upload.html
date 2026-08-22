@@ -40,11 +40,7 @@
   <section class="vet-browse" id="vet-browse">
     <div class="admin-section__head">
       <div>
-        <h2 class="admin-section__title">Club submissions</h2>
-        <p class="admin-section__sub">
-          Pick the submission you are vetting for. Every list checked here is counted
-          against that club's event cap, so the work always starts from a club.
-        </p>
+        <h2 class="admin-section__title">Club Submissions</h2>
       </div>
     </div>
 
@@ -94,7 +90,6 @@
       </div>
       <span id="vet-sub-status"></span>
     </div>
-    <div class="vet-sub__meta" id="vet-sub-meta"></div>
     <div class="sub-cap">
       <div class="sub-cap__head">
         <span class="sub-cap__count" id="vet-sub-count">0 / 0</span>
@@ -137,8 +132,7 @@
       <div>
         <h2 class="admin-section__title"><span class="bulk-step">1</span>Vet a list</h2>
         <p class="admin-section__sub">
-          Upload a club's CSV. Every company is checked against the database. Prohibited and approved
-          companies are flagged. Any we cannot find are listed separately for individual review.
+          Upload a club's CSV to check each company against the database.
         </p>
       </div>
     </div>
@@ -184,23 +178,30 @@
 
         <div class="bulk-summary" id="bulk-summary"></div>
 
-        <!-- Record this list against the linked submission (one wave). Hidden
-             entirely when no submission is attached. -->
-        <div class="vet-record" id="vet-record" hidden>
-          <div class="vet-record__text">
-            <div class="vet-record__title" id="vet-record-title">Record this list</div>
-            <div class="vet-record__msg" id="vet-record-msg"></div>
+        <div class="vet-next" id="vet-actions" hidden>
+          <div class="banner banner--warn vet-next__banner" id="cap-banner" hidden>
+            <i class="bi bi-exclamation-triangle-fill banner__icon"></i>
+            <div class="banner__body">
+              <div class="banner__title">Over the event cap</div>
+              <div class="banner__message" id="cap-banner-msg"></div>
+            </div>
           </div>
-          <button type="button" class="btn btn--primary btn--sm" id="vet-record-btn">
-            <i class="bi bi-journal-plus"></i> Record <span id="vet-record-count">0</span> to submission
-          </button>
-        </div>
 
-        <div class="banner banner--warn" id="cap-banner" hidden>
-          <i class="bi bi-exclamation-triangle-fill banner__icon"></i>
-          <div class="banner__body">
-            <div class="banner__title">Over the event cap</div>
-            <div class="banner__message" id="cap-banner-msg"></div>
+          <div class="vet-next__row">
+            <ol class="vet-next__track" id="vet-next-track" aria-label="Progress">
+              <li class="vet-next__dot" data-step="1"><span>1</span>Record</li>
+              <li class="vet-next__dot" data-step="2"><span>2</span>Outreach</li>
+            </ol>
+            <div class="vet-next__text">
+              <div class="vet-next__title" id="vet-next-title">&nbsp;</div>
+              <div class="vet-next__msg" id="vet-next-msg"></div>
+            </div>
+            <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="vet-record-btn" hidden>
+              <i class="bi bi-journal-plus"></i> Record <span id="vet-record-count">0</span> to submission
+            </button>
+            <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="log-outreach-btn" hidden>
+              <i class="bi bi-graph-up-arrow"></i> Log outreach for all <span id="log-count">0</span>
+            </button>
           </div>
         </div>
 
@@ -216,13 +217,12 @@
         <div class="vet-panel">
           <div class="vet-panel__head">
             <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
-            <span class="vet-panel__sub">Each row shows the company from the list and the record it matched. Prohibited and approved are flagged. Record the list against the submission first. Outreach is then logged in one go for every approved company on the wave, which closes that wave: a company is contacted once per event.</span>
           </div>
           <div class="table-wrapper table-wrapper--responsive">
             <table class="table">
               <thead>
                 <tr>
-                  <th style="width: 44px">Contacted</th>
+                  <th style="width: 52px">Outreach</th>
                   <th style="width: 44px">#</th>
                   <th>Company (from list)</th>
                   <th>Matched in database</th>
@@ -236,12 +236,6 @@
             </table>
           </div>
           <div class="vet-panel__empty" id="matched-empty" hidden>None of the uploaded companies were found in the database.</div>
-          <div class="vet-panel__foot" id="matched-foot" style="display: none">
-            <span class="vet-panel__foot-note" id="matched-foot-note">Logging adds 1 to each ticked company's outreach count. Companies that reach the cap move into cooldown. Once logged for this event, a company cannot be logged again.</span>
-            <button type="button" class="btn btn--primary btn--sm" id="log-outreach-btn" disabled>
-              <i class="bi bi-graph-up-arrow"></i> Log outreach for all <span id="log-count">0</span>
-            </button>
-          </div>
         </div>
 
         <!-- Panel B: the separate review window for companies not on record -->
@@ -267,7 +261,7 @@
           </div>
           <div class="vet-panel__empty" id="review-empty" hidden>Every company on the list was found in the database.</div>
           <div class="vet-panel__foot" id="review-foot">
-            <span class="vet-panel__foot-note">Adding a company does not record any outreach. Once it is in the database, log outreach from the &ldquo;Found in the database&rdquo; list above.</span>
+            <span class="vet-panel__foot-note">Adding a company to the database does not put it on this submission or count it towards the cap. Vet the list again once they are added.</span>
             <div class="vet-foot-actions">
               <span class="vet-foot-count" id="review-sel-text">0 selected</span>
               <button type="button" class="btn btn--primary btn--sm" id="send-to-staging" disabled>
@@ -290,10 +284,7 @@
       <div>
         <h2 class="admin-section__title"><span class="bulk-step">2</span>Add sponsors to the database</h2>
         <p class="admin-section__sub">
-          Set each company's status and industry, untick any you do not want, then add them all at once.
-          Adding a company records no outreach: vet the list again once they are on the database,
-          record it against the submission, then log outreach from step 1.
-          To add sponsors that are not from a club list, use &ldquo;Add sponsors&rdquo; on the Sponsors page.
+          Set each company's status and industry, and add them to the database.
         </p>
       </div>
       <button type="button" class="btn btn--secondary btn--sm" id="add-row">

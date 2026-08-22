@@ -116,6 +116,7 @@
     if (!session) return; // redirected away by the auth guard
 
     const esc = window.AdminShell.escapeHtml;
+    const mapsLink = window.AdminShell.mapsLink;
 
     // ---------- element refs ----------
     const dropZone      = document.getElementById('drop-zone');
@@ -137,8 +138,6 @@
 
     const matchedTbody  = document.getElementById('matched-tbody');
     const matchedEmpty  = document.getElementById('matched-empty');
-    const matchedFoot   = document.getElementById('matched-foot');
-    const matchedFootNote = document.getElementById('matched-foot-note');
     const logBtn        = document.getElementById('log-outreach-btn');
     const logCountEl    = document.getElementById('log-count');
     const reviewTbody   = document.getElementById('review-tbody');
@@ -169,13 +168,13 @@
     const subEventEl    = document.getElementById('vet-sub-event');
     const subClubEl     = document.getElementById('vet-sub-club');
     const subStatusEl   = document.getElementById('vet-sub-status');
-    const subMeta       = document.getElementById('vet-sub-meta');
     const subCountEl    = document.getElementById('vet-sub-count');
     const subWavesEl    = document.getElementById('vet-sub-waves');
     const subBar        = document.getElementById('vet-sub-bar');
-    const recordBar     = document.getElementById('vet-record');
-    const recordTitle   = document.getElementById('vet-record-title');
-    const recordMsg     = document.getElementById('vet-record-msg');
+    const actionsBar    = document.getElementById('vet-actions');
+    const actionsTrack  = document.getElementById('vet-next-track');
+    const actionsTitle  = document.getElementById('vet-next-title');
+    const actionsMsg    = document.getElementById('vet-next-msg');
     const recordCountEl = document.getElementById('vet-record-count');
     const recordBtn     = document.getElementById('vet-record-btn');
     const capBanner     = document.getElementById('cap-banner');
@@ -580,16 +579,6 @@
       subClubEl.textContent = submission.club;
       subStatusEl.innerHTML = statusPillHtml(submission.status);
 
-      subMeta.innerHTML =
-        '<span>' + esc(submission.contact_email) + '</span>' +
-        '<span>' + esc(SIZE_LABEL[submission.event_size] || submission.event_size) +
-          ' event · cap ' + cap.toLocaleString() + '</span>' +
-        '<span>Submitted ' + esc(formatDateShort(new Date(submission.submitted_at))) + '</span>' +
-        (submission.complete_by
-          ? '<span>Due ' + esc(formatDateShort(new Date(submission.complete_by))) + '</span>'
-          : '') +
-        '<span><a href="home.html">View on Home</a></span>';
-
       const listed = submission.listed_count || 0;
       subCountEl.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString() + ' sponsors';
       subWavesEl.textContent =
@@ -613,10 +602,13 @@
       return hit ? hit.name : null;
     }
 
-    // Why a company was not contacted, which is more useful than a blank cell.
+    // Whether OUR outreach log has an entry for this company on this event.
+    // Deliberately not phrased as "contacted": the stamp records that an admin
+    // logged an approach, which is not the same claim as the club having
+    // actually reached the company.
     function contactedCell(row) {
       if (row.outreach_logged_at) {
-        return '<span class="wave-contacted">' +
+        return '<span class="wave-contacted">Logged ' +
           esc(formatDateShort(new Date(row.outreach_logged_at))) + '</span>';
       }
       if (row.status === 'prohibited' || row.status === 'closed') {
@@ -624,7 +616,7 @@
       }
       if (row.status === 'cooldown') return '<span class="wave-nope">In cooldown</span>';
       if (row.status === 'review')   return '<span class="wave-nope">Not vetted yet</span>';
-      return '<span class="wave-nope">Not contacted</span>';
+      return '<span class="wave-nope">Not logged</span>';
     }
 
     function waveRowHtml(row) {
@@ -632,12 +624,12 @@
       const counts = window.AdminAPI.countsTowardCap(row.status);
       return (
         '<tr>' +
-          '<td data-label="Company"><div class="table__cell-primary">' + esc(row.company_name) + '</div></td>' +
+          '<td data-label="Company"><div class="table__cell-primary">' + mapsLink(row.company_name) + '</div></td>' +
           '<td data-label="Matched record">' +
             (matched ? esc(matched) : '<span class="text-muted text-xs">-</span>') + '</td>' +
           '<td data-label="Status">' + statusTagHtml(row.status) + '</td>' +
           '<td data-label="Counts">' + (counts ? 'Yes' : 'No') + '</td>' +
-          '<td data-label="Contacted">' + contactedCell(row) + '</td>' +
+          '<td data-label="Outreach">' + contactedCell(row) + '</td>' +
           '<td data-label="Logged by" class="text-secondary text-xs">' +
             esc(row.outreach_logged_by || '—') + '</td>' +
         '</tr>'
@@ -701,9 +693,9 @@
                   '<span><b>' + counted + '</b> count</span>' +
                   (unvetted ? '<span class="vet-flag vet-flag--todo">' + unvetted + ' unvetted</span>' : '') +
                   (contacted.length
-                    ? '<span class="vet-flag vet-flag--done">' + contacted.length + ' contacted' +
+                    ? '<span class="vet-flag vet-flag--done">' + contacted.length + ' outreach logged' +
                       (lastContact ? ' ' + esc(formatDateShort(lastContact)) : '') + '</span>'
-                    : '<span class="vet-flag">Not contacted</span>') +
+                    : '<span class="vet-flag">No outreach logged</span>') +
                 '</span>' +
                 '<i class="bi bi-chevron-right wave__chev"></i>' +
               '</button>' +
@@ -712,7 +704,7 @@
                   '<table class="table">' +
                     '<thead><tr>' +
                       '<th>Company</th><th>Matched record</th><th>Status</th>' +
-                      '<th>Counts</th><th>Contacted</th><th>Logged by</th>' +
+                      '<th>Counts</th><th>Outreach</th><th>Logged by</th>' +
                     '</tr></thead>' +
                     '<tbody>' + rows.map(waveRowHtml).join('') + '</tbody>' +
                   '</table>' +
@@ -793,15 +785,36 @@
       });
     }
 
-    function renderRecordBar() {
-      if (!recordBar) return;
+    // How the approved companies on this list stand for outreach.
+    function outreachTotals() {
+      let approachable = 0, loggable = 0, locked = 0, logged = 0;
+      results.forEach(function (r) {
+        if (classify(r) !== 'approved' || !r.matchedId) return;
+        approachable++;
+        const line = lineFor(r);
+        if (!line) locked++;
+        else if (line.outreach_logged_at) logged++;
+        else loggable++;
+      });
+      return { approachable: approachable, loggable: loggable, locked: locked, logged: logged };
+    }
 
-      if (!submission) {
-        recordBar.hidden = true;
+    // ---------- the next action ----------
+    // Recording and logging outreach are two writes that must happen in order,
+    // and the admin only ever has one of them to do. Showing both at once (or
+    // parking them in a separate section below the results) made the page read
+    // as a pile of controls, so this renders whichever step is current and
+    // nothing else. The bar is sticky, so the action stays in reach while the
+    // two result panels are read.
+    function renderActions() {
+      if (!actionsBar) return;
+
+      if (!submission || !results.length) {
+        actionsBar.hidden = true;
         if (capBanner) capBanner.hidden = true;
         return;
       }
-      recordBar.hidden = false;
+      actionsBar.hidden = false;
 
       const listed = listedCompanies().length;
       const fresh = unrecordedCompanies().length;
@@ -809,6 +822,7 @@
       const refreshable = refreshableCompanies().length;
       const cap = submissionCap();
       const used = submission.sponsor_count || 0;
+      const out = outreachTotals();
 
       // Only the approachable ones move the cap: the new companies that count,
       // plus any already-recorded row whose verdict has since become countable.
@@ -822,10 +836,17 @@
       const over = cap > 0 && wouldBe > cap;
 
       // Unresolved companies are recorded at zero, so they never block.
-      const nothingToDo = fresh === 0 && refreshable === 0;
+      const recordDone = fresh === 0 && refreshable === 0;
+
+      // Over cap keeps the button visible but disabled, so the banner below has
+      // something to point at.
+      recordBtn.hidden = recordDone;
+      recordBtn.disabled = over;
       recordCountEl.textContent = fresh || refreshable;
-      recordBtn.disabled = nothingToDo || over;
-      recordBar.classList.toggle('is-done', nothingToDo);
+
+      logBtn.hidden = recordDone ? out.loggable === 0 : true;
+      logBtn.disabled = false;
+      if (logCountEl) logCountEl.textContent = out.loggable;
 
       const pending = unresolved
         ? ' ' + unresolved + (unresolved === 1 ? ' company is' : ' companies are') +
@@ -833,33 +854,64 @@
           (unresolved === 1 ? 'it' : 'them') + ' in step 2 or confirm a possible match.'
         : '';
 
-      if (nothingToDo) {
-        recordTitle.textContent = 'Already recorded';
-        recordMsg.textContent = (listed === 0
-          ? 'Nothing on this list to record.'
-          : 'Every company on this list is already on ' + submission.event_name +
-            ' (' + used + ' of ' + cap + ' counting towards the cap).') + pending;
-      } else if (fresh === 0) {
-        // Nothing new, but verdicts have moved since these were recorded.
-        recordTitle.textContent = 'Update ' + refreshable +
-          (refreshable === 1 ? ' company' : ' companies');
-        recordMsg.textContent =
-          refreshable + (refreshable === 1 ? ' company on this list has' : ' companies on this list have') +
-          ' a new verdict since ' + (refreshable === 1 ? 'it was' : 'they were') + ' recorded' +
-          (newlyCounting ? ', ' + newlyCounting + ' of which now count towards the cap' : '') +
-          '. Record again to update ' + submission.event_name + ' to ' + wouldBe +
-          ' of ' + cap + '.' + pending;
+      let step;   // 1 = record, 2 = outreach, 3 = both finished
+
+      if (!recordDone) {
+        step = 1;
+        if (fresh === 0) {
+          // Nothing new, but verdicts have moved since these were recorded.
+          actionsTitle.textContent = 'Update ' + refreshable +
+            (refreshable === 1 ? ' company' : ' companies');
+          actionsMsg.textContent =
+            refreshable + (refreshable === 1 ? ' company on this list has' : ' companies on this list have') +
+            ' a new verdict since ' + (refreshable === 1 ? 'it was' : 'they were') + ' recorded' +
+            (newlyCounting ? ', ' + newlyCounting + ' of which now count towards the cap' : '') +
+            '. Record again to update ' + submission.event_name + ' to ' + wouldBe +
+            ' of ' + cap + '.' + pending;
+        } else {
+          const notCounting = fresh - freshCounting;
+          actionsTitle.textContent = 'Record this list as wave ' + ((submission.wave_count || 0) + 1);
+          actionsMsg.textContent =
+            fresh + (fresh === 1 ? ' new company' : ' new companies') + ', of which ' +
+            freshCounting + ' count' + (freshCounting === 1 ? 's' : '') + ' towards the cap' +
+            (notCounting
+              ? ' (' + notCounting + ' prohibited, closed, in cooldown or unvetted, recorded but not counted)'
+              : '') +
+            (refreshable ? ', plus ' + refreshable + ' updated' : '') +
+            '. That takes ' + submission.event_name + ' to ' + wouldBe + ' of ' + cap + '.' + pending;
+        }
+      } else if (out.loggable > 0) {
+        step = 2;
+        const waves = waveLabel(openWaves());
+        actionsTitle.textContent = 'Log outreach for ' + waves;
+        actionsMsg.textContent =
+          'Records one outreach for all ' + out.loggable + ' approved ' +
+          (out.loggable === 1 ? 'company' : 'companies') + ' on ' + waves +
+          ', adding 1 to each running count. Companies that reach the cap move into ' +
+          'cooldown. This cannot be undone.' +
+          (out.logged ? ' ' + out.logged + ' already logged for this event.' : '') + pending;
       } else {
-        const notCounting = fresh - freshCounting;
-        recordTitle.textContent = 'Record this list as wave ' + ((submission.wave_count || 0) + 1);
-        recordMsg.textContent =
-          fresh + (fresh === 1 ? ' new company' : ' new companies') + ', of which ' +
-          freshCounting + ' count' + (freshCounting === 1 ? 's' : '') + ' towards the cap' +
-          (notCounting
-            ? ' (' + notCounting + ' prohibited, closed, in cooldown or unvetted, recorded but not counted)'
-            : '') +
-          (refreshable ? ', plus ' + refreshable + ' updated' : '') +
-          '. That takes ' + submission.event_name + ' to ' + wouldBe + ' of ' + cap + '.' + pending;
+        step = 3;
+        const on = loggedOnDate();
+        actionsTitle.textContent = out.logged ? 'This list is done' : 'Recorded';
+        actionsMsg.textContent = (out.logged
+          ? 'Recorded against ' + submission.event_name + ', and outreach logged for ' +
+            out.logged + (out.logged === 1 ? ' company' : ' companies') +
+            (on ? ' on ' + formatDateShort(on) : '') + '.'
+          : (listed === 0
+              ? 'Nothing on this list to record.'
+              : 'Every company on this list is on ' + submission.event_name +
+                ' (' + used + ' of ' + cap + ' counting towards the cap). ' +
+                'None of them can be contacted for this event.')) + pending;
+      }
+
+      actionsBar.classList.toggle('is-done', step === 3);
+      if (actionsTrack) {
+        actionsTrack.querySelectorAll('[data-step]').forEach(function (li) {
+          const n = parseInt(li.getAttribute('data-step'), 10);
+          li.classList.toggle('is-current', n === step);
+          li.classList.toggle('is-done', n < step);
+        });
       }
 
       if (capBanner) {
@@ -979,13 +1031,13 @@
       setUploadGate();
       renderSubmissionCard();
       renderWaves();
-      renderRecordBar();
+      renderActions();
       renderMatchedIfShown();
 
       return loadRecorded().then(function () {
         renderSubmissionCard();
         renderWaves();
-        renderRecordBar();
+        renderActions();
         renderMatchedIfShown();
       });
     }
@@ -1026,7 +1078,7 @@
         await loadRecorded();
         renderSubmissionCard();
         renderWaves();            // the new wave appears in the history
-        renderRecordBar();
+        renderActions();
         renderMatchedIfShown();   // recorded companies can now be logged for outreach
 
         res = res || {};
@@ -1247,7 +1299,7 @@
 
       renderMatched();
       renderReview();
-      renderRecordBar();
+      renderActions();
     }
 
     function statTile(mod, value, label) {
@@ -1269,12 +1321,10 @@
       if (rows.length === 0) {
         matchedTbody.innerHTML = '';
         matchedEmpty.hidden = false;
-        matchedFoot.style.display = 'none';
         return;
       }
       matchedEmpty.hidden = true;
 
-      let eligible = 0, approachableTotal = 0, lockedTotal = 0, loggedTotal = 0;
       matchedTbody.innerHTML = rows.map(function (r) {
         const bucket = classify(r);
         const idx = results.indexOf(r) + 1;         // original row number in the file
@@ -1285,19 +1335,15 @@
         const line = lineFor(r);
         const approachable = bucket === 'approved' && r.matchedId;
         const canLog = approachable && line && !line.outreach_logged_at;
-        if (approachable) approachableTotal++;
-        if (canLog) eligible++;
-        else if (approachable && line) loggedTotal++;
-        else if (approachable) lockedTotal++;
 
         // No tick boxes: outreach is a single wave-wide action, so this column
         // only reports state.
         let checkCell = '';
         if (canLog) {
-          checkCell = '<span class="vet-pending" title="Will be contacted when outreach is logged for this wave">' +
+          checkCell = '<span class="vet-pending" title="Included when outreach is logged for this wave">' +
             '<i class="bi bi-circle"></i></span>';
         } else if (approachable && line && line.outreach_logged_at) {
-          checkCell = '<span class="vet-logged" title="Outreach already logged for this event on ' +
+          checkCell = '<span class="vet-logged" title="Outreach logged for this event on ' +
             esc(formatDateShort(new Date(line.outreach_logged_at))) + '">' +
             '<i class="bi bi-check-circle-fill"></i></span>';
         } else if (approachable && !line) {
@@ -1308,7 +1354,7 @@
           '<tr class="' + flaggedCls + '">' +
             '<td data-label="Log">' + checkCell + '</td>' +
             '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
-            '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
+            '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(r.input) + '</div></td>' +
             '<td data-label="Matched in database">' + matchCell(r) + '</td>' +
             '<td data-label="Status">' + pillFor(bucket) + '</td>' +
             '<td data-label="Industry">' +
@@ -1319,9 +1365,6 @@
           '</tr>'
         );
       }).join('');
-
-      matchedFoot.style.display = approachableTotal ? '' : 'none';
-      renderLogState(eligible, lockedTotal, loggedTotal);
     }
 
     // Every approved company on this list that is recorded on the submission and
@@ -1364,47 +1407,6 @@
       return latest;
     }
 
-    // Three states, in order of what the admin has to do next:
-    //   1. approved companies are not recorded yet -> record the wave first
-    //   2. recorded and open -> one button logs the lot
-    //   3. contacted -> the wave is closed and the button is gone
-    function renderLogState(eligible, lockedTotal, loggedTotal) {
-      if (!logBtn || !matchedFootNote) return;
-      const waves = openWaves();
-
-      if (lockedTotal) {
-        logBtn.hidden = true;
-        matchedFootNote.textContent =
-          lockedTotal + (lockedTotal === 1 ? ' approved company is' : ' approved companies are') +
-          ' not on this submission yet. Record the list above first, then log outreach.';
-        return;
-      }
-
-      if (eligible === 0) {
-        logBtn.hidden = true;
-        const on = loggedOnDate();
-        matchedFootNote.textContent = loggedTotal
-          ? 'Outreach logged for ' + loggedTotal +
-            (loggedTotal === 1 ? ' company' : ' companies') +
-            (on ? ' on ' + formatDateShort(on) : '') +
-            '. Every approved company on this wave is done, and none can be ' +
-            'logged again for this event.'
-          : 'No approved companies on this list to contact.';
-        return;
-      }
-
-      logBtn.hidden = false;
-      logBtn.disabled = false;   // markup ships it disabled; this state enables it
-      if (logCountEl) logCountEl.textContent = eligible;
-      matchedFootNote.textContent =
-        'Logs one outreach for all ' + eligible + ' approved ' +
-        (eligible === 1 ? 'company' : 'companies') + ' on ' + waveLabel(waves) +
-        ', adding 1 to each running count. Companies that reach the cap move into ' +
-        'cooldown. Each is then closed for this event and cannot be logged again, ' +
-        'so this cannot be undone.' +
-        (loggedTotal ? ' ' + loggedTotal + ' already contacted for this event.' : '');
-    }
-
     function updateReviewTile(n) {
       const el = summaryEl.querySelector('.bulk-stat--review .bulk-stat__value');
       if (el) el.textContent = n;
@@ -1438,7 +1440,7 @@
           '<tr class="' + rowCls + '">' +
             '<td data-label="Log"><input type="checkbox" class="vet-review-check bulk-staging__check" data-ri="' + ri + '" aria-label="Select for adding or outreach"></td>' +
             '<td class="table__cell-secondary" data-label="#">' + (ri + 1) + '</td>' +
-            '<td data-label="Company (from list)"><div class="table__cell-primary">' + esc(r.input) + '</div></td>' +
+            '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(r.input) + '</div></td>' +
             '<td data-label="Suggested industry">' +
               (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
             '</td>' +

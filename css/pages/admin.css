@@ -168,6 +168,9 @@
   color: var(--text-secondary);
 }
 
+/* display:flex below would otherwise beat the hidden attribute. */
+.pending__list[hidden] { display: none; }
+
 .pending__list {
   list-style: none;
   margin: 0;
