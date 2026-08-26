@@ -1,0 +1,417 @@
+﻿company_name,industry_code
+Grab,transport_mobility
+BlueSG,transport_mobility
+Shopee,retail_general
+Lazada,retail_general
+Atome,professional_services
+TADA,transport_mobility
+Shopback,professional_services
+Courts,retail_general
+Dyson,tech_electronics
+Nintendo Switch,tech_electronics
+Canon,tech_electronics
+Nikon,tech_electronics
+Fujifilm,tech_electronics
+Olympus,tech_electronics
+GoPro,tech_electronics
+Bose,tech_electronics
+Apple,tech_electronics
+Samsung,tech_electronics
+Kate Spade,apparel_accessories
+Favepay,professional_services
+Shaw Theatres,entertainment_leisure
+Filmgarde Complex,entertainment_leisure
+Golden Village,entertainment_leisure
+WE Cinemas,entertainment_leisure
+Carnival Cinemas,entertainment_leisure
+Eaglewings Cinematics,entertainment_leisure
+Deliveroo,food_beverage
+Foodpanda,food_beverage
+Kimage,beauty_personal_care
+Love Bonito,apparel_accessories
+Zalora,retail_general
+Acuvue,health_wellness
+Fairprice,retail_general
+Sephora,beauty_personal_care
+Popular,retail_general
+Eu Yan Sang,health_wellness
+theWYLDshop,retail_general
+Anessa,beauty_personal_care
+Fresh,beauty_personal_care
+Walch,beauty_personal_care
+Zappy,beauty_personal_care
+Cloversoft,beauty_personal_care
+Kleenex,beauty_personal_care
+Beautex,beauty_personal_care
+Hansaplast,health_wellness
+Kotex,beauty_personal_care
+Rexona,beauty_personal_care
+Dove,beauty_personal_care
+Lifebuoy,beauty_personal_care
+Sunsilk,beauty_personal_care
+Acti-Tape,health_wellness
+Cetaphil,beauty_personal_care
+DrinkAid,health_wellness
+Innisfree,beauty_personal_care
+Neutrogena,beauty_personal_care
+iHerb,health_wellness
+Scott's,health_wellness
+GNC,health_wellness
+Swisse,health_wellness
+BYOP,
+Weider,health_wellness
+Brands,health_wellness
+Medicube,beauty_personal_care
+Corsx,beauty_personal_care
+Laneige,beauty_personal_care
+Clinique,beauty_personal_care
+Salonpas,health_wellness
+Tiger Balm,health_wellness
+D Program (Shiseido),beauty_personal_care
+Laurier,beauty_personal_care
+Liese,beauty_personal_care
+Acnes,beauty_personal_care
+Biore UV,beauty_personal_care
+Banana Boat,beauty_personal_care
+Bifesta,beauty_personal_care
+Browhaus,beauty_personal_care
+Coco&Eve,beauty_personal_care
+Yankee Candle,home_lifestyle
+Flo Aroma,home_lifestyle
+Muji,home_lifestyle
+IKEA,home_lifestyle
+Diptyque,beauty_personal_care
+Jo Malone,beauty_personal_care
+Guess,beauty_personal_care
+MontBlanc,beauty_personal_care
+Calvin Klein,apparel_accessories
+Lovet,apparel_accessories
+The Tinsel Rack,apparel_accessories
+The Style Soiree,apparel_accessories
+6styleco,apparel_accessories
+Goodtotes,apparel_accessories
+Owndays,apparel_accessories
+MGP Label,apparel_accessories
+The SMU Shop,apparel_accessories
+Sekkisei KOSE,beauty_personal_care
+Kew Organics,beauty_personal_care
+Handmade Heroes,beauty_personal_care
+Hush Candle,home_lifestyle
+Lenskart,apparel_accessories
+Darlie,beauty_personal_care
+XVXII,apparel_accessories
+The Shirt Bar,apparel_accessories
+A Kind Ooof,apparel_accessories
+Aftershock PC,tech_electronics
+Sharp,tech_electronics
+Philips,tech_electronics
+Garmin,tech_electronics
+Fitbit,tech_electronics
+LG,tech_electronics
+Marshall,tech_electronics
+Lenovo,tech_electronics
+HP,tech_electronics
+Asus,tech_electronics
+Acer,tech_electronics
+Microsoft,tech_electronics
+Razer,tech_electronics
+Fufjifilm,tech_electronics
+SecretLab,home_lifestyle
+Herman Miller,home_lifestyle
+Starhub,tech_electronics
+M1,tech_electronics
+Circles.Life,tech_electronics
+MyRepublic,tech_electronics
+PRISM+,tech_electronics
+Excel Hardware,tech_electronics
+Dell,tech_electronics
+Samsung Electronics,tech_electronics
+Interflux singapore,tech_electronics
+Panasonic,tech_electronics
+Jabil,tech_electronics
+Nexwave Telecoms,tech_electronics
+Zero1,tech_electronics
+Siemens,tech_electronics
+Nike,apparel_accessories
+Lululemon,apparel_accessories
+Adidas,apparel_accessories
+Puma,apparel_accessories
+Footlocker,apparel_accessories
+JD Sports,apparel_accessories
+Under Armour,apparel_accessories
+Rigorer,apparel_accessories
+New Balance,apparel_accessories
+Decathlon,apparel_accessories
+Kydra,apparel_accessories
+Royal Sporting House,apparel_accessories
+Skechers,apparel_accessories
+Anya Active,apparel_accessories
+Cheak,apparel_accessories
+YOF Athletica,apparel_accessories
+Xexymix,apparel_accessories
+Urbanized Co,apparel_accessories
+Weston Corp,apparel_accessories
+Vivre Activewear,apparel_accessories
+IRUNSG,apparel_accessories
+Key Power Sports,apparel_accessories
+Sun and Sand,apparel_accessories
+Gorilla Gear,apparel_accessories
+Optimum Nutrition,health_wellness
+Myprotein,health_wellness
+F45 Training,health_wellness
+Anytime Fitness,health_wellness
+Ascend Fitness,health_wellness
+Gympod,health_wellness
+Revolution,health_wellness
+Spartans Boxing Club,health_wellness
+Classpass,health_wellness
+Anywheel,transport_mobility
+Boulder Planet,health_wellness
+Balletbody,health_wellness
+Fitness First,health_wellness
+Evolve MMA,health_wellness
+ActivLabs,health_wellness
+WoahGroup,health_wellness
+Activex Physio,health_wellness
+NutriFirst,health_wellness
+Sapien Health,health_wellness
+Climb Central,health_wellness
+The Strength Yard,health_wellness
+100 plus,food_beverage
+Tokyo Milk Cheese,food_beverage
+Nestle,food_beverage
+Royce,food_beverage
+Sourbombe,food_beverage
+Grin Affair,food_beverage
+Bob The Baker Boy,food_beverage
+Kingdom Food Group,food_beverage
+Pickupp,
+An Acai Affair,food_beverage
+Meiji,food_beverage
+Irvins,food_beverage
+Khong Guan,food_beverage
+Loacker,food_beverage
+Ricola,food_beverage
+Yogood,food_beverage
+Nature Valley,food_beverage
+Pokka,food_beverage
+Yeo's,food_beverage
+Liho,food_beverage
+Gongcha,food_beverage
+Bobertea,food_beverage
+Pocari,food_beverage
+Kellogg,food_beverage
+KOI,food_beverage
+Chagee,food_beverage
+Chicha,food_beverage
+Boost,food_beverage
+Eureka,food_beverage
+Reese,food_beverage
+Halls,food_beverage
+Quaker,food_beverage
+Mr Coconut,food_beverage
+Don Don Donki,retail_general
+Swee Heng,food_beverage
+Delifrance,food_beverage
+Swissbakes,food_beverage
+Doughnut Shack,food_beverage
+Jollibean,food_beverage
+The Summer Acai,food_beverage
+Lipton,food_beverage
+Lorespresso,food_beverage
+Oreo,food_beverage
+JellyBelly,food_beverage
+Polar,food_beverage
+The Cocoa Trees,food_beverage
+Famous Amos,food_beverage
+Skippy,food_beverage
+Cadbury,food_beverage
+Ben & Jerry's,food_beverage
+Indomie,food_beverage
+Wen Ken (Three legs brand water),food_beverage
+Sukiya,food_beverage
+4 fingers,food_beverage
+Jinjja Chicken,food_beverage
+Nandos,food_beverage
+McDonalds,food_beverage
+KFC,food_beverage
+Simply Wrapps,food_beverage
+Old Chang Kee,food_beverage
+Grain,food_beverage
+Sweetest Moments,food_beverage
+BakeINC,food_beverage
+Hey Sugar,food_beverage
+Kane Mochi,food_beverage
+Baskin Robbins,food_beverage
+Cat & The Fiddle,food_beverage
+Pancake Boss,food_beverage
+Prima Deli,food_beverage
+Auntie Anne's,food_beverage
+Nasty Cookie,food_beverage
+Dunkin Donuts,food_beverage
+Krispy Kreme,food_beverage
+Ritz Apple Strudel,food_beverage
+Fisherman's Friend,food_beverage
+Pizza Hut,food_beverage
+Swensens,food_beverage
+Fish & Co,food_beverage
+Tuk Tuk Cha,food_beverage
+Makisan,food_beverage
+Ya Kun Kaya Toast,food_beverage
+The Alley,food_beverage
+Absolut Chocolate,food_beverage
+Ferrero,food_beverage
+Nestle (Milo),food_beverage
+Aroma Truffle,food_beverage
+Killiney,food_beverage
+Breadtalk,food_beverage
+Toastbox,food_beverage
+Denzy Gelato,food_beverage
+Matchaya,food_beverage
+Oatbedient,food_beverage
+Sunday Folks,food_beverage
+Wogi,
+Bynd Artisan,retail_general
+Kinobi,
+Justco,professional_services
+MyKaki,
+Janio Asia,transport_mobility
+Kinokuniya,media_publishing
+Evergreen Stationery,retail_general
+Home n Office,retail_general
+Oregon Stationery,retail_general
+Pilot Pen,retail_general
+BonCafe Singapore,food_beverage
+Crafune,activities_experiences
+Rever,
+Hides and Thread,retail_general
+Gifts less ordinary,retail_general
+kikki.K,retail_general
+Pastal Pink Flora (last year's sponsor),retail_general
+BioPak,
+Party Allo,activities_experiences
+Ecover,home_lifestyle
+Herschel,apparel_accessories
+Pick&Go,
+Tumbleweed,
+Rooted,
+Ferns And Petals,retail_general
+One Dollar Only,retail_general
+Gift Market,retail_general
+Precious Thoughts,retail_general
+Funfit,apparel_accessories
+Gym Wear Movement,apparel_accessories
+Base Athletica,apparel_accessories
+F Brand,
+Outfyt,apparel_accessories
+Aphy,apparel_accessories
+Quest Nutrition,health_wellness
+Blenderbottle,home_lifestyle
+Cellular Hydration Singapore,health_wellness
+BSN,
+Ripple,professional_services
+Ultimate Sup,health_wellness
+Kalpha,
+Times,media_publishing
+The Good Things,
+Everfirst Pte Ltd,
+Naiise,retail_general
+Himalaya Vajomba,food_beverage
+braek,food_beverage
+2XU,apparel_accessories
+3M Nexcare,health_wellness
+Adore,
+Ammeltz Yoko Yoko,health_wellness
+ASICS,apparel_accessories
+Bausche & Lomb,health_wellness
+Blood,
+Colgate,beauty_personal_care
+Compex (Rehab Zone),health_wellness
+Dettol,beauty_personal_care
+Dr. Scholl’s,health_wellness
+Ebene,health_wellness
+Eyemo,health_wellness
+Fila,apparel_accessories
+Gatsby,beauty_personal_care
+Guardian,beauty_personal_care
+Hada Labo,beauty_personal_care
+Himalaya,beauty_personal_care
+Hydro Flask,home_lifestyle
+Kao Corporation (Megrythmn),beauty_personal_care
+Kefen Tech,
+Kobayashi Kool Fever,health_wellness
+Lion (Kirei Kirei),beauty_personal_care
+Lion (Systema),beauty_personal_care
+Listerine,beauty_personal_care
+Mueller Sports Medicine,health_wellness
+New Era Caps,apparel_accessories
+OPTP (US),health_wellness
+Outdoor Voices,apparel_accessories
+Pearlie White,beauty_personal_care
+RockTape,health_wellness
+Rudy Project,apparel_accessories
+Schick,beauty_personal_care
+Sebamed,beauty_personal_care
+Simple,beauty_personal_care
+Superfeet,apparel_accessories
+Theragun,health_wellness
+UUcare,
+Veet,beauty_personal_care
+Vionic,apparel_accessories
+Whisper,beauty_personal_care
+Yonex (Sunrise Click),apparel_accessories
+Zambuk,health_wellness
+Clear Vision Eye Clinic and Lasik Centre,health_wellness
+Bausch,
+The Body Shop,beauty_personal_care
+foptics,apparel_accessories
+Aslan Sports,apparel_accessories
+Yishion,apparel_accessories
+Kei,
+Fly Active Wear,apparel_accessories
+Fashion Tailors,apparel_accessories
+MGP,apparel_accessories
+Feel Fresh,beauty_personal_care
+One Sports (Sponsor of SG Athletics),apparel_accessories
+2Be.Yoga,health_wellness
+Abvolution Wellness,health_wellness
+Advantage Pilates,health_wellness
+Clearly Basics,
+Fahrenheit Performance,health_wellness
+Hebeloft,
+Liht Organics,beauty_personal_care
+Loccitane,beauty_personal_care
+Phiten SG,health_wellness
+Purpose Performance Wear,apparel_accessories
+Sunlight Sports,apparel_accessories
+Suu Balm,beauty_personal_care
+Theo10,beauty_personal_care
+Touch the Toes,health_wellness
+Unnie,
+Worn2Win,apparel_accessories
+Zenyum,health_wellness
+Active Fitness,health_wellness
+Amore Fitness,health_wellness
+Amped,activities_experiences
+Boulder Movement,health_wellness
+Boulder World,health_wellness
+Bounce,activities_experiences
+Bungy Jump AJ Hackett,activities_experiences
+Calibrate Health,health_wellness
+Cohesion,activities_experiences
+dododots,
+Postcard,
+Rough Beauty,beauty_personal_care
+Clarins,beauty_personal_care
+To Be Calm,home_lifestyle
+Oyasumi Scents,home_lifestyle
+Slow Scent Company,home_lifestyle
+Andar,apparel_accessories
+Kirona Scent,home_lifestyle
+Owala,home_lifestyle
+Yumi Active,apparel_accessories
+Tumi,apparel_accessories
+Overjoyed,retail_general
+Therapin,
+Loreal,beauty_personal_care
+Jisulife,tech_electronics
