@@ -71,7 +71,10 @@
   font-size: var(--font-size-xs);
 }
 
-/* ---------- Admin table footer (pagination) ---------- */
+/* ---------- Table footer (pagination) ----------
+   .table-footer is the public-page block, .admin-table-footer the admin one.
+   Same look, so they share these rules. */
+.table-footer,
 .admin-table-footer {
   display: flex;
   align-items: center;
@@ -85,12 +88,14 @@
   flex-wrap: wrap;
 }
 
+.table-footer__nav,
 .admin-table-footer__nav {
   display: flex;
   align-items: center;
   gap: 2px;
 }
 
+.table-footer__btn,
 .admin-table-footer__btn {
   display: inline-flex;
   align-items: center;
@@ -109,21 +114,25 @@
               color var(--duration-fast) var(--ease-out);
 }
 
+.table-footer__btn:hover:not(:disabled),
 .admin-table-footer__btn:hover:not(:disabled) {
   background-color: var(--surface-card);
   color: var(--color-navy);
 }
 
+.table-footer__btn.is-active,
 .admin-table-footer__btn.is-active {
   background-color: var(--color-navy);
   color: var(--text-inverse);
 }
 
+.table-footer__btn:disabled,
 .admin-table-footer__btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
+.table-footer__ellipsis,
 .admin-table-footer__ellipsis {
   padding: 0 var(--space-2);
   color: var(--text-muted);

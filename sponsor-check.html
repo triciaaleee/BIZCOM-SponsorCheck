@@ -203,7 +203,7 @@
                 <div>
                   <h2 class="preview-card__title">Ready to check</h2>
                   <div class="preview-card__sub">
-                    <strong id="preview-total">0</strong> distinct companies &middot; <span id="preview-cap">Small, cap 300 OK</span>
+                    <strong id="preview-total">0</strong> distinct companies
                   </div>
                 </div>
                 <div class="preview-card__actions">
@@ -327,6 +327,10 @@
                 </thead>
                 <tbody id="results-tbody"></tbody>
               </table>
+              <div class="table-footer" id="results-pager" hidden>
+                <div class="table-footer__range" id="results-range"></div>
+                <nav class="table-footer__nav" id="results-pager-nav" aria-label="Results pagination"></nav>
+              </div>
             </div>
           </div>
 
@@ -459,22 +463,18 @@
         <strong><span id="cap-modal-cap">300</span></strong> distinct sponsors. Your list has
         <strong><span id="cap-modal-count">0</span></strong>.
       </p>
-      <p class="text-secondary text-sm">
+      <p>
         You can trim the list and re-upload, or reclassify your event to a larger size above.
       </p>
     </div>
     <div class="modal__footer">
-      <button class="btn btn--tertiary" data-modal-close>Got it</button>
-      <button class="btn btn--primary" data-modal-close>Trim and re-upload</button>
+      <button class="btn btn--primary" data-modal-close>Got it</button>
     </div>
   </div>
 </div>
 
 <!-- SheetJS for Excel template generation -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<!-- canvas-confetti for zero-issue celebration -->
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 <!-- App scripts -->
 <script src="./js/components/navbar.js" defer></script>

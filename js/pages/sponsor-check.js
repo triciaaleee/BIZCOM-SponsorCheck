@@ -33,7 +33,6 @@
   const uploadStatus  = document.getElementById('upload-status');
   const previewBody   = document.getElementById('preview-body');
   const previewTotal  = document.getElementById('preview-total');
-  const previewCap    = document.getElementById('preview-cap');
   const submitBtn     = document.getElementById('submit-check');
   const reuploadBtn   = document.getElementById('reupload');
 
@@ -44,6 +43,9 @@
   const emailErrorText = document.getElementById('email-error-text');
 
   const resultsTbody  = document.getElementById('results-tbody');
+  const resultsPager  = document.getElementById('results-pager');
+  const resultsRange  = document.getElementById('results-range');
+  const resultsPagerNav = document.getElementById('results-pager-nav');
   const filterChips   = document.querySelectorAll('[data-filter]');
   const summary = {
     clear:      document.getElementById('count-clear'),
@@ -59,6 +61,7 @@
   let results = [];
   let eventSize = 'small';
   let activeFilter = 'all';
+  let resultsPage = 1;
   let isFromSample = false;
 
   // ---------- Live data (Supabase, anon-readable) ----------
@@ -66,8 +69,11 @@
   let industries = [];
   let outreachMap = {};
   let settings = {};
-  let readyPromise = null;
+  let readyPromise = null;   // boot load only; runCheck always re-reads
   const DAY_MS = 86400000;
+
+  // Results are paginated so a long CSV does not turn into an endless scroll.
+  const RESULTS_PAGE_SIZE = 25;
 
   function todayISO() {
     const d = new Date();
@@ -176,9 +182,6 @@
       btn.classList.add('is-active');
       btn.setAttribute('aria-checked', 'true');
       eventSize = btn.getAttribute('data-event-size');
-      if (previewCap) {
-        previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + eventCaps()[eventSize].toLocaleString();
-      }
       updateEmailButtonState();
     });
   });
@@ -336,7 +339,6 @@
     previewState.classList.remove('d-none');
 
     previewTotal.textContent = parsedRows.length.toLocaleString();
-    previewCap.textContent = SIZE_LABELS[eventSize] + ', cap ' + eventCaps()[eventSize].toLocaleString() + ' OK';
 
     previewBody.innerHTML = parsedRows.slice(0, 10).map(function (r, i) {
       const indCell = r.industry
@@ -380,9 +382,13 @@
     previewState.classList.add('d-none');
     checkingState.classList.remove('d-none');
 
-    // Ensure the live sponsor data is loaded, then match (synchronous). The
-    // short delay keeps the "cross-checking" animation visible.
-    (readyPromise || loadData()).then(function () {
+    // Re-read the live data on every check. The boot snapshot goes stale the
+    // moment an admin edits a sponsor, and a tab left open all afternoon would
+    // otherwise keep vetting against the list as it was when the page opened.
+    // These are small tables, so the extra round trip is cheaper than being
+    // wrong about whether a company is prohibited.
+    loadData().then(function () {
+      syncTileCaps();
       setTimeout(function () {
         results = window.Matcher.checkBatch(parsedRows, matchCtx());
         renderResults();
@@ -428,22 +434,8 @@
       }
     }
 
+    resultsPage = 1;
     renderTable();
-
-    // Confetti only when there are zero issues to act on.
-    // "Issues" = prohibited, cooldown, alumni (alumni still needs OAR coordination).
-    // Unverified is fine, that's just BIZCOM's normal job.
-    const hasIssues = counts.prohibited > 0 || counts.cooldown > 0 || counts.alumni > 0;
-    if (!hasIssues && results.length > 0 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      if (window.confetti) {
-        window.confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.3 },
-          colors: ['#2E529D', '#D6B238', '#2A9463']
-        });
-      }
-    }
 
     resultsState.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -462,16 +454,22 @@
             '<div class="empty-state__description">Try a different status or clear the filter.</div>' +
           '</div>' +
         '</td></tr>';
+      renderResultsPager(0, 0, 0);
       return;
     }
 
-    resultsTbody.innerHTML = filtered.map(function (r, i) {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / RESULTS_PAGE_SIZE));
+    if (resultsPage > totalPages) resultsPage = totalPages;
+    const start = (resultsPage - 1) * RESULTS_PAGE_SIZE;
+    const pageRows = filtered.slice(start, start + RESULTS_PAGE_SIZE);
+
+    resultsTbody.innerHTML = pageRows.map(function (r, i) {
       const pill = pillFor(r.status);
       const industryLabel = r.industry ? industryDisplayName(r.industry) : '';
       const flagClass = (r.status === 'prohibited' || r.status === 'cooldown') ? 'is-flagged' : '';
       return (
         '<tr class="' + flagClass + '">' +
-          '<td class="table__cell-secondary" data-label="#">' + (i + 1) + '</td>' +
+          '<td class="table__cell-secondary" data-label="#">' + (start + i + 1) + '</td>' +
           '<td data-label="Company">' +
             '<div class="table__cell-primary">' + escapeHtml(r.input) + '</div>' +
           '</td>' +
@@ -483,6 +481,78 @@
         '</tr>'
       );
     }).join('');
+
+    renderResultsPager(filtered.length, totalPages, start);
+  }
+
+  // Page numbers to show: all of them when there are few, otherwise the first,
+  // the last, and a window around the current page.
+  function resultsPageList(current, total) {
+    const out = [];
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) out.push(i);
+      return out;
+    }
+    out.push(1);
+    const from = Math.max(2, current - 1);
+    const to   = Math.min(total - 1, current + 1);
+    if (from > 2) out.push('...');
+    for (let i = from; i <= to; i++) out.push(i);
+    if (to < total - 1) out.push('...');
+    out.push(total);
+    return out;
+  }
+
+  function renderResultsPager(totalRows, totalPages, start) {
+    if (!resultsPager || !resultsPagerNav || !resultsRange) return;
+
+    if (totalPages <= 1) {
+      resultsPager.hidden = true;
+      resultsPagerNav.innerHTML = '';
+      return;
+    }
+    resultsPager.hidden = false;
+
+    const end = Math.min(start + RESULTS_PAGE_SIZE, totalRows);
+    resultsRange.textContent = 'Showing ' + (start + 1) + '-' + end + ' of ' + totalRows;
+
+    const parts = [];
+    parts.push(
+      '<button type="button" class="table-footer__btn" data-results-page="prev"' +
+      (resultsPage === 1 ? ' disabled' : '') + ' aria-label="Previous page">' +
+        '<i class="bi bi-chevron-left"></i>' +
+      '</button>'
+    );
+    resultsPageList(resultsPage, totalPages).forEach(function (p) {
+      if (p === '...') {
+        parts.push('<span class="table-footer__ellipsis">...</span>');
+      } else {
+        parts.push(
+          '<button type="button" class="table-footer__btn' +
+          (p === resultsPage ? ' is-active' : '') + '" data-results-page="' + p + '" aria-label="Page ' + p + '"' +
+          (p === resultsPage ? ' aria-current="page"' : '') + '>' + p + '</button>'
+        );
+      }
+    });
+    parts.push(
+      '<button type="button" class="table-footer__btn" data-results-page="next"' +
+      (resultsPage === totalPages ? ' disabled' : '') + ' aria-label="Next page">' +
+        '<i class="bi bi-chevron-right"></i>' +
+      '</button>'
+    );
+    resultsPagerNav.innerHTML = parts.join('');
+
+    resultsPagerNav.querySelectorAll('[data-results-page]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const target = btn.getAttribute('data-results-page');
+        if (target === 'prev') resultsPage--;
+        else if (target === 'next') resultsPage++;
+        else resultsPage = parseInt(target, 10);
+        renderTable();
+        const wrap = resultsTbody.closest('.table-wrapper');
+        if (wrap) wrap.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    });
   }
 
   filterChips.forEach(function (chip) {
@@ -490,6 +560,7 @@
       filterChips.forEach(function (c) { c.classList.remove('is-active'); });
       chip.classList.add('is-active');
       activeFilter = chip.getAttribute('data-filter');
+      resultsPage = 1;
       renderTable();
     });
   });

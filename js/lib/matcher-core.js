@@ -90,6 +90,18 @@
     return String(s.contract_ends) >= today;
   }
 
+  // Plain-word standing of a sponsor, for the near-miss note below. Says
+  // "contract ended" rather than "prohibited" for a lapsed Annex B partner,
+  // so the note never overstates the restriction.
+  function describeCategory(s, today) {
+    switch (s.category) {
+      case 'prohibited': return isActiveBan(s, today) ? 'prohibited' : 'BIZCOM contract ended';
+      case 'closed':     return 'closed';
+      case 'alumni':     return 'alumni-affiliated';
+      default:           return 'previously approved';
+    }
+  }
+
   function formatDate(d) {
     if (!d) return '';
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -173,9 +185,19 @@
           status = 'clear';
           reason = 'Match found, no restrictions.';
       }
+    } else if (suggestion) {
+      // Close, but under the match threshold. Deliberately NOT given a status of
+      // its own: inheriting the lookalike's status would risk calling a company
+      // prohibited on a 45% guess, and a seventh status would need its own pill,
+      // filter chip, stat tile and legend entry for a rare case. It stays
+      // unverified (BIZCOM vets it either way) and the near-miss is named in the
+      // reason, which the results table and the CSV export both show.
+      status = 'unverified';
+      reason = 'Close to "' + best.sponsor.name + '" (' +
+               describeCategory(best.sponsor, ctx.today) + ', ' + suggestion.score + '% similar).';
     } else {
       status = 'unverified';
-      reason = 'Not in any list. BIZCOM will need to vet this company.';
+      reason = 'Not found in database. BIZCOM will need to vet this company.';
     }
 
     return {
