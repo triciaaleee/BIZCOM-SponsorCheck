@@ -1,0 +1,80 @@
+-- ============================================================
+-- 0020_sponsors_name_index.sql
+--
+-- Adds a btree index on `sponsors.name`, the column the admin
+-- Sponsors list sorts by on every page view.
+--
+-- WHY
+-- The paged list runs, in effect:
+--
+--   select * from sponsors
+--    where (contract_ends is null or contract_ends >= current_date)
+--    order by name
+--    limit 50 offset <page>;
+--
+-- With no ordered access path to `name`, Postgres has to read every
+-- matching row before it can know which 50 sort first. The LIMIT means
+-- the sort itself is cheap (a bounded top-N heapsort rather than a full
+-- sort), but the read is not: returning 50 rows costs work proportional
+-- to the size of the whole table, on every page view, including page 1.
+--
+-- A btree on `name` gives the planner an ordered path: walk the index,
+-- fetch rows in order, stop at 50. Row 51 is never touched. The cost
+-- becomes proportional to the page size instead of the table size.
+--
+-- 0001 indexed `category`, `industry` and `normalised` (trigram) but not
+-- `name`, so the sort column was the one thing left scanning.
+--
+-- WHAT THIS DOES NOT DO
+--   * It does not speed up search. That is `name ilike '%q%'`, a leading
+--     wildcard, which no btree can serve. Left alone deliberately: the
+--     trigram index on `normalised` could serve it, but pointing search
+--     at that column changes which names match (normalise() strips
+--     punctuation and legal suffixes), so it is a product decision, not
+--     a free optimisation.
+--   * It does not fix deep pagination. `offset 9950` still walks 9,950
+--     index entries first. Keyset pagination is the fix for that, and it
+--     would mean giving up the numbered page jumps in the pager.
+--   * It will not be used by every query, and should not be. Filtering to
+--     a small category is cheaper via sponsors_category_idx plus a sort
+--     of the few rows that match. The planner picks; this index is for
+--     the default unfiltered view, which is the one opened every time.
+--
+-- COST
+-- A few hundred KB at ten thousand rows, and a marginally slower write
+-- whenever a sponsor is added or renamed. Both irrelevant for a table an
+-- admin edits by hand.
+--
+-- HONEST NOTE ON SCALE
+-- At a few hundred sponsors this changes nothing measurable, and Postgres
+-- may keep choosing a sequential scan because at that size a scan really
+-- is cheaper. It will switch on its own as the table grows. The point is
+-- to remove the only part of this query that scales, not to fix a
+-- slowness that exists today.
+--
+-- The index is created inside a transaction, which briefly locks writes
+-- to `sponsors`. That is fine at this size. On a large, busy table the
+-- move would be `create index concurrently`, which cannot run in a
+-- transaction block.
+--
+-- Run once in the SQL Editor. Idempotent: safe to re-run.
+-- ============================================================
+
+begin;
+
+create index if not exists sponsors_name_idx on public.sponsors (name);
+
+commit;
+
+-- ------------------------------------------------------------
+-- Verify (run separately):
+--
+--   explain analyze
+--   select * from public.sponsors
+--    where (contract_ends is null or contract_ends >= current_date)
+--    order by name limit 50;
+--
+-- Want "Index Scan using sponsors_name_idx". A "Seq Scan" feeding a
+-- "Sort" is not a failure on a small table; it means the planner judged
+-- a scan cheaper, and it will change its mind as rows are added.
+-- ------------------------------------------------------------

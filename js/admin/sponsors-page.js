@@ -154,9 +154,8 @@
     }
 
     // ----------------- cap alert -----------------
-    // Companies whose cooldown ends in the current calendar month — i.e. those
-    // that free up for outreach again this month. Always visible at the top,
-    // independent of the search box.
+    // Every company currently in cooldown, soonest to free up first. Always
+    // visible at the top, independent of the search box.
     async function renderCapAlert() {
       const capList = document.getElementById('cap-list');
       const capEmpty = document.getElementById('cap-empty');
@@ -164,7 +163,7 @@
 
       let rows;
       try {
-        rows = await window.AdminAPI.cooldownsEndingThisMonth();
+        rows = await window.AdminAPI.activeCooldowns();
       } catch (e) {
         toastError('Could not load cooldowns', e);
         capList.innerHTML = '';

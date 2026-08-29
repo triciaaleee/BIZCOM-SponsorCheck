@@ -42,6 +42,30 @@
     return !!(e && (e.code === '23505' || /duplicate key|already exists/i.test(e.message || '')));
   }
 
+  // Sponsor names for a list of ids, as { id: name }.
+  //
+  // Chunked because PostgREST filters travel in the query string: a single
+  // in.(...) holding a few hundred uuids builds a URL long enough for the
+  // server to reject the request outright, which fails the whole read rather
+  // than merely slowing it. 100 ids is roughly 3.7KB of URL, comfortably
+  // inside the usual 8KB ceiling with the rest of the query alongside it.
+  function namesByIds(ids) {
+    var CHUNK = 100;
+    var batches = [];
+    for (var i = 0; i < ids.length; i += CHUNK) batches.push(ids.slice(i, i + CHUNK));
+    return Promise.all(batches.map(function (batch) {
+      return Promise.resolve(
+        sb().from('sponsors').select('id, name').in('id', batch)
+      ).then(unwrap);
+    })).then(function (results) {
+      var byId = {};
+      results.forEach(function (rows) {
+        (rows || []).forEach(function (s) { byId[s.id] = s.name; });
+      });
+      return byId;
+    });
+  }
+
   var AdminAPI = {
     isUniqueViolation: isUniqueViolation,
 
@@ -169,11 +193,15 @@
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 
-    // ---------- outreach: cooldowns ending this calendar month ----------
-    // Reads the sponsor_outreach view for in-cooldown rows, derives each
-    // cooldown's end date (started_at + cooldown_days) and keeps only those
-    // ending in the current month. returns: [{ id, name, ends:Date }]
-    cooldownsEndingThisMonth: function () {
+    // ---------- outreach: every company currently in cooldown ----------
+    // Reads the sponsor_outreach view for in-cooldown rows and derives each
+    // cooldown's end date (started_at + cooldown_days), soonest first.
+    //
+    // The view's `in_cooldown` is the only test applied, and it is evaluated
+    // server-side against the database clock. Nothing here compares calendar
+    // months, so the browser's timezone cannot disagree with Postgres about
+    // which cooldowns count. returns: [{ id, name, ends:Date }]
+    activeCooldowns: function () {
       var self = this;
       return self.getSettings().then(function (settings) {
         var cooldownDays = settings.cooldown_days || 30;
@@ -182,22 +210,24 @@
             .select('sponsor_id, cooldown_started_at, in_cooldown')
             .eq('in_cooldown', true)
         ).then(unwrap).then(function (rows) {
-          rows = rows || [];
-          if (!rows.length) return [];
-          var ids = rows.map(function (r) { return r.sponsor_id; });
-          return Promise.resolve(
-            sb().from('sponsors').select('id, name').in('id', ids)
-          ).then(unwrap).then(function (sponsors) {
-            var nameById = {};
-            (sponsors || []).forEach(function (s) { nameById[s.id] = s.name; });
-            var now = new Date();
-            var DAY = 86400000;
-            return rows.map(function (r) {
-              var ends = new Date(new Date(r.cooldown_started_at).getTime() + cooldownDays * DAY);
-              return { id: r.sponsor_id, name: nameById[r.sponsor_id] || '(unknown)', ends: ends };
-            }).filter(function (x) {
-              return x.ends.getFullYear() === now.getFullYear() && x.ends.getMonth() === now.getMonth();
-            }).sort(function (a, b) { return a.ends - b.ends; });
+          var DAY = 86400000;
+
+          var active = (rows || []).map(function (r) {
+            return {
+              id: r.sponsor_id,
+              ends: new Date(new Date(r.cooldown_started_at).getTime() + cooldownDays * DAY)
+            };
+          }).sort(function (a, b) { return a.ends - b.ends; });
+
+          if (!active.length) return [];
+
+          // Every in-cooldown company needs a name now that none are filtered
+          // out, so the chunking in namesByIds is doing real work here: this
+          // list is bounded only by how many companies are in cooldown at once.
+          return namesByIds(active.map(function (x) { return x.id; })).then(function (nameById) {
+            return active.map(function (x) {
+              return { id: x.id, name: nameById[x.id] || '(unknown)', ends: x.ends };
+            });
           });
         });
       });

@@ -104,7 +104,7 @@
     function annexOptions(selected) {
       const cats = getAnnexCats();
       let out = '<option value="">' + esc(DETAIL_META.prohibited.placeholder) + '</option>';
-      [['A', 'Annex A, prohibited'], ['B', 'Annex B, restricted']].forEach(function (pair) {
+      [['A', 'Prohibited (Annex A)'], ['B', 'Restricted (Annex B)']].forEach(function (pair) {
         const inAnnex = cats.filter(function (a) { return a.annex === pair[0]; });
         if (!inAnnex.length) return;
         out += '<optgroup label="' + esc(pair[1]) + '">';
