@@ -32,9 +32,12 @@
   'use strict';
 
   // Sponsor categories, mirroring sponsor-page.js / the DB check constraint.
+  // 'prohibited' is the umbrella covering both annexes, so it is labelled for
+  // both: the annex category picked in the detail column is what decides
+  // whether the company reads as Prohibited (Annex A) or Restricted (Annex B).
   const STATUS_OPTIONS = [
     { value: 'approved',   label: 'Approved'   },
-    { value: 'prohibited', label: 'Prohibited' },
+    { value: 'prohibited', label: 'Prohibited / Restricted' },
     { value: 'closed',     label: 'Closed'     },
     { value: 'alumni',     label: 'Alumni'     }
   ];

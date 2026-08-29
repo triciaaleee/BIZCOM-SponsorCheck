@@ -84,17 +84,57 @@
       return end < today;
     }
 
+    // The DB keeps one 'prohibited' umbrella category for every annex-listed
+    // company; the annex letter is what the club acts on. Annex A reads
+    // Prohibited (remove it from the list), Annex B reads Restricted (keep it,
+    // BIZCOM decides). Same rule as the public checker in matcher-core.js.
+    function displayStatus(sponsor) {
+      if (sponsor.category !== 'prohibited') return sponsor.category;
+      const cat = sponsor.annex_category_id ? annexById[sponsor.annex_category_id] : null;
+      return (cat && cat.annex === 'B') ? 'restricted' : 'prohibited';
+    }
+
     // Status shown as a coloured tag (icon + label).
-    function statusPill(category) {
+    function statusPill(sponsor) {
       const meta = {
         approved: { label: 'Approved', icon: 'bi-check-circle-fill' },
         prohibited: { label: 'Prohibited', icon: 'bi-x-circle-fill' },
+        restricted: { label: 'Restricted', icon: 'bi-shield-fill-exclamation' },
         closed: { label: 'Closed',   icon: 'bi-dash-circle-fill' },
         alumni: { label: 'Alumni',   icon: 'bi-mortarboard-fill' }
       };
-      const m = meta[category] || { label: category, icon: 'bi-tag-fill' };
-      return '<span class="status-pill status-pill--' + category + '">' +
+      const status = displayStatus(sponsor);
+      const m = meta[status] || { label: status, icon: 'bi-tag-fill' };
+      return '<span class="status-pill status-pill--' + status + '">' +
         '<i class="bi ' + m.icon + '"></i>' + m.label + '</span>';
+    }
+
+    // The status pills mix plain categories with the two annex pills. Annex A
+    // and Annex B are not categories in the database, so they are turned into
+    // the annex_categories ids they cover and filtered on annex_category_id.
+    function annexIdsFor(letter) {
+      return annexCats
+        .filter(function (a) { return a.annex === letter; })
+        .map(function (a) { return a.id; });
+    }
+
+    function statusParams() {
+      const categories = [];
+      let annexIds = [];
+      let wantsAnnex = false;
+      statusFilter.forEach(function (v) {
+        if (v === 'annex_a' || v === 'annex_b') {
+          wantsAnnex = true;
+          annexIds = annexIds.concat(annexIdsFor(v === 'annex_a' ? 'A' : 'B'));
+        } else {
+          categories.push(v);
+        }
+      });
+      // If the annex categories failed to load there are no ids to match on.
+      // Filter on a value no row can hold, so the pill returns nothing rather
+      // than silently falling back to every sponsor.
+      if (wantsAnnex && !annexIds.length) categories.push('__none__');
+      return { status: categories, annexIds: annexIds };
     }
 
     // "Annex A, Tobacco Products" - the same string the old free-text
@@ -214,11 +254,11 @@
       // Every company added through this panel is a BIZCOM partner by
       // definition, so it takes that Annex B category.
       const partnerCat = annexCats.find(function (a) {
-        return a.annex === 'B' && a.name === 'BIZCOM partner';
+        return a.annex === 'B' && (a.name || '').toLowerCase() === 'bizcom partner';
       });
       if (!partnerCat) {
         toastMsg({ type: 'error', title: 'Missing annex category',
-          message: 'The "BIZCOM partner" Annex B category is missing. Run migration 0017.' });
+          message: 'The "BIZCOM Partner" Annex B category is missing. Run migration 0018.' });
         return;
       }
       const payload = {
@@ -265,11 +305,13 @@
     async function render() {
       let res;
       try {
+        const sf = statusParams();
         res = await window.AdminAPI.querySponsors({
           page: currentPage,
           pageSize: PAGE_SIZE,
           search: searchQuery,
-          status: statusFilter,
+          status: sf.status,
+          annexIds: sf.annexIds,
           industry: industryFilter
         });
       } catch (e) {
@@ -308,7 +350,7 @@
         return (
           '<tr>' +
             '<td><div class="table__cell-primary">' + mapsLink(s.name) + '</div></td>' +
-            '<td>' + statusPill(s.category) + '</td>' +
+            '<td>' + statusPill(s) + '</td>' +
             '<td><span class="tag tag--rounded">' + esc(industryDisplay(s.industry)) + '</span></td>' +
             '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
             '<td>' +

@@ -71,22 +71,30 @@
     // multi-select filters, alphabetical, 50/page — but server-side, so the
     // page only ever holds one slice. Lapsed Annex B partners (contract_ends in
     // the past) are excluded here; they live only in the Annex B panel.
-    // params: { search, status:[], industry:[], page, pageSize }
+    // params: { search, status:[], annexIds:[], industry:[], page, pageSize }
     // returns: { rows, total, page, totalPages, start }
     querySponsors: function (params) {
       params = params || {};
       var q = (params.search || '').trim();
       var statuses = params.status || [];
+      var annexIds = params.annexIds || [];
       var industries = params.industry || [];
       var pageSize = params.pageSize || 50;
       var today = todayISODate();
 
-      // Apply the shared filters (search + status + industry + exclude lapsed
-      // Annex B partners) to either a count query or a data query.
+      // Apply the shared filters (search + status/annex + industry + exclude
+      // lapsed Annex B partners) to either a count query or a data query.
       function applyFilters(query) {
         query = query.or('contract_ends.is.null,contract_ends.gte.' + today);
         if (q) query = query.ilike('name', '%' + escapeLike(q) + '%');
-        if (statuses.length) query = query.in('category', statuses);
+        // Status is one row of pills on the page but two columns here: Annex A
+        // and Annex B rows share category 'prohibited', so the annex pills
+        // arrive as annex_categories ids and match on annex_category_id. The
+        // two are OR-ed so "Approved + Annex B" returns both, not neither.
+        var clauses = [];
+        if (statuses.length) clauses.push('category.in.(' + statuses.join(',') + ')');
+        if (annexIds.length) clauses.push('annex_category_id.in.(' + annexIds.join(',') + ')');
+        if (clauses.length) query = query.or(clauses.join(','));
         if (industries.length) query = query.in('industry', industries);
         return query;
       }

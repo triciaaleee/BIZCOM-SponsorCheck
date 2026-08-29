@@ -86,7 +86,7 @@
         </button>
       </div>
       <div class="annex-card__body">
-        <div class="annex-group__label">BIZCOM clients <span class="annex-group__kind">companies</span></div>
+        <div class="annex-group__label">BIZCOM partners <span class="annex-group__kind">companies</span></div>
 
         <div id="annex-b-list"></div>
 
@@ -128,7 +128,8 @@
       <div class="status-filter" id="sponsors-status-filter" role="group" aria-label="Filter by status">
         <button type="button" class="status-filter__pill status-filter__pill--all is-active" data-status="all" aria-pressed="true">All</button>
         <button type="button" class="status-filter__pill status-filter__pill--approved" data-status="approved" aria-pressed="false"><i class="bi bi-check-circle-fill"></i> Approved</button>
-        <button type="button" class="status-filter__pill status-filter__pill--prohibited" data-status="prohibited" aria-pressed="false"><i class="bi bi-x-circle-fill"></i> Prohibited</button>
+        <button type="button" class="status-filter__pill status-filter__pill--prohibited" data-status="annex_a" aria-pressed="false"><i class="bi bi-x-circle-fill"></i> Prohibited (Annex A)</button>
+        <button type="button" class="status-filter__pill status-filter__pill--restricted" data-status="annex_b" aria-pressed="false"><i class="bi bi-shield-fill-exclamation"></i> Restricted (Annex B)</button>
         <button type="button" class="status-filter__pill status-filter__pill--closed" data-status="closed" aria-pressed="false"><i class="bi bi-dash-circle-fill"></i> Closed</button>
         <button type="button" class="status-filter__pill status-filter__pill--alumni" data-status="alumni" aria-pressed="false"><i class="bi bi-mortarboard-fill"></i> Alumni</button>
       </div>
@@ -172,11 +173,11 @@
 
 </main>
 
-<!-- Add BizCom client modal -->
+<!-- Add BIZCOM partner modal -->
 <div class="modal" id="annex-b-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="annex-b-title">
   <div class="modal__dialog">
     <header class="modal__header">
-      <h2 class="modal__title" id="annex-b-title">Add BizCom client</h2>
+      <h2 class="modal__title" id="annex-b-title">Add BIZCOM partner</h2>
       <button class="modal__close" data-modal-close aria-label="Close">
         <i class="bi bi-x"></i>
       </button>
@@ -190,7 +191,7 @@
         <div class="form-group">
           <label class="form-label" for="annex-b-date">Contract end date <span class="form-label__required">*</span></label>
           <input type="date" class="form-input" id="annex-b-date">
-          <div class="form-helper">The company is prohibited as a sponsor until this date, then automatically flagged to clear.</div>
+          <div class="form-helper">Restricted under Annex B until this date, then automatically flagged to clear.</div>
         </div>
         <div class="form-group">
           <label class="form-label" for="annex-b-industry">Industry</label>
@@ -204,7 +205,7 @@
       <footer class="modal__footer">
         <button type="button" class="btn btn--secondary btn--sm" data-modal-close>Cancel</button>
         <button type="submit" class="btn btn--primary btn--sm">
-          <i class="bi bi-plus-lg"></i> Add client
+          <i class="bi bi-plus-lg"></i> Add partner
         </button>
       </footer>
     </form>

@@ -1029,6 +1029,11 @@
   border-color: rgba(211, 58, 3, 0.55);
   color: var(--color-orange-dark);
 }
+.status-filter__pill--restricted.is-active {
+  background-color: rgba(214, 178, 56, 0.20);
+  border-color: rgba(214, 178, 56, 0.60);
+  color: #8C7212;
+}
 .status-filter__pill--closed.is-active {
   background-color: var(--surface-muted);
   border-color: var(--border-strong);
