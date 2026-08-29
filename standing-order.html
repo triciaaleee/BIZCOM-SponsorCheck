@@ -84,14 +84,14 @@
             <li><a href="#section-2" class="toc__link">2. Definitions</a></li>
             <li><a href="#section-3" class="toc__link">3. Roles and responsibilities</a></li>
             <li><a href="#section-4" class="toc__link">4. Outreach process</a></li>
-            <li><a href="#section-5" class="toc__link">5. 30-day outreach cap</a></li>
+            <li><a href="#section-5" class="toc__link">5. <span data-stat="cooldown_days">30</span>-day outreach cap</a></li>
             <li><a href="#section-6" class="toc__link">6. Event-size caps</a></li>
             <li><a href="#section-7" class="toc__link">7. Master List</a></li>
             <li><a href="#section-8" class="toc__link">8. Alumni List</a></li>
             <li><a href="#section-9" class="toc__link">9. Non-circumvention</a></li>
             <li><a href="#section-10" class="toc__link">10. Penalties</a></li>
             <li><a href="#annex-a" class="toc__link">Annex A, prohibited categories</a></li>
-            <li><a href="#annex-b" class="toc__link">Annex B, restricted partners</a></li>
+            <li><a href="#annex-b" class="toc__link">Annex B, restricted organisations</a></li>
           </ul>
 
           <div class="so-search mt-5">
@@ -142,30 +142,30 @@
             <li>Log each outreach attempt back to BIZCOM so the rolling outreach counter stays accurate for everyone.</li>
           </ol>
 
-          <h2 id="section-5">5. 30-day outreach cap</h2>
+          <h2 id="section-5">5. <span data-stat="cooldown_days">30</span>-day outreach cap</h2>
           <div class="annex">
             <p>
-              Each sponsor may receive a maximum of <strong>10 outreach attempts</strong> in any rolling 30-day window across all SMU SAGs combined. Once the cap is reached, the sponsor enters a 30-day cooldown during which no SAG may approach them.
+              Each sponsor may receive a maximum of <strong><span data-stat="outreach_cap">10</span> outreach attempts</strong> in any rolling <span data-stat="cooldown_days">30</span>-day window across all SMU SAGs combined. Once the cap is reached, the sponsor enters a <span data-stat="cooldown_days">30</span>-day cooldown during which no SAG may approach them.
             </p>
             <p class="text-secondary text-sm" style="margin-bottom: 0">
-              Rationale: repeated cold outreach to the same company within a short window damages SMU's reputation as a coordinated partner. The cap is enforced advisorily through this platform and definitively at BIZCOM review.
+              Rationale: repeated cold outreach to the same company within a short window damages SMU's reputation as a coordinated partner. The cap is enforced advisorily through this platform and definitively at BIZCOM review. Figures on this page are read live from BIZCOM's settings.
             </p>
           </div>
 
           <h2 id="section-6">6. Event-size caps</h2>
           <p>The maximum number of distinct sponsors that may be approached per event is determined by the event size:</p>
           <ul>
-            <li><strong>Small event</strong> (under 50 attendees): cap of <strong>300</strong> sponsors.</li>
-            <li><strong>Medium event</strong> (50 to 150 attendees): cap of <strong>600</strong> sponsors.</li>
-            <li><strong>Large event</strong> (over 150 attendees): cap of <strong>1,000</strong> sponsors.</li>
+            <li><strong>Small event</strong> (under 50 attendees): cap of <strong><span data-stat="event_cap_small">200</span></strong> sponsors.</li>
+            <li><strong>Medium event</strong> (50 to 150 attendees): cap of <strong><span data-stat="event_cap_medium">600</span></strong> sponsors.</li>
+            <li><strong>Large event</strong> (over 150 attendees): cap of <strong><span data-stat="event_cap_large">2,000</span></strong> sponsors.</li>
           </ul>
           <p class="text-secondary text-sm">
-            These caps are cumulative across all submission waves for the same event. Re-classifying an event after submission requires written approval from the Corporate Relations Secretary.
+            These caps are cumulative across all submission waves for the same event. Re-classifying an event after submission requires written approval from the Corporate Relations Secretary. Figures on this page are read live from BIZCOM's settings.
           </p>
 
           <h2 id="section-7">7. Master List</h2>
           <p>
-            The Master List contains sponsors that have been previously approved through BIZCOM vetting. Companies on the Master List are not automatically pre-approved for new events. They still require submission, but they will not be flagged as prohibited or alumni-restricted.
+            The Master List contains sponsors that have been previously approved through BIZCOM vetting. Companies on the Master List are not automatically pre-approved for new events. They still require submission, but they will not be flagged as prohibited, restricted, or alumni-affiliated.
           </p>
           <p>
             The Master List grows over time. Sponsors approved through one SAG's submission are subsequently added to the Master List, reducing review time for future submissions.
@@ -178,6 +178,10 @@
           <p>
             The Alumni List is maintained collaboratively with OAR and is updated as alumni-owned businesses are identified.
           </p>
+          <ul class="text-secondary text-sm">
+            <li>Office of Alumni Relations (OAR): <a href="mailto:alumni@smu.edu.sg">alumni@smu.edu.sg</a></li>
+            <li>Office of Advancement (OA): <a href="mailto:alumnigiving@smu.edu.sg">alumnigiving@smu.edu.sg</a></li>
+          </ul>
 
           <h2 id="section-9">9. Non-circumvention</h2>
           <p>
@@ -196,26 +200,30 @@
           </p>
 
           <h2 id="annex-a">Annex A, prohibited categories</h2>
-          <p>The following categories of organisation may not be approached for sponsorship under any circumstances:</p>
+          <p>The following organisations, and all associated companies, must not be approached for sponsorship under any circumstances:</p>
           <ul>
-            <li>Alcohol and alcoholic beverage producers or distributors</li>
-            <li>Tobacco and vaping product manufacturers or retailers</li>
-            <li>Gaming, betting, and gambling operators</li>
-            <li>Adult or sexual products and services</li>
-            <li>Pharmaceutical companies (over-the-counter wellness brands are reviewed case-by-case)</li>
-            <li>Foundations and grant-making bodies (these route through OAR)</li>
-            <li>Insurance companies (cross-referenced with Annex B)</li>
-            <li>Companies that have ceased operations or are confirmed defunct</li>
+            <li><strong>All Foundations</strong> (e.g. Lee Foundation, Shaw Foundation, Tanoto Foundation)</li>
+            <li><strong>SMU Board of Trustees and associated companies</strong>: see the <a href="./dashboard.html">sponsor directory</a> for the full list</li>
+            <li><strong>Alcoholic product companies</strong> (e.g. Asia Pacific Breweries)</li>
+            <li><strong>Tobacco product companies</strong> (e.g. Marlboro)</li>
+            <li><strong>Gaming and betting companies</strong> (e.g. Singapore Pools)</li>
+            <li><strong>Sexual product companies</strong> (e.g. Durex)</li>
+            <li><strong>SMU Commencement sponsorship companies</strong></li>
+            <li><strong>Insurance companies</strong>: no sponsorship, partnership, or collaboration, direct or indirect, monetary or otherwise, including through their subsidiaries, affiliates, intermediaries, representatives, brokers, agents, or any third party acting on their behalf</li>
+            <li><strong>Multi-level marketing companies</strong></li>
           </ul>
 
-          <h2 id="annex-b">Annex B, restricted partners</h2>
-          <p>The following categories are reserved for BIZCOM-direct partnerships and may not be approached by individual SAGs:</p>
+          <h2 id="annex-b">Annex B, restricted organisations</h2>
+          <p>
+            The following are organisations BIZCOM is collaborating with directly. CBDs and Student Activity Groups may not approach them on their own. Any other company may still be approached, provided a SAG does not negotiate on behalf of SMUSA or BIZCOM and the company is not offering a corporate discount to all SMU students; if a listed company asks to liaise with SMUSA, refer it to BIZCOM instead.
+          </p>
           <ul>
-            <li>Major Singapore banks (DBS, OCBC, UOB and equivalents)</li>
-            <li>Insurance companies (cross-referenced with Annex A)</li>
-            <li>Telecommunications providers (Singtel, StarHub, M1)</li>
-            <li>Government-linked statutory boards (route through OSL)</li>
+            <li><strong>Government entities</strong> (e.g. TOTE Board)</li>
+            <li><strong>Banks and financial institutions</strong></li>
           </ul>
+          <p>
+            <strong>SMU Alumni Members</strong> are also covered under Annex B. See <a href="#section-8">Section 8, Alumni List</a> for the outreach process and OAR/OA contact details.
+          </p>
 
           <p class="mt-6 text-secondary text-sm">
             <em>Effective date: 1 March 2024. The binding text and all amendments are on the <a href="https://www.smusa.sg/smusa-gazette" target="_blank" rel="noopener">SMUSA Gazette</a>. For clarifications, contact the BIZCOM Corporate Relations Secretary at <a href="mailto:biz.secretary@sa.smu.edu.sg">biz.secretary@sa.smu.edu.sg</a>.</em>
@@ -256,10 +264,42 @@
   </footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="./js/lib/supabase-config.js" defer></script>
+<script src="./js/lib/supabase-public.js" defer></script>
+<script src="./js/lib/public-data.js" defer></script>
 <script src="./js/components/navbar.js" defer></script>
 
 <script>
 (function () {
+  // This script is inline, so `defer` on the tag would be ignored and it
+  // would otherwise run immediately during parsing, before the deferred
+  // supabase-config/supabase-public/public-data scripts above have had a
+  // chance to define window.PublicData. Waiting for DOMContentLoaded is
+  // guaranteed (by spec) to run after every deferred script has executed.
+  document.addEventListener('DOMContentLoaded', main);
+
+  function main() {
+  // Fills every [data-stat] span from the live settings row, then hands off
+  // to the TOC + search setup below. The search feature snapshots the
+  // article's innerHTML to restore it after each keystroke, so that snapshot
+  // must happen AFTER these numbers are filled in, or clearing the search box
+  // would revert a live figure back to its static placeholder.
+  function loadLiveStats() {
+    if (!window.PublicData || !window.PublicData.getSettings) return Promise.resolve();
+    return window.PublicData.getSettings().then(function (settings) {
+      document.querySelectorAll('[data-stat]').forEach(function (el) {
+        const value = settings && settings[el.getAttribute('data-stat')];
+        if (value != null) el.textContent = Number(value).toLocaleString();
+      });
+    }).catch(function (e) {
+      console.error('[standing-order] could not load live caps, showing static defaults', e);
+    });
+  }
+
+  loadLiveStats().then(init);
+
+  function init() {
   const links = document.querySelectorAll('.toc__link');
   const sections = Array.from(links).map(l => document.getElementById(l.getAttribute('href').slice(1))).filter(Boolean);
 
@@ -301,6 +341,8 @@
     if (node.nodeType === 3) { fn(node); return; }
     if (node.nodeType !== 1 || node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
     Array.from(node.childNodes).forEach(c => walk(c, fn));
+  }
+  }
   }
 })();
 </script>
