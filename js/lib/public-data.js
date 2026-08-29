@@ -23,6 +23,15 @@
   }
 
   var PublicData = {
+    // Annex A (prohibited) + Annex B (restricted) categories. The checker
+    // needs these to tell the two annexes apart, so they are anon-readable
+    // like industries.
+    listAnnexCategories: function () {
+      return Promise.resolve(
+        sb().from('annex_categories').select('id, annex, name, note, sort_order').order('annex').order('sort_order')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
     listIndustries: function () {
       return Promise.resolve(
         sb().from('industries').select('code, display_name, sort_order').order('sort_order')
@@ -33,7 +42,7 @@
     // normalised is recomputed from the shared matcher on load so it can't drift.
     allSponsors: function () {
       return Promise.resolve(
-        sb().from('sponsors').select('id, name, normalised, category, industry, ban_reason, notes, contract_ends').order('name')
+        sb().from('sponsors').select('id, name, normalised, category, industry, annex_category_id, notes, contract_ends').order('name')
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 

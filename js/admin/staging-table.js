@@ -40,10 +40,12 @@
   ];
 
   // Placeholder + whether the "detail" field is required, per status. The
-  // detail column maps to notes (approved/closed/alumni) or ban_reason (prohibited).
+  // detail column maps to notes (approved/closed/alumni) or, for prohibited,
+  // the chosen annex_categories id. Prohibited therefore renders a picker
+  // rather than a text box: the annex is a foreign key now, not free text.
   const DETAIL_META = {
     approved:   { placeholder: 'Notes (optional)',                        required: false },
-    prohibited: { placeholder: 'Prohibited reason, e.g. Annex A, Gaming', required: true  },
+    prohibited: { placeholder: 'Pick the annex category...',              required: true  },
     closed:     { placeholder: 'Closed notes (optional)',                 required: false },
     alumni:     { placeholder: 'Notes (optional)',                        required: false }
   };
@@ -61,6 +63,7 @@
     const saveBtn     = opts.saveBtn;
 
     const getIndustries = opts.industries || function () { return []; };
+    const getAnnexCats  = opts.annexCategories || function () { return []; };
     const getExisting   = opts.existingNormalised || function () { return new Set(); };
     const onChange      = opts.onChange || function () {};
     const onCommitted   = opts.onCommitted || function () {};
@@ -93,6 +96,33 @@
       }).join('');
     }
 
+    // Grouped A then B, so it is obvious which half of the Standing Order a
+    // category comes from.
+    function annexOptions(selected) {
+      const cats = getAnnexCats();
+      let out = '<option value="">' + esc(DETAIL_META.prohibited.placeholder) + '</option>';
+      [['A', 'Annex A, prohibited'], ['B', 'Annex B, restricted']].forEach(function (pair) {
+        const inAnnex = cats.filter(function (a) { return a.annex === pair[0]; });
+        if (!inAnnex.length) return;
+        out += '<optgroup label="' + esc(pair[1]) + '">';
+        inAnnex.forEach(function (a) {
+          out += '<option value="' + esc(a.id) + '"' + (a.id === selected ? ' selected' : '') + '>' +
+            esc(a.name) + '</option>';
+        });
+        out += '</optgroup>';
+      });
+      return out;
+    }
+
+    // Prohibited rows pick an annex category; everything else types a note.
+    function detailCell(row, meta) {
+      if (row.category === 'prohibited') {
+        return '<select class="form-input" data-field="detail">' + annexOptions(row.detail) + '</select>';
+      }
+      return '<input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) +
+        '" placeholder="' + esc(meta.placeholder) + '">';
+    }
+
     function statusOptions(selected) {
       return STATUS_OPTIONS.map(function (o) {
         return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
@@ -115,7 +145,7 @@
               '<td><input type="text" class="form-input" data-field="name" value="' + esc(row.name) + '" placeholder="Company name"></td>' +
               '<td><select class="form-input" data-field="category">' + statusOptions(row.category) + '</select></td>' +
               '<td><select class="form-input" data-field="industry">' + industryOptions(row.industry) + '</select></td>' +
-              '<td><input type="text" class="form-input" data-field="detail" value="' + esc(row.detail) + '" placeholder="' + esc(meta.placeholder) + '"></td>' +
+              '<td>' + detailCell(row, meta) + '</td>' +
               '<td><button type="button" class="bulk-staging__remove" data-field="remove" title="Remove row"><i class="bi bi-trash"></i></button></td>' +
             '</tr>'
           );
@@ -167,11 +197,10 @@
       if (field === 'industry') row.industry = e.target.value;
       if (field === 'category') {
         row.category = e.target.value;
-        const detailInput = tr.querySelector('[data-field="detail"]');
-        if (detailInput) {
-          detailInput.placeholder = DETAIL_META[row.category].placeholder;
-          detailInput.classList.remove('is-invalid');
-        }
+        // The detail control is a picker for prohibited and a text box
+        // otherwise, so the whole row is redrawn rather than relabelled.
+        row.detail = '';
+        render();
       }
     });
 
@@ -240,7 +269,7 @@
         }
         if (DETAIL_META[row.category].required && !row.detail.trim()) {
           if (detailInput) detailInput.classList.add('is-invalid');
-          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs a prohibited reason.' };
+          firstError = firstError || { el: detailInput, msg: (row.name.trim() || 'A row') + ' needs an annex category.' };
         }
       });
       if (firstError) {
@@ -268,9 +297,9 @@
           industry: row.industry,
           category: row.category,
           notes: '',
-          ban_reason: null
+          annex_category_id: null
         };
-        if (row.category === 'prohibited') payload.ban_reason = row.detail.trim();
+        if (row.category === 'prohibited') payload.annex_category_id = row.detail || null;
         else payload.notes = row.detail.trim();
         payloads.push(payload);
       });

@@ -50,7 +50,9 @@
   const summary = {
     clear:      document.getElementById('count-clear'),
     alumni:     document.getElementById('count-alumni'),
-    prohibited:    document.getElementById('count-prohibited'),
+    prohibited: document.getElementById('count-prohibited'),
+    restricted: document.getElementById('count-restricted'),
+    closed:     document.getElementById('count-closed'),
     cooldown:   document.getElementById('count-cooldown'),
     unverified: document.getElementById('count-unverified'),
     duplicate:  document.getElementById('count-duplicate')
@@ -67,6 +69,7 @@
   // ---------- Live data (Supabase, anon-readable) ----------
   let sponsors = [];
   let industries = [];
+  let annexCategories = [];
   let outreachMap = {};
   let settings = {};
   let readyPromise = null;   // boot load only; runCheck always re-reads
@@ -86,15 +89,20 @@
     return Promise.all([
       window.PublicData.allSponsors(),
       window.PublicData.listIndustries(),
+      window.PublicData.listAnnexCategories(),
       window.PublicData.outreachSnapshot(),
       window.PublicData.getSettings()
     ]).then(function (out) {
       sponsors = out[0] || [];
       industries = out[1] || [];
-      outreachMap = out[2] || {};
-      settings = out[3] || {};
+      annexCategories = out[2] || [];
+      outreachMap = out[3] || {};
+      settings = out[4] || {};
       // Reuse the shared normalise for the lookup key so it can't drift.
       sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+      // Resolve each sponsor's annex so the matcher can tell Annex A
+      // (prohibited) from Annex B (restricted).
+      window.Matcher.attachAnnex(sponsors, annexCategories);
     });
   }
 
@@ -405,7 +413,7 @@
     checkingState.classList.add('d-none');
     resultsState.classList.remove('d-none');
 
-    const counts = { clear: 0, alumni: 0, prohibited: 0, cooldown: 0, unverified: 0, duplicate: 0 };
+    const counts = { clear: 0, alumni: 0, prohibited: 0, restricted: 0, closed: 0, cooldown: 0, unverified: 0, duplicate: 0 };
     results.forEach(function (r) {
       if (counts[r.status] !== undefined) counts[r.status]++;
     });
@@ -466,7 +474,9 @@
     resultsTbody.innerHTML = pageRows.map(function (r, i) {
       const pill = pillFor(r.status);
       const industryLabel = r.industry ? industryDisplayName(r.industry) : '';
-      const flagClass = (r.status === 'prohibited' || r.status === 'cooldown') ? 'is-flagged' : '';
+      // is-flagged marks rows the club must take OFF the list. Restricted is
+      // deliberately excluded: those stay on the list for BIZCOM to decide.
+      const flagClass = (r.status === 'prohibited' || r.status === 'closed' || r.status === 'cooldown') ? 'is-flagged' : '';
       return (
         '<tr class="' + flagClass + '">' +
           '<td class="table__cell-secondary" data-label="#">' + (start + i + 1) + '</td>' +
@@ -569,7 +579,9 @@
     const map = {
       clear:      { cls: 'pill--clear',    icon: 'bi-check-circle-fill',       label: 'Clear' },
       alumni:     { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',        label: 'Alumni' },
-      prohibited:    { cls: 'pill--prohibited',  icon: 'bi-x-circle-fill',           label: 'Prohibited' },
+      prohibited: { cls: 'pill--prohibited', icon: 'bi-x-circle-fill',        label: 'Prohibited' },
+      restricted: { cls: 'pill--restricted', icon: 'bi-exclamation-triangle-fill', label: 'Restricted' },
+      closed:     { cls: 'pill--closed',     icon: 'bi-slash-circle-fill',    label: 'Closed' },
       cooldown:   { cls: 'pill--cooldown', icon: 'bi-clock-fill',              label: 'Cooldown' },
       unverified: { cls: 'pill--neutral',  icon: 'bi-question-circle-fill',    label: 'Unverified' },
       duplicate:  { cls: 'pill--neutral',  icon: 'bi-files',                   label: 'Duplicate' }

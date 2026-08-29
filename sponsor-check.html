@@ -287,6 +287,14 @@
                   <div class="summary-stat__value" id="count-prohibited">0</div>
                   <div class="summary-stat__label">Prohibited</div>
                 </div>
+                <div class="summary-stat summary-stat--restricted">
+                  <div class="summary-stat__value" id="count-restricted">0</div>
+                  <div class="summary-stat__label">Restricted</div>
+                </div>
+                <div class="summary-stat summary-stat--closed">
+                  <div class="summary-stat__value" id="count-closed">0</div>
+                  <div class="summary-stat__label">Closed</div>
+                </div>
                 <div class="summary-stat summary-stat--cooldown">
                   <div class="summary-stat__value" id="count-cooldown">0</div>
                   <div class="summary-stat__label">Cooldown</div>
@@ -308,6 +316,8 @@
                 <button class="filter-chip" data-filter="clear">Clear</button>
                 <button class="filter-chip" data-filter="alumni">Alumni</button>
                 <button class="filter-chip" data-filter="prohibited">Prohibited</button>
+                <button class="filter-chip" data-filter="restricted">Restricted</button>
+                <button class="filter-chip" data-filter="closed">Closed</button>
                 <button class="filter-chip" data-filter="cooldown">Cooldown</button>
                 <button class="filter-chip" data-filter="unverified">Unverified</button>
                 <button class="filter-chip" data-filter="duplicate">Duplicate</button>
@@ -357,7 +367,8 @@
             <div class="event-meta__list">
               <div class="event-meta__list-title">Before you email</div>
               <ul>
-                <li>Remove or replace anything flagged <b>prohibited, cooldown or duplicate</b>.</li>
+                <li>Remove or replace anything flagged <b>prohibited, closed, cooldown or duplicate</b>.</li>
+                <li>Leave anything flagged <b>restricted</b> on your list. Those are Annex B, and BIZCOM decides them against your event's purpose.</li>
                 <li>Receive approval from Office of Alumni Relations (OAR) before approaching alumni-affiliated companies.</li>
                 <li>Download the CSV from your results, then use <strong>Email to BIZCOM</strong> below to open a pre-filled draft.</li>
                 <li>Attach the CSV, your sponsorship deck and your outreach email template, then send the draft yourself.</li>
@@ -395,7 +406,15 @@
               </li>
               <li>
                 <span class="pill pill--prohibited"><i class="bi bi-x-circle-fill pill__icon"></i>Prohibited</span>
-                <span class="aside-card__legend-text">Prohibited per Annex A/B, or the company has closed.</span>
+                <span class="aside-card__legend-text">Annex A. Cannot be approached at all, remove it from your list.</span>
+              </li>
+              <li>
+                <span class="pill pill--restricted"><i class="bi bi-exclamation-triangle-fill pill__icon"></i>Restricted</span>
+                <span class="aside-card__legend-text">Annex B. Keep it on your list, BIZCOM approves or rejects it.</span>
+              </li>
+              <li>
+                <span class="pill pill--closed"><i class="bi bi-slash-circle-fill pill__icon"></i>Closed</span>
+                <span class="aside-card__legend-text">Company has shut down. Choose a different sponsor.</span>
               </li>
               <li>
                 <span class="pill pill--cooldown"><i class="bi bi-clock-fill pill__icon"></i>Cooldown</span>

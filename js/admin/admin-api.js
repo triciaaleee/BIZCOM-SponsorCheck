@@ -46,6 +46,14 @@
     isUniqueViolation: isUniqueViolation,
 
     // ---------- reference data ----------
+    // Annex A (prohibited) + Annex B (restricted) categories, for the sponsor
+    // form's picker and the Sponsors-page annex panels.
+    listAnnexCategories: function () {
+      return Promise.resolve(
+        sb().from('annex_categories').select('id, annex, name, note, sort_order').order('annex').order('sort_order')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
     listIndustries: function () {
       return Promise.resolve(
         sb().from('industries').select('code, display_name, sort_order').order('sort_order')
@@ -141,7 +149,7 @@
     // matcher on load so the lookup key can't drift.
     allSponsors: function () {
       return Promise.resolve(
-        sb().from('sponsors').select('id, name, normalised, category, industry, ban_reason, contract_ends').order('name')
+        sb().from('sponsors').select('id, name, normalised, category, industry, annex_category_id, contract_ends').order('name')
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 

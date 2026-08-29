@@ -10,12 +10,18 @@
      checkOne(name, industry?, ctx)       -> single result
      checkBatch(rows, ctx)                -> array of results (sync)
    where ctx = {
-     sponsors: [{ id, name, normalised, category, industry, ban_reason, contract_ends }],
+     sponsors: [{ id, name, normalised, category, industry, contract_ends,
+                   annex, annexName }],   // annex fields via attachAnnex()
      capState: function (sponsorId) -> { count, cap, inCooldown, cooldownEndsAt, approaching, ... },
      today:    'YYYY-MM-DD'
    }
 
-   STATUS values: clear | cooldown | alumni | prohibited | unverified | duplicate.
+   STATUS values: clear | cooldown | alumni | prohibited | restricted |
+                  closed | unverified | duplicate.
+
+   Annex A companies report "prohibited" (remove them from the list); Annex B
+   report "restricted" (KEEP them on the list, BIZCOM decides). The annex comes
+   from sponsors.annex_category_id, resolved onto each sponsor by attachAnnex().
    ============================================================ */
 (function () {
   'use strict';
@@ -82,25 +88,45 @@
     return union === 0 ? 0 : intersect / union;
   }
 
-  // Currently-prohibited rule: prohibited AND (permanent OR contract not yet lapsed).
+  // Resolve each sponsor's annex_category_id against the annex_categories
+  // rows, stamping `annex` ('A'|'B') and `annexName` onto the sponsor. Callers
+  // run this once after loading, alongside the normalise() pass, so the matcher
+  // never has to carry a lookup map around. Safe to call twice.
+  function attachAnnex(sponsors, categories) {
+    var byId = {};
+    (categories || []).forEach(function (c) { byId[c.id] = c; });
+    (sponsors || []).forEach(function (s) {
+      var c = s.annex_category_id ? byId[s.annex_category_id] : null;
+      s.annex = c ? c.annex : null;
+      s.annexName = c ? c.name : null;
+    });
+    return sponsors;
+  }
+
+  // Is a time-boxed Annex B contract still running? Annex A is permanent and
+  // never consults contract_ends, so only Annex B can lapse.
   // ISO date strings (YYYY-MM-DD) compare correctly lexicographically.
-  function isActiveBan(s, today) {
-    if (!s || s.category !== 'prohibited') return false;
-    if (!s.contract_ends) return true;
+  function isLiveContract(s, today) {
+    if (!s || !s.contract_ends) return true;
     return String(s.contract_ends) >= today;
   }
 
-  // Plain-word standing of a sponsor, for the near-miss note below. Says
-  // "contract ended" rather than "prohibited" for a lapsed Annex B partner,
-  // so the note never overstates the restriction.
+  // Plain-word standing of a sponsor, for the near-miss note below. A lapsed
+  // Annex B partner reads as approachable, so the note never overstates it.
   function describeCategory(s, today) {
     switch (s.category) {
-      case 'prohibited': return isActiveBan(s, today) ? 'prohibited' : 'BIZCOM contract ended';
+      case 'prohibited':
+        if (s.annex === 'B') return isLiveContract(s, today) ? 'restricted' : 'partnership ended';
+        return 'prohibited';
       case 'closed':     return 'closed';
       case 'alumni':     return 'alumni-affiliated';
       default:           return 'previously approved';
     }
   }
+
+  // Used by approved companies and by Annex B partners whose contract has
+  // lapsed, which are indistinguishable from the club's point of view.
+  var CLEAR_REASON = 'Previously approved by BIZCOM';
 
   function formatDate(d) {
     if (!d) return '';
@@ -144,24 +170,41 @@
 
     var suggestion = null;
     if (!effectiveMatch && best.sponsor && best.score >= 0.4) {
-      suggestion = { id: best.sponsor.id, name: best.sponsor.name, category: best.sponsor.category, score: Math.round(best.score * 100) };
+      suggestion = {
+        id: best.sponsor.id, name: best.sponsor.name,
+        category: best.sponsor.category,
+        annex: best.sponsor.annex || null,   // so a near-miss can be labelled Restricted, not Prohibited
+        score: Math.round(best.score * 100)
+      };
     }
 
     var status, reason;
     if (effectiveMatch) {
       switch (effectiveMatch.category) {
         case 'prohibited':
-          if (!isActiveBan(effectiveMatch, ctx.today)) {
-            status = 'unverified';
-            reason = 'BIZCOM contract has ended — no longer restricted. Vet before approaching.';
+          // The umbrella category. The annex letter is what the club acts on.
+          if (effectiveMatch.annex === 'B') {
+            if (!isLiveContract(effectiveMatch, ctx.today)) {
+              // A BIZCOM partnership that has run out. Nothing restricts the
+              // company any more, so it reads exactly like any other clear row:
+              // the club does not need to know a partnership ever existed.
+              status = 'clear';
+              reason = CLEAR_REASON;
+            } else {
+              status = 'restricted';
+              reason = 'Annex B, ' + (effectiveMatch.annexName || 'restricted') +
+                       (effectiveMatch.contract_ends
+                         ? ' until ' + formatDate(new Date(effectiveMatch.contract_ends))
+                         : '');
+            }
           } else {
             status = 'prohibited';
-            reason = effectiveMatch.ban_reason || 'On the prohibited list';
+            reason = 'Annex A, ' + (effectiveMatch.annexName || 'prohibited');
           }
           break;
         case 'closed':
-          status = 'prohibited';
-          reason = 'Company is closed or defunct';
+          status = 'closed';
+          reason = 'Company has closed';
           break;
         case 'alumni':
           status = 'alumni';
@@ -170,7 +213,7 @@
         case 'approved':
           if (capSt.inCooldown) {
             status = 'cooldown';
-            reason = 'Outreach cap reached (' + capSt.cap + ' of ' + capSt.cap +
+            reason = 'Outreach cap reached (' + capSt.count + ' of ' + capSt.cap +
                      '). In cooldown until ' + formatDate(capSt.cooldownEndsAt) + '.';
           } else {
             // Nearing the cap used to report 'caution'. Dropped deliberately:
@@ -178,12 +221,12 @@
             // same as 'clear'. Cap management is BIZCOM's job, not the club's.
             // (capState.approaching is still used by the admin vetting screen.)
             status = 'clear';
-            reason = 'Previously approved by BIZCOM.';
+            reason = CLEAR_REASON;
           }
           break;
         default:
           status = 'clear';
-          reason = 'Match found, no restrictions.';
+          reason = 'Match found, no restrictions';
       }
     } else if (suggestion) {
       // Close, but under the match threshold. Deliberately NOT given a status of
@@ -194,7 +237,7 @@
       // reason, which the results table and the CSV export both show.
       status = 'unverified';
       reason = 'Close to "' + best.sponsor.name + '" (' +
-               describeCategory(best.sponsor, ctx.today) + ', ' + suggestion.score + '% similar).';
+               describeCategory(best.sponsor, ctx.today) + ', ' + suggestion.score + '% similar)';
     } else {
       status = 'unverified';
       reason = 'Not found in database. BIZCOM will need to vet this company.';
@@ -207,6 +250,7 @@
       matchedId: effectiveMatch ? effectiveMatch.id : null,
       matchedName: effectiveMatch ? effectiveMatch.name : null,
       matchedCategory: effectiveMatch ? effectiveMatch.category : null,
+      matchedAnnex: effectiveMatch ? (effectiveMatch.annex || null) : null,
       matchType: matchType,
       matchScore: matched ? 100 : (fuzzy ? Math.round(best.score * 100) : null),
       suggestion: suggestion,
@@ -241,11 +285,20 @@
       var cr = results[canonicalIdx - 1];
       if (!cr) return;
       var extra = 'Also appears on row' + (dupIndexes.length > 1 ? 's ' : ' ') + dupIndexes.join(', ');
-      cr.reason = (cr.reason || '') + ' ' + extra;
+      // Appending turns a one-phrase reason into two sentences, so it gains
+      // both the separator and a terminating stop. Reasons that already ran to
+      // two sentences have theirs stripped first, so it is never doubled.
+      var base = (cr.reason || '').replace(/\.$/, '');
+      cr.reason = base + '. ' + extra + '.';
     });
 
     return results;
   }
 
-  window.Matcher = { normalise: normalise, checkOne: checkOne, checkBatch: checkBatch };
+  window.Matcher = {
+    normalise: normalise,
+    attachAnnex: attachAnnex,
+    checkOne: checkOne,
+    checkBatch: checkBatch
+  };
 })();

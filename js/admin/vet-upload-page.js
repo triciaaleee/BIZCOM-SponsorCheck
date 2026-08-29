@@ -195,6 +195,7 @@
     // Live data (loaded from Supabase at boot / refreshed after writes).
     let sponsors = [];
     let industries = [];
+    let annexCats = [];
     let outreachMap = {};       // { sponsorId: { count, cooldown_started_at, in_cooldown } }
     let settings = {};
     let loadError = false;
@@ -252,15 +253,20 @@
         window.AdminAPI.allSponsors(),
         window.AdminAPI.outreachSnapshot(),
         window.AdminAPI.getSettings(),
-        window.AdminAPI.listSubmissions()
+        window.AdminAPI.listSubmissions(),
+        window.AdminAPI.listAnnexCategories()
       ]).then(function (out) {
         industries = out[0] || [];
         sponsors = out[1] || [];
         outreachMap = out[2] || {};
         settings = out[3] || {};
         submissionList = out[4] || [];
+        annexCats = out[5] || [];
         // Reuse the shared normalise for the lookup key so it can't drift.
         sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+        // Resolve each sponsor's annex so Annex A (prohibited) and Annex B
+        // (restricted) can be told apart.
+        window.Matcher.attachAnnex(sponsors, annexCats);
       }).catch(function (e) {
         loadError = true;
         toastError('Could not load the sponsor database', e);
@@ -273,6 +279,7 @@
       return window.AdminAPI.allSponsors().then(function (rows) {
         sponsors = rows || [];
         sponsors.forEach(function (s) { s.normalised = window.Matcher.normalise(s.name); });
+        window.Matcher.attachAnnex(sponsors, annexCats);
       }, function () {});
     }
 
@@ -301,7 +308,7 @@
         r.matchedCategory = s.category;
         r.matchType = 'linked';
         r.matchScore = null;
-        r.reason = 'Confirmed by an admin as the same company as ' + s.name + '.';
+        r.reason = 'Confirmed by an admin as the same company as ' + s.name;
         if (s.industry) r.industry = s.industry;
       });
       return rows;
@@ -332,7 +339,10 @@
     function classify(r) {
       if (r.status === 'duplicate') return 'duplicate';
       switch (r.matchedCategory) {
-        case 'prohibited': return 'prohibited';
+        case 'prohibited':
+          // A lapsed Annex B contract leaves nothing restricting the company.
+          if (r.status === 'clear') return 'approved';
+          return r.matchedAnnex === 'B' ? 'restricted' : 'prohibited';
         case 'closed': return 'closed';
         case 'alumni': return 'alumni';
         case 'approved': {
@@ -608,6 +618,7 @@
       if (row.status === 'prohibited' || row.status === 'closed') {
         return '<span class="wave-nope">Cannot be approached</span>';
       }
+      if (row.status === 'restricted') return '<span class="wave-nope">Annex B, BIZCOM decision</span>';
       if (row.status === 'cooldown') return '<span class="wave-nope">In cooldown</span>';
       if (row.status === 'review')   return '<span class="wave-nope">Not vetted yet</span>';
       return '<span class="wave-nope">Not logged</span>';
@@ -633,7 +644,7 @@
     function statusTagHtml(status) {
       const labels = {
         approved: 'Approved', alumni: 'Alumni', prohibited: 'Prohibited',
-        closed: 'Closed', cooldown: 'Cooldown', review: 'Unvetted'
+        restricted: 'Restricted', closed: 'Closed', cooldown: 'Cooldown', review: 'Unvetted'
       };
       const cls = labels[status] ? status : 'review';
       return '<span class="wave-tag wave-tag--' + esc(cls) + '">' +
@@ -1209,7 +1220,7 @@
     }
 
     function renderCheck() {
-      const counts = { approved: 0, cooldown: 0, prohibited: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
+      const counts = { approved: 0, cooldown: 0, prohibited: 0, restricted: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
       results.forEach(function (r) { counts[classify(r)]++; });
       counts.review = reviewCompanies().length;
 
@@ -1220,6 +1231,7 @@
         statTile('approved', counts.approved, 'Approved') +
         statTile('cooldown', counts.cooldown, 'Cooldown') +
         statTile('prohibited',   counts.prohibited,   'Prohibited') +
+        statTile('restricted',   counts.restricted,   'Restricted') +
         statTile('closed',   counts.closed,   'Closed') +
         statTile('alumni',   counts.alumni,   'Alumni') +
         statTile('review',   counts.review,   'Not in database');
@@ -1244,7 +1256,7 @@
     }
 
     // Panel A — companies found in the database, most-severe first.
-    const SEVERITY = { prohibited: 0, cooldown: 1, closed: 2, alumni: 3, approved: 4 };
+    const SEVERITY = { prohibited: 0, restricted: 1, cooldown: 2, closed: 3, alumni: 4, approved: 5 };
     function renderMatched() {
       const rows = results.filter(function (r) {
         return SEVERITY[classify(r)] !== undefined;
@@ -1402,7 +1414,8 @@
         approved: { cls: 'pill--clear',    icon: 'bi-check-circle-fill',  label: 'Approved' },
         cooldown: { cls: 'pill--cooldown', icon: 'bi-clock-fill',         label: 'Cooldown' },
         prohibited:   { cls: 'pill--prohibited',  icon: 'bi-x-circle-fill',     label: 'Prohibited' },
-        closed:   { cls: 'pill--neutral',  icon: 'bi-slash-circle-fill',  label: 'Closed' },
+        restricted: { cls: 'pill--restricted', icon: 'bi-exclamation-triangle-fill', label: 'Restricted' },
+        closed:   { cls: 'pill--closed',   icon: 'bi-slash-circle-fill',  label: 'Closed' },
         alumni:   { cls: 'pill--alumni',   icon: 'bi-mortarboard-fill',   label: 'Alumni' }
       };
       const m = map[bucket] || map.approved;
@@ -1452,13 +1465,13 @@
       return '<span class="vet-suggest">' +
         '<i class="bi bi-exclamation-triangle-fill vet-suggest__icon"></i>' +
         '<span class="table__cell-primary">' + esc(s.name) + '</span>' +
-        catPill(s.category) +
+        catPill(s.annex === 'B' ? 'restricted' : s.category) +
         '<span class="vet-suggest__score">' + s.score + '% similar</span>' +
       '</span>';
     }
 
     function catPill(cat) {
-      const labels = { approved: 'Approved', prohibited: 'Prohibited', closed: 'Closed', alumni: 'Alumni' };
+      const labels = { approved: 'Approved', prohibited: 'Prohibited', restricted: 'Restricted', closed: 'Closed', alumni: 'Alumni' };
       return '<span class="status-pill status-pill--' + cat + '">' + (labels[cat] || cat) + '</span>';
     }
 
@@ -1599,6 +1612,7 @@
       clearBtn:    clearBtn,
       saveBtn:     saveBtn,
       industries: function () { return industries; },
+      annexCategories: function () { return annexCats; },
       existingNormalised: function () {
         return new Set(sponsors.map(function (s) {
           return s.normalised || window.Matcher.normalise(s.name);

@@ -34,6 +34,8 @@
     let pendingDeleteName = '';
 
     let industries = [];             // fetched once at boot
+    let annexCats = [];              // annex_categories, fetched once at boot
+    const annexById = {};            // id -> { annex, name }
     let currentRows = [];            // the sponsors on the page currently shown
     let contractPartnersCache = [];  // Annex B partners currently rendered
 
@@ -95,8 +97,15 @@
         '<i class="bi ' + m.icon + '"></i>' + m.label + '</span>';
     }
 
+    // "Annex A, Tobacco Products" - the same string the old free-text
+    // ban_reason column used to hold, now built from the category row.
+    function annexLabel(sponsor) {
+      const cat = sponsor.annex_category_id ? annexById[sponsor.annex_category_id] : null;
+      return cat ? 'Annex ' + cat.annex + ', ' + cat.name : '';
+    }
+
     function notesFor(sponsor) {
-      if (sponsor.category === 'prohibited' && sponsor.ban_reason) return sponsor.ban_reason;
+      if (sponsor.category === 'prohibited') return annexLabel(sponsor) || (sponsor.notes || '');
       return sponsor.notes || '';
     }
 
@@ -202,12 +211,22 @@
 
     // ---- Annex B add / remove ----
     async function addAnnexBPartner(name, dateStr, industry, notes) {
+      // Every company added through this panel is a BIZCOM partner by
+      // definition, so it takes that Annex B category.
+      const partnerCat = annexCats.find(function (a) {
+        return a.annex === 'B' && a.name === 'BIZCOM partner';
+      });
+      if (!partnerCat) {
+        toastMsg({ type: 'error', title: 'Missing annex category',
+          message: 'The "BIZCOM partner" Annex B category is missing. Run migration 0017.' });
+        return;
+      }
       const payload = {
         name: name,
         normalised: window.Matcher.normalise(name),
         industry: industry || 'other',
         category: 'prohibited',
-        ban_reason: 'Annex B, BIZCOM partner',
+        annex_category_id: partnerCat.id,
         notes: notes || '',
         contract_ends: dateStr
       };
@@ -565,6 +584,7 @@
       clearBtn:    document.getElementById('add-staging-clear'),
       saveBtn:     document.getElementById('add-staging-save'),
       industries: function () { return industries; },
+      annexCategories: function () { return annexCats; },
       // The list is paged server-side, so there is no full local copy to check
       // against. bulkAddSponsors upserts on the unique normalised name, which
       // already skips anything that exists; this only catches repeats typed
@@ -597,6 +617,14 @@
         toastError('Could not load industries', e);
         industries = [];
       }
+      try {
+        annexCats = await window.AdminAPI.listAnnexCategories();
+      } catch (e) {
+        toastError('Could not load annex categories', e);
+        annexCats = [];
+      }
+      annexCats.forEach(function (a) { annexById[a.id] = a; });
+
       buildIndustryPanel();
       populateAnnexIndustry();
       addStaging.render();

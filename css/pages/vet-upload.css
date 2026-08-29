@@ -92,6 +92,7 @@
 .bulk-stat--approved { border-left-color: var(--color-green); }
 .bulk-stat--cooldown { border-left-color: var(--color-orange); }
 .bulk-stat--prohibited   { border-left-color: var(--color-orange-dark); }
+.bulk-stat--restricted { border-left-color: var(--color-gold); }
 .bulk-stat--closed   { border-left-color: var(--text-muted); }
 .bulk-stat--alumni   { border-left-color: var(--color-navy); }
 .bulk-stat--review   { border-left-color: var(--color-gold); }
@@ -696,6 +697,7 @@
 .wave-tag--approved   { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
 .wave-tag--alumni     { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
 .wave-tag--prohibited { background-color: rgba(211, 58, 3, 0.10); color: var(--color-orange-dark); }
+.wave-tag--restricted { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
 .wave-tag--closed     { background-color: var(--surface-muted); color: var(--text-muted); }
 .wave-tag--cooldown   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange); }
 .wave-tag--review     { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }

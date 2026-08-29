@@ -46,30 +46,47 @@ Every company in the system has exactly one **category** (its vetting status):
 | `closed` | Company has ceased operations / brand discontinued. |
 | `alumni` | Alumni-affiliated — needs OAR (alumni office) clearance before outreach. |
 
-### 2.2 The prohibition model (Annex A vs Annex B) — one table, no duplication
-The SMUSA *Sponsorship Standing Order* has two annexes of prohibited sponsors.
-**Both are modelled as ordinary `prohibited` sponsor rows** — there is deliberately
-**no separate "annex companies" table**. Two fields carry the nuance:
+### 2.2 The annex model (Annex A vs Annex B) — one lookup table
+The SMUSA *Sponsorship Standing Order* has two annexes. **Both are modelled as
+ordinary `prohibited` sponsor rows** — there is deliberately **no separate
+"annex companies" table**. What separates them is a foreign key:
 
-- **`ban_reason`** (free text) — *why* it's prohibited, referencing the annex, e.g.
-  `"Annex A, Gaming & Betting"`, `"Annex A, Board of Trustees"`,
-  `"Annex B, BIZCOM partner"`, `"Annex B, Banks & Financial"`.
+- **`annex_category_id`** (FK → `annex_categories.id`) — which annex category the
+  company falls under. The referenced row's `annex` column (`'A'` or `'B'`) decides the
+  status the checker shows.
 - **`contract_ends`** (date, nullable) — set **only** for time-boxed **BIZCOM
-  partners** (Annex B). `NULL` = permanently prohibited.
+  partners** (Annex B). `NULL` = no end date. Stays on the sponsor row because a
+  contract is per-company, not per-category.
 
-The **single rule** for "is this company prohibited *right now*?", used everywhere:
+`category` stays the umbrella ("this company is on an annex"); it reads `'prohibited'`
+for Annex A and Annex B alike. The two annexes mean genuinely different things to a club:
+
+| Annex | Status shown | What the club does |
+| ----- | ------------ | ------------------ |
+| `A` | **Prohibited** | Cannot be approached. Remove from the list before emailing BIZCOM. |
+| `B` | **Restricted** | **Keep on the list.** BIZCOM decides: an existing client is never released, while banks, telcos and statutory boards are re-vetted against the club's stated purpose. |
+
+That last distinction lives in **`annex_categories.note`**, the student-facing guidance
+string, rather than in code — so BIZCOM can reword it without a deploy.
+
+The **single rule** for "is this company still restricted *right now*?", used everywhere:
 
 ```
 category = 'prohibited' AND (contract_ends IS NULL OR contract_ends >= current_date)
 ```
 
-So a BIZCOM partner is prohibited while its contract runs, then **automatically**
-drops out of the active prohibited set the day the contract lapses.
+So a BIZCOM partner is restricted while its contract runs, then **automatically** drops
+out the day the contract lapses and reads as **Clear**.
 
-> The Standing Order's Annex A also lists *prohibited category types* (Alcohol,
-> Tobacco, Foundations, Gaming, …). Those aren't companies and aren't stored in
-> the database at all: they are policy text in the Standing Order, applied by
-> whoever vets the list.
+> **Before migration 0017** the annex lived in a free-text `ban_reason` column, and it
+> disagreed with `contract_ends` on real rows: DBS Bank and OCBC Bank read
+> `"Annex B, Banks & Financial"` while carrying no contract end date, which the schema
+> defined as Annex A. Two fields, one fact, no tiebreak. `ban_reason` was backfilled into
+> `annex_categories` and dropped. Per-company colour belongs in `notes`.
+
+> Pharmaceuticals and defunct companies are **not** annex categories. Pharmaceuticals
+> belong to no annex, and a company that has shut down is carried by
+> `category = 'closed'` and its own **Closed** status. Insurance is Annex A only.
 
 ### 2.3 Outreach cap + cooldown
 BIZCOM limits how often any one company is approached, so the same brands aren't
@@ -217,6 +234,7 @@ near-misses.
 ```mermaid
 erDiagram
     industries  ||--o{ sponsors            : classifies
+    annex_categories |o--o{ sponsors      : "restricts (Annex A/B)"
     sponsors    ||--o{ outreach_log        : "contacted via"
     submissions |o--o{ outreach_log        : "contacted for"
     submissions ||--o{ submission_sponsors : "vetted in waves"
@@ -228,6 +246,13 @@ erDiagram
         text display_name
         int  sort_order
     }
+    annex_categories {
+        uuid id PK
+        text annex "A|B"
+        text name
+        text note "student-facing guidance"
+        int sort_order
+    }
     sponsors {
         uuid id PK
         text name
@@ -235,7 +260,7 @@ erDiagram
         text industry FK
         text category "approved|prohibited|closed|alumni"
         text notes "approved/closed/alumni"
-        text ban_reason "when prohibited"
+        uuid annex_category_id FK "when prohibited"
         date contract_ends "Annex B only"
         timestamptz cooldown_started_at
         timestamptz count_reset_at
@@ -346,14 +371,14 @@ The heart of the system. Holds approved, prohibited, closed, and alumni companie
 | `industry` | text | **FK → industries.code.** |
 | `category` | text | `approved` \| `prohibited` \| `closed` \| `alumni`. |
 | `notes` | text | General notes (used by `approved`, `closed`, and `alumni`). Default `''`. |
-| `ban_reason` | text | **Required when `prohibited`.** Annex reference. |
-| `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = permanently prohibited. |
+| `annex_category_id` | uuid | **FK → annex_categories.id. Required when `prohibited`.** Decides Prohibited (Annex A) vs Restricted (Annex B). |
+| `contract_ends` | date | Set only for Annex B BIZCOM partners; `NULL` = no end date. A lapsed contract reads as **Clear**. |
 | `cooldown_started_at` | timestamptz | Stamped when the outreach cap is hit. |
 | `count_reset_at` | timestamptz | Marks the start of the current outreach cycle. |
 | `created_at` | timestamptz | Row creation timestamp. |
 
-**Constraints:** `prohibited` ⇒ `ban_reason` present; `contract_ends` only allowed
-when `prohibited`. (Alumni companies have no required extra field — an optional
+**Constraints:** `prohibited` ⇒ `annex_category_id` present; `annex_category_id` and
+`contract_ends` only allowed when `prohibited`. (Alumni companies have no required extra field — an optional
 `notes` entry is all.)
 
 ### `outreach_log` — append-only contact history
@@ -500,7 +525,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | ------ | ----- | ------ | ----- |
 | **Login** | `admins` (+ Supabase Auth) | — | Only whitelisted emails get in. |
 | **Home** (submissions calendar) | `submissions`, `submission_sponsors` | `submissions` (create/edit, **not** the derived counts) | Year calendar of club submissions + a "pending" list by due date. Every card shows `recorded / cap` and links straight into Vet & Upload for that submission. The side panel shows the per-wave breakdown. |
-| **Sponsors list** | `sponsors`, `sponsor_outreach` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (prohibited sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (prohibited sponsors with a `contract_ends`, add/remove). |
+| **Sponsors list** | `sponsors`, `sponsor_outreach` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (sponsors whose annex category is "Board of Trustees"), and the **Annex B** panel (sponsors whose annex category sits in Annex B, add/remove). |
 | **Sponsor detail / add-edit** | `sponsors`, `sponsor_outreach` | `sponsors` (create/update/delete) | The single-company form. Sidebar shows outreach count / cap and cooldown. |
 | **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach`, `submissions`, `submission_sponsors` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add), `submission_sponsors` (via `record_submission_wave`) | Always attached to a club submission (`?submission=<id>` or the picker); step 1 is locked until one is chosen. Upload a CSV, vet against the DB, resolve unknowns by bulk-adding them, record the list as a wave against the club's cap (not gated on the list being fully vetted), resolve unknowns by bulk-adding them or confirming a possible match, then log outreach for the whole wave at once. Step 2 also works standalone as the bulk entry screen for the sponsor list, and records no outreach of its own. |
 | **Settings** *(super-admin only)* | `admins`, `settings` | `admins` (invite/remove, `transfer_super_admin`), `settings` (update) | Team management + cap/cooldown/event-cap configuration. |

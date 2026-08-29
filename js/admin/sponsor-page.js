@@ -32,11 +32,11 @@
     const statusBtns = document.querySelectorAll('[data-status]');
     const industryEl = document.getElementById('sp-industry');
     const notesEl = document.getElementById('sp-notes');
-    const banReasonEl = document.getElementById('sp-ban-reason');
+    const annexCatEl = document.getElementById('sp-annex-category');
     const closedNotesEl = document.getElementById('sp-closed-notes');
 
     const grpNotes = document.getElementById('grp-notes');
-    const grpBan = document.getElementById('grp-ban-reason');
+    const grpAnnex = document.getElementById('grp-annex-category');
     const grpClosed = document.getElementById('grp-closed-notes');
 
     const dangerZone = document.getElementById('danger-zone');
@@ -69,7 +69,7 @@
       // Show only the relevant status-specific field. Alumni reuses the general
       // (optional) notes field — there is no dedicated alumni-owner field.
       grpNotes.style.display  = (s === 'approved' || s === 'alumni') ? '' : 'none';
-      grpBan.style.display    = (s === 'prohibited') ? '' : 'none';
+      grpAnnex.style.display  = (s === 'prohibited') ? '' : 'none';
       grpClosed.style.display = (s === 'closed') ? '' : 'none';
     }
 
@@ -81,8 +81,8 @@
 
     // Build the row values from the form. normalised uses the shared matcher key
     // so a saved sponsor is found by the same lookup the checker uses.
-    // Leaving 'prohibited' clears ban_reason + contract_ends to satisfy the DB check
-    // constraint (contract_ends only allowed when prohibited).
+    // Leaving 'prohibited' clears annex_category_id + contract_ends to satisfy the
+    // DB check constraint (both only allowed when prohibited).
     function buildValues() {
       const name = nameEl.value.trim();
       const values = {
@@ -91,11 +91,11 @@
         industry: industryEl.value,
         category: currentStatus,
         notes: '',
-        ban_reason: null
+        annex_category_id: null
       };
       if (currentStatus === 'approved' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
       else if (currentStatus === 'closed') values.notes = closedNotesEl.value.trim();
-      else if (currentStatus === 'prohibited') values.ban_reason = banReasonEl.value.trim();
+      else if (currentStatus === 'prohibited') values.annex_category_id = annexCatEl.value || null;
       if (currentStatus !== 'prohibited') values.contract_ends = null;
       return values;
     }
@@ -106,7 +106,7 @@
       if (a.industry !== b.industry) out.push('Industry: ' + a.industry + ' → ' + b.industry);
       if (a.category !== b.category) out.push('Status: ' + a.category + ' → ' + b.category);
       if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
-      if ((a.ban_reason || '') !== (b.ban_reason || '')) out.push('Prohibited reason updated');
+      if ((a.annex_category_id || '') !== (b.annex_category_id || '')) out.push('Annex category updated');
       return out;
     }
 
@@ -118,8 +118,8 @@
         toastMsg({ type: 'error', title: 'Name required', message: 'Enter a company name.' });
         return;
       }
-      if (currentStatus === 'prohibited' && !banReasonEl.value.trim()) {
-        toastMsg({ type: 'error', title: 'Ban reason required', message: 'Add the Annex reference.' });
+      if (currentStatus === 'prohibited' && !annexCatEl.value) {
+        toastMsg({ type: 'error', title: 'Annex category required', message: 'Pick the Annex A or Annex B category.' });
         return;
       }
 
@@ -192,6 +192,24 @@
         industryEl.appendChild(opt);
       });
 
+      // Annex categories, grouped A then B so the two are visually separate.
+      let annexCats;
+      try {
+        annexCats = await window.AdminAPI.listAnnexCategories();
+      } catch (e) {
+        toastError('Could not load annex categories', e);
+        annexCats = [];
+      }
+      annexCatEl.appendChild(new Option('Select a category...', ''));
+      [['A', 'Annex A, prohibited'], ['B', 'Annex B, restricted']].forEach(function (pair) {
+        const inAnnex = annexCats.filter(function (a) { return a.annex === pair[0]; });
+        if (!inAnnex.length) return;
+        const grp = document.createElement('optgroup');
+        grp.label = pair[1];
+        inAnnex.forEach(function (a) { grp.appendChild(new Option(a.name, a.id)); });
+        annexCatEl.appendChild(grp);
+      });
+
       if (isCreate) {
         heading.textContent = 'Add sponsor';
         saveLabel.textContent = 'Create sponsor';
@@ -223,7 +241,7 @@
       industryEl.value = sponsor.industry;
       setStatus(sponsor.category);
       notesEl.value = sponsor.notes || '';        // approved + alumni notes
-      banReasonEl.value = sponsor.ban_reason || '';
+      annexCatEl.value = sponsor.annex_category_id || '';
       closedNotesEl.value = sponsor.notes || '';  // closed uses notes field
 
       // Side panel

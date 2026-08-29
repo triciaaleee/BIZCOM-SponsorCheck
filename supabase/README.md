@@ -34,7 +34,8 @@ installs from `0001` already have the final shape and can skip it.
 | Table | Purpose |
 | ----- | ------- |
 | `industries` | 15 canonical industry codes |
-| `sponsors` | every company — name, normalised key, industry, category (`approved`/`prohibited`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
+| `annex_categories` | Standing Order Annex A (prohibited) + Annex B (restricted) categories, with the student-facing guidance note for each |
+| `sponsors` | every company — name, normalised key, industry, category (`approved`/`prohibited`/`closed`/`alumni`), notes, annex_category_id, contract_ends, cooldown state |
 | `outreach_log` | append-only contact events; the running count is derived from this |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
 | `admins` | EXCO whitelist + role (`super_admin`/`admin`); at most one super-admin |
@@ -52,23 +53,40 @@ installs from `0001` already have the final shape and can skip it.
 
 ## Key modelling decisions
 
-### 1. Annex A + Annex B companies are just `prohibited` sponsors
-There is **no separate annex-companies table**. Everything prohibited/restricted
-lives in `sponsors` with `category = 'prohibited'`, distinguished by:
+### 1. Annex A + Annex B companies are `prohibited` sponsors pointing at a category
+There is **no separate annex-companies table**. Every annex-listed company lives in
+`sponsors` with `category = 'prohibited'`, and `annex_category_id` says which annex
+category it falls under. `category` is the umbrella ("this company is on an annex");
+the annex letter on the referenced row decides the status the checker shows:
 
-- `ban_reason` — free text (`'Annex A, Gaming & Betting'`, `'Annex A, Board of Trustees'`, `'Annex B, BIZCOM partner'`, …)
-- `contract_ends` — set only for **time-boxed BIZCOM partners** (Annex B). `NULL` = permanently prohibited. A partner whose contract has lapsed drops out of the active prohibited set automatically.
+| Annex | Status shown | What the club does |
+| ----- | ------------ | ------------------ |
+| `A` | **Prohibited** | Remove it from the list before emailing BIZCOM. |
+| `B` | **Restricted** | **Keep it on the list.** BIZCOM approves or rejects it. |
 
-The single "currently prohibited?" rule used by the matcher, lists and panels is:
+`annex_categories.note` carries the student-facing guidance, which is how the two kinds
+of Annex B row differ without needing two statuses: an existing BIZCOM client will not be
+released, while banks, telcos and statutory boards are re-vetted against the club's stated
+purpose. That is data, so BIZCOM can reword it without a deploy.
+
+`contract_ends` is set only for **time-boxed BIZCOM partners** (Annex B) and stays on the
+sponsor row, since a contract is per-company, not per-category. A partner whose contract
+has lapsed reads as **Clear**.
+
+The "still restricted?" rule used by the matcher, lists and panels is:
 
 ```
 category = 'prohibited' AND (contract_ends IS NULL OR contract_ends >= current_date)
 ```
 
-The Board-of-Trustees companies are seeded as prohibited sponsors too (so the checker
-flags them). The Sponsors-page "Board of Trustees" panel lists them by querying
-`ban_reason = 'Annex A, Board of Trustees'`. The prohibited **category types**
-themselves are policy text in the Standing Order, not database rows.
+Board-of-Trustees companies are seeded as prohibited sponsors under the Annex A category
+of the same name, so the checker flags them like any other Annex A row.
+
+**Before 0017** the annex lived in a free-text `ban_reason` column. It disagreed with
+`contract_ends` on real data (DBS Bank and OCBC Bank read "Annex B" while carrying no
+contract end date, which the schema defined as Annex A), so the column was replaced by the
+foreign key and dropped. Per-company colour that used to be squeezed into it belongs in
+`notes`.
 
 ### 2. Submissions are admin-managed
 The public checker (`sponsor-check.html`) only **emails** BIZCOM — it does not
@@ -128,7 +146,8 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 - `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
 - Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).
 - Dropped the unused `dashboard_stats` view (no page reads it; the public dashboard counts client-side, and the admin list uses a paged `count`).
-- Field-integrity `CHECK`s mirror the sponsor form (prohibited⇒ban_reason, contract_ends only when prohibited).
+- Field-integrity `CHECK`s mirror the sponsor form (prohibited⇒annex_category_id; annex_category_id and contract_ends only when prohibited).
+- Replaced free-text `ban_reason` with `annex_categories` + `sponsors.annex_category_id` (0017), splitting Annex A (**Prohibited**, remove from the list) from Annex B (**Restricted**, keep for BIZCOM to decide). Pharmaceuticals and defunct companies are no longer annex categories; insurance is Annex A only.
 
 ## Next step (not done yet)
 Wire the frontend to these tables: add the `supabase-js` client + config, then
