@@ -9,7 +9,7 @@
    supabase/migrations/0001_init.sql. This module grows one section
    at a time as each admin page is wired.
 
-   Depends on window.sb (js/admin/supabase-client.js).
+   Depends on window.sb (js/lib/supabase-client.js), the authenticated client.
    ============================================================ */
 (function () {
   'use strict';

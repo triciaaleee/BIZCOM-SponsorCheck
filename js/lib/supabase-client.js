@@ -1,36 +1,27 @@
 /* ============================================================
    js/lib/supabase-client.js
-   Creates the shared Supabase client (window.sb), used by BOTH the
-   admin console and the public pages.
+   The AUTHENTICATED Supabase client (window.sb) for the ADMIN console
+   only.
 
-   Loaded on every page AFTER the supabase-js UMD bundle (the CDN
-   <script> just above this one). That bundle exposes a global
-   `supabase` with createClient; we build the project client from it.
+   Loaded AFTER supabase-config.js, and ONLY by pages under admin/.
+   The public pages load supabase-public.js instead — see the note in
+   that file for why the two must not be shared.
 
-   SECURITY: the publishable key below is SAFE to ship in frontend
-   code — it only grants the anon / authenticated roles, and Row
-   Level Security in the database is what actually authorises every
-   read and write. NEVER put the secret (sb_secret_...) key here.
+   The auth session is persisted (localStorage) so an admin login
+   survives navigation between admin pages.
    ============================================================ */
 (function () {
   'use strict';
 
-  var SUPABASE_URL = 'https://qapczpyehtyybwyqbfov.supabase.co';
-  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8ILhe4rkSEoIgP5fpbIb2Q_7zoMytpH';
-
-  if (!window.supabase || !window.supabase.createClient) {
-    console.error('[supabase-client] supabase-js did not load. ' +
-      'Check that the CDN <script> tag is present and ordered before this file.');
+  if (typeof window.createSupabaseClient !== 'function') {
+    console.error('[supabase-client] supabase-config.js did not load. ' +
+      'It must be ordered before this file.');
     return;
   }
 
-  // window.sb is the one client every page shares. The auth session is
-  // persisted (localStorage) so an admin login survives navigation.
-  window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      storageKey: 'sponsorcheck_supabase_auth'
-    }
+  window.sb = window.createSupabaseClient({
+    persistSession: true,
+    autoRefreshToken: true,
+    storageKey: 'sponsorcheck_supabase_auth'
   });
 })();

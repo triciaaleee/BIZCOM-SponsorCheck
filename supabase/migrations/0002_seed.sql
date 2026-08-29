@@ -6,8 +6,7 @@
 --
 -- Annex A + Annex B companies are seeded as `category='prohibited'` rows in
 -- `sponsors` (there is no separate annex-companies table). The Board-of-Trustees
--- companies are seeded as prohibited sponsors too, so the matcher flags them. Only
--- the prohibited category *types* live in `annex_a_categories`.
+-- companies are seeded as prohibited sponsors too, so the matcher flags them.
 -- ============================================================
 
 -- ---------- industries -------------------------------------------------------
@@ -38,18 +37,6 @@ on conflict (id) do nothing;
 insert into public.admins (email, name, role) values
   ('biz@sa.smu.edu.sg',          'Tricia',  'super_admin')
 on conflict (email) do nothing;
-
--- ---------- annex_a_categories (prohibited *types*, not companies) ----------
-insert into public.annex_a_categories (label, sort_order) values
-  ('Foundations',              1),
-  ('Alcohol',                  2),
-  ('Tobacco',                  3),
-  ('Gaming & betting',         4),
-  ('Sexual products',          5),
-  ('Insurance',                6),
-  ('Multi-level marketing',    7),
-  ('SMU Commencement sponsors',8)
-on conflict (label) do nothing;
 
 -- ---------- sponsors ---------------------------------------------------------
 -- approved / prohibited examples / closed / alumni

@@ -13,9 +13,6 @@
 --     `category = 'prohibited'` rows — described by `ban_reason`, and (for time-boxed
 --     BIZCOM partners) auto-expiring via `contract_ends`. There is deliberately
 --     NO separate "annex companies" table.
---   * `annex_a_categories` holds only the prohibited *category types* (Alcohol,
---     Tobacco, Foundations, …) shown on the Sponsors page — these are policy
---     rules, not companies, so they can't live in `sponsors`.
 --   * Outreach cap/cooldown is an append-only `outreach_log`; the running count
 --     and live cooldown state are DERIVED in the `sponsor_outreach` view, which
 --     encodes the confirmed rule (count resets to 0 once a cooldown elapses).
@@ -83,14 +80,6 @@ create table if not exists public.outreach_log (
   contacted_at  timestamptz not null default now(),
   contacted_by  text,            -- admin email (set by log_outreach) or null
   note          text
-);
-
--- Prohibited category *types* from Standing Order Annex A (not companies).
--- Rendered as tags on the admin Sponsors page. Editable reference data.
-create table if not exists public.annex_a_categories (
-  id         uuid primary key default gen_random_uuid(),
-  label      text not null unique,
-  sort_order int  not null default 0
 );
 
 -- One row per club's submitted sponsor list (the admin Home calendar cards).
@@ -278,7 +267,6 @@ create or replace view public.sponsor_outreach as
 alter table public.industries          enable row level security;
 alter table public.sponsors            enable row level security;
 alter table public.outreach_log        enable row level security;
-alter table public.annex_a_categories  enable row level security;
 alter table public.submissions         enable row level security;
 alter table public.admins              enable row level security;
 alter table public.settings            enable row level security;
@@ -300,13 +288,6 @@ create policy sponsors_write on public.sponsors for all
 -- ---- outreach_log: admin only (aggregate exposed via sponsor_outreach) ----
 drop policy if exists outreach_admin on public.outreach_log;
 create policy outreach_admin on public.outreach_log for all
-  using (public.is_admin()) with check (public.is_admin());
-
--- ---- annex_a_categories: public read, admin write ----
-drop policy if exists annexa_read  on public.annex_a_categories;
-drop policy if exists annexa_write on public.annex_a_categories;
-create policy annexa_read  on public.annex_a_categories for select using (true);
-create policy annexa_write on public.annex_a_categories for all
   using (public.is_admin()) with check (public.is_admin());
 
 -- ---- submissions: admin only (public checker emails; it does not insert) ----
@@ -334,13 +315,12 @@ create policy settings_update on public.settings for update
 grant usage on schema public to anon, authenticated;
 
 -- public, read-only data
-grant select on public.industries, public.sponsors, public.settings,
-                public.annex_a_categories                     to anon, authenticated;
+grant select on public.industries, public.sponsors, public.settings to anon, authenticated;
 grant select on public.sponsor_outreach                       to anon, authenticated;
 
 -- admins (any signed-in user; RLS narrows to whitelisted emails)
 grant select, insert, update, delete on
-  public.industries, public.sponsors, public.outreach_log, public.annex_a_categories,
+  public.industries, public.sponsors, public.outreach_log,
   public.submissions,
   public.admins, public.settings
   to authenticated;

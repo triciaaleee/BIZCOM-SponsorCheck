@@ -6,14 +6,16 @@
 
    Exposes window.PublicData. Each method returns a Promise and throws
    on error (the page catches and shows a friendly state).
-   Depends on window.sb (js/lib/supabase-client.js).
+   Depends on window.sbPublic (js/lib/supabase-public.js), the
+   anonymous client. Deliberately NOT window.sb: the public pages
+   must never send an admin's JWT.
    ============================================================ */
 (function () {
   'use strict';
 
   function sb() {
-    if (!window.sb) throw new Error('Supabase client not ready.');
-    return window.sb;
+    if (!window.sbPublic) throw new Error('Supabase client not ready.');
+    return window.sbPublic;
   }
   function unwrap(res) {
     if (res && res.error) throw res.error;

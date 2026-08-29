@@ -36,7 +36,6 @@ installs from `0001` already have the final shape and can skip it.
 | `industries` | 15 canonical industry codes |
 | `sponsors` | every company — name, normalised key, industry, category (`approved`/`prohibited`/`closed`/`alumni`), notes, ban_reason, contract_ends, cooldown state |
 | `outreach_log` | append-only contact events; the running count is derived from this |
-| `annex_a_categories` | prohibited *category types* from Standing Order Annex A (Alcohol, Tobacco, …) — reference data, not companies |
 | `submissions` | one row per club's submitted sponsor list (admin-managed Home calendar) |
 | `admins` | EXCO whitelist + role (`super_admin`/`admin`); at most one super-admin |
 | `settings` | single-row caps + cooldown window |
@@ -68,8 +67,8 @@ category = 'prohibited' AND (contract_ends IS NULL OR contract_ends >= current_d
 
 The Board-of-Trustees companies are seeded as prohibited sponsors too (so the checker
 flags them). The Sponsors-page "Board of Trustees" panel lists them by querying
-`ban_reason = 'Annex A, Board of Trustees'`. Only the prohibited **category
-types** (which aren't companies) live in `annex_a_categories`.
+`ban_reason = 'Annex A, Board of Trustees'`. The prohibited **category types**
+themselves are policy text in the Standing Order, not database rows.
 
 ### 2. Submissions are admin-managed
 The public checker (`sponsor-check.html`) only **emails** BIZCOM — it does not
@@ -105,7 +104,7 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 
 | Data | Public (anon) | Signed-in admin |
 | ---- | ------------- | --------------- |
-| industries, sponsors, settings, annex_a_categories | read | read + write¹ |
+| industries, sponsors, settings | read | read + write¹ |
 | `sponsor_outreach` view | read | read |
 | submissions | none | full, except `sponsor_count` / `listed_count` / `wave_count` (derived; no column grant) |
 | submission_sponsors | none | read + delete (write via `record_submission_wave`; the outreach stamp only via `log_outreach`) |
@@ -120,11 +119,11 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 - Dropped `submissions.contact_email` (0014): nothing ever read it. The app sends no mail (the public checker composes a message in the student's own mail client and writes nothing here), so the column only ever displayed an address back to whoever typed it in.
 - Corrected what an event cap counts, and locked outreach per event (0013). The cap now counts sponsors the event may APPROACH (approved + alumni), not every name the club sent, so a 14-name list with 5 prohibited uses 9 of the cap. Every listed company is still stored (`listed_count` carries the raw total). `log_outreach()` takes an optional `submission_id`, stamps `submission_sponsors.outreach_logged_at`, and refuses a second contact for the same company and event.
 - Brought `submission_sponsors` back (0012), this time wired up: one row per company vetted under a submission, written only by `record_submission_wave()`. Gives clubs multi-wave submissions, moves the event cap server-side, and makes `submissions.sponsor_count` derived and non-editable (column-level grants, not just a disabled input).
+- Dropped `annex_a_categories` (0016): nothing ever read it, and it was already absent from the deployed database. The category types are policy text, not data.
 - Dropped `submission_sponsors` (0009): never read or written by the app, so it only ever held seed rows.
 - Widened the `admins.email` domain check (0007): any `smu.edu.sg` address or subdomain, not just `@sa.smu.edu.sg`.
 - Renamed `sponsors.category` `banned` -> `prohibited` (0006), standardising the term across both sites. (0006 also renamed `submission_sponsors.status`; that table was later dropped in 0009.)
 - Dropped `activity_log` (0005): it was write-only, nothing ever read it back.
-- Added `annex_a_categories` (types only).
 - Added `log_outreach()` + `transfer_super_admin()` RPCs and the one-super-admin index.
 - `sponsor_outreach` now resets `contact_count` to 0 when a cooldown elapses (previously it kept counting).
 - Submissions are admin-only (removed the anonymous-insert flow — the app emails instead).

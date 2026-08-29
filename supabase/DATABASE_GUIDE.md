@@ -67,8 +67,9 @@ So a BIZCOM partner is prohibited while its contract runs, then **automatically*
 drops out of the active prohibited set the day the contract lapses.
 
 > The Standing Order's Annex A also lists *prohibited category types* (Alcohol,
-> Tobacco, Foundations, Gaming, …). Those aren't companies, so they live in their
-> own small reference table, **`annex_a_categories`**.
+> Tobacco, Foundations, Gaming, …). Those aren't companies and aren't stored in
+> the database at all: they are policy text in the Standing Order, applied by
+> whoever vets the list.
 
 ### 2.3 Outreach cap + cooldown
 BIZCOM limits how often any one company is approached, so the same brands aren't
@@ -292,11 +293,6 @@ erDiagram
         int  event_cap_medium
         int  event_cap_large
     }
-    annex_a_categories {
-        uuid id PK
-        text label UK
-        int  sort_order
-    }
     auth_users {
         uuid id PK
         text email
@@ -304,8 +300,7 @@ erDiagram
 ```
 
 > `auth_users` is Supabase's built-in **`auth.users`** table (the login
-> accounts). `settings` and `annex_a_categories` have no foreign keys — they
-> stand alone. `submissions` has none either; it is the *parent* of
+> accounts). `settings` has no foreign keys — it stands alone. `submissions` has none either; it is the *parent* of
 > `submission_sponsors`.
 
 ---
@@ -372,18 +367,6 @@ One row per logged outreach. The running count is derived from this.
 | `contacted_by` | text | Admin email (not an FK). |
 | `submission_id` | uuid | **FK -> submissions.id** (set null). Which event the contact was for. Null for outreach logged outside a submission. |
 | `note` | text | Optional. |
-
-### `annex_a_categories` — prohibited *category types*
-Small reference list of Annex A prohibitions that are **types, not companies**
-(Alcohol, Tobacco, Foundations, Gaming & betting, Sexual products, Insurance,
-Multi-level marketing, SMU Commencement sponsors). Rendered as tags on the admin
-Sponsors page.
-
-| Column | Type | Notes |
-| ------ | ---- | ----- |
-| `id` | uuid | **PK.** |
-| `label` | text | **Unique.** e.g. "Tobacco". |
-| `sort_order` | int | Display order. |
 
 ### `submissions` — a club's submitted sponsor list (admin-tracked)
 Each row is one club's request, tracked by admins on a calendar. **Admin-managed
@@ -492,7 +475,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 
 | Data | Public (anon) | Admin | Super-admin only |
 | ---- | ------------- | ----- | ---------------- |
-| `industries`, `sponsors`, `annex_a_categories` | read | read + write | — |
+| `industries`, `sponsors` | read | read + write | — |
 | `settings` | read | read | **write** |
 | `sponsor_outreach` (view) | read | read | — |
 | `submissions` | — | full, except the derived `sponsor_count` / `wave_count` (no column grant) | — |
@@ -517,7 +500,7 @@ Supabase enforces access per-table. `anon` = not logged in (public site);
 | ------ | ----- | ------ | ----- |
 | **Login** | `admins` (+ Supabase Auth) | — | Only whitelisted emails get in. |
 | **Home** (submissions calendar) | `submissions`, `submission_sponsors` | `submissions` (create/edit, **not** the derived counts) | Year calendar of club submissions + a "pending" list by due date. Every card shows `recorded / cap` and links straight into Vet & Upload for that submission. The side panel shows the per-wave breakdown. |
-| **Sponsors list** | `sponsors`, `sponsor_outreach`, `annex_a_categories` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (`annex_a_categories` + prohibited sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (prohibited sponsors with a `contract_ends`, add/remove). |
+| **Sponsors list** | `sponsors`, `sponsor_outreach` | `sponsors` (delete) | Paged, searchable, filterable list. Shows a "cooldowns ending this month" alert (from `sponsor_outreach`), the **Annex A** panel (prohibited sponsors whose `ban_reason` = "Annex A, Board of Trustees"), and the **Annex B** panel (prohibited sponsors with a `contract_ends`, add/remove). |
 | **Sponsor detail / add-edit** | `sponsors`, `sponsor_outreach` | `sponsors` (create/update/delete) | The single-company form. Sidebar shows outreach count / cap and cooldown. |
 | **Vet & upload** | `sponsors`, `settings`, `sponsor_outreach`, `submissions`, `submission_sponsors` | `outreach_log` (via `log_outreach`), `sponsors` (bulk add), `submission_sponsors` (via `record_submission_wave`) | Always attached to a club submission (`?submission=<id>` or the picker); step 1 is locked until one is chosen. Upload a CSV, vet against the DB, resolve unknowns by bulk-adding them, record the list as a wave against the club's cap (not gated on the list being fully vetted), resolve unknowns by bulk-adding them or confirming a possible match, then log outreach for the whole wave at once. Step 2 also works standalone as the bulk entry screen for the sponsor list, and records no outreach of its own. |
 | **Settings** *(super-admin only)* | `admins`, `settings` | `admins` (invite/remove, `transfer_super_admin`), `settings` (update) | Team management + cap/cooldown/event-cap configuration. |

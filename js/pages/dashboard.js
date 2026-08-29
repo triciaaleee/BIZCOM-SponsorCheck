@@ -127,7 +127,7 @@
   function boot() {
     renderIndustries();
 
-    if (!window.sb || !window.PublicData) {
+    if (!window.sbPublic || !window.PublicData) {
       requestAnimationFrame(boot);
       return;
     }
