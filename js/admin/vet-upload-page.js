@@ -483,9 +483,16 @@
       const ofYear = submissionList.filter(function (s) { return submissionYear(s) === browseYear; });
 
       yearLabel.textContent = browseYear;
-      yearCount.textContent = ofYear.length
+      // The caption only earns its place once there is something to count.
+      // On an empty year it is taken out of the layout entirely, not just
+      // blanked: a reserved empty line under the year makes the label column
+      // taller than the arrows it sits between, which reads as the year
+      // floating above them.
+      const hasAny = ofYear.length > 0;
+      yearCount.hidden = !hasAny;
+      yearCount.textContent = hasAny
         ? ofYear.length + (ofYear.length === 1 ? ' submission' : ' submissions')
-        : 'nothing yet';
+        : '';
 
       const activeCount = ofYear.filter(isActive).length;
       document.getElementById('tab-count-active').textContent = activeCount;
@@ -499,9 +506,13 @@
       });
 
       if (!rows.length) {
+        // One sentence, not a heading and a sentence saying the same thing.
+        // No action here either: Add submission lives in the section header,
+        // where it is available whether the year is empty or not.
         browseResults.innerHTML =
-          '<div class="sub-empty"><b>Nothing yet</b>No ' +
-          (browseTab === 'all' ? '' : browseTab + ' ') + 'submissions in ' + browseYear + '.</div>';
+          '<div class="sub-empty">No ' +
+          (browseTab === 'all' ? '' : browseTab + ' ') +
+          'submissions in ' + browseYear + '.</div>';
         return;
       }
 

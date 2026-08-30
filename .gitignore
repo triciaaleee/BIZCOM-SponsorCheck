@@ -1,0 +1,3 @@
+# Claude Code local config (preview server launch config, local settings).
+# Local to whoever is working on the repo, not part of the site.
+.claude/

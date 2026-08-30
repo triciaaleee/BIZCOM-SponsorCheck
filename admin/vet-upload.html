@@ -42,6 +42,13 @@
       <div>
         <h2 class="admin-section__title">Club Submissions</h2>
       </div>
+      <!-- Submissions are created on Home, which owns the form. This carries
+           the admin there with it open, and back into vetting once saved, so
+           an unlogged club is not a dead end on this page. Any admin may add
+           one: the submissions RLS policy is is_admin(), not super-admin. -->
+      <a class="btn btn--primary btn--sm" href="home.html?new=1&amp;then=vet">
+        <i class="bi bi-plus-lg"></i> Add submission
+      </a>
     </div>
 
     <div class="browse-bar">
@@ -51,7 +58,7 @@
         </button>
         <span class="year-nav__label">
           <span class="year-nav__year" id="year-label">2026</span>
-          <span class="year-nav__count" id="year-count">&nbsp;</span>
+          <span class="year-nav__count" id="year-count" hidden></span>
         </span>
         <button type="button" class="year-nav__btn" id="year-next" aria-label="Next year">
           <i class="bi bi-chevron-right"></i>

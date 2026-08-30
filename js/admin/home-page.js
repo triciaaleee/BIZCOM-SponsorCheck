@@ -85,6 +85,7 @@
     const panelCapWaves = document.getElementById('panel-cap-waves');
     const panelCapBar = document.getElementById('panel-cap-bar');
     const panelWaveList = document.getElementById('panel-wave-list');
+    const panelCapSection = document.getElementById('panel-cap-section');
     const panelSubmittedEl = document.getElementById('panel-submitted');
     const panelSubmittedLine = document.getElementById('panel-submitted-line');
     const panelStatusBtns = document.querySelectorAll('[data-panel-status]');
@@ -453,6 +454,7 @@
       panelSubmittedEl.textContent = formatDate(sub.submitted_at);
       panelSubmittedLine.style.display = '';
 
+      if (panelCapSection) panelCapSection.hidden = false;
       renderCap(sub, sub.event_size);
       loadWaves(sub.id);
 
@@ -478,7 +480,10 @@
 
       panelSubmittedLine.style.display = 'none';
 
-      renderCap(null, 'small');
+      // Nothing has been recorded against a row that does not exist yet, so
+      // the meter could only read 0 / cap and the wave list could only be
+      // empty. Hide the section rather than show an empty one.
+      if (panelCapSection) panelCapSection.hidden = true;
       renderWaves([]);
 
       saveLabel.textContent = 'Create';
@@ -538,6 +543,11 @@
       backdrop.classList.add('is-open');
       panel.classList.add('is-open');
       panel.setAttribute('aria-hidden', 'false');
+      // `inert` is what actually keeps the closed panel out of the tab order.
+      // The CSS hides it with `visibility` on a delayed transition so the
+      // slide-out still plays, but that means focusability would depend on a
+      // transition having finished. This does not.
+      panel.removeAttribute('inert');
       lockPageScroll();
       panel.addEventListener('keydown', trapTab);
 
@@ -555,6 +565,10 @@
       backdrop.classList.remove('is-open');
       panel.classList.remove('is-open');
       panel.setAttribute('aria-hidden', 'true');
+      // Set before focus is restored: this blurs whatever inside the panel
+      // still holds it, and the restore below then puts focus where it came
+      // from rather than leaving it on the body.
+      panel.setAttribute('inert', '');
       panel.removeEventListener('keydown', trapTab);
       unlockPageScroll();
 
@@ -586,16 +600,38 @@
 
     // `submittedIso` is the stamp the row is filed under: the existing
     // submitted_at when editing, the month being added to when creating.
+    // Returns { message, field } for the first problem, or null. The field
+    // comes back with the message so the caller can put the cursor on it: the
+    // toast fires in the corner of the screen, a long way from the input it is
+    // talking about, and naming a field is not the same as finding it.
     function validateForm(form, submittedIso) {
-      if (!form.event_name) return 'Event name is required.';
-      if (!form.club) return 'Club is required.';
-      if (!form.complete_by) return 'Complete by date is required.';
+      if (!form.event_name) {
+        return { message: 'Event name is required.', field: panelEventInput };
+      }
+      if (!form.club) {
+        return { message: 'Club is required.', field: panelClubInput };
+      }
+      if (!form.complete_by) {
+        return { message: 'Complete by date is required.', field: panelCompleteByInput };
+      }
       const floor = localDateOf(submittedIso);
       if (floor && form.complete_by < floor) {
-        return 'Complete by cannot be earlier than ' + formatDate(submittedIso) +
-               ', the date this submission is filed under.';
+        return {
+          message: 'Complete by cannot be earlier than ' + formatDate(submittedIso) +
+                   ', the date this submission is filed under.',
+          field: panelCompleteByInput
+        };
       }
       return null;
+    }
+
+    // Say what is wrong, then go to it. Selecting the existing text means the
+    // admin can retype straight over a wrong value rather than clearing it.
+    function reportInvalid(err) {
+      toastMsg({ type: 'error', title: 'Check the form', message: err.message });
+      if (!err.field) return;
+      err.field.focus();
+      if (err.field.select && err.field.type !== 'date') err.field.select();
     }
 
     async function saveEdit() {
@@ -604,7 +640,7 @@
       const form = readPanelForm();
       const err = validateForm(form, sub.submitted_at);
       if (err) {
-        toastMsg({ type: 'error', title: 'Check the form', message: err });
+        reportInvalid(err);
         return;
       }
 
@@ -648,7 +684,7 @@
       const form = readPanelForm();
       const err = validateForm(form, pendingSubmittedAt);
       if (err) {
-        toastMsg({ type: 'error', title: 'Check the form', message: err });
+        reportInvalid(err);
         return;
       }
 
@@ -680,6 +716,11 @@
       renderBanner();
       renderCalendar();
       closePanel();
+
+      // Sent here from Vet & Upload to log a submission that was not on the
+      // board yet. Carry on into vetting the new row rather than stranding
+      // the admin on Home, which is not where they were going.
+      if (returnToVetting && created && created.id) goToVetting(created.id);
     }
 
     async function deleteSubmission() {
@@ -762,6 +803,23 @@
       });
     }
 
+    // ---------- deep link: home.html?new=1[&then=vet] ----------
+    // Vet & Upload has no submission form of its own, so its "Add submission"
+    // button sends the admin here with the create panel already open, and
+    // `then=vet` sends them back into vetting the row they just made.
+    function readCreateIntent() {
+      let params;
+      try {
+        params = new URLSearchParams(window.location.search);
+      } catch (e) {
+        return { open: false, thenVet: false };
+      }
+      return { open: params.get('new') === '1', thenVet: params.get('then') === 'vet' };
+    }
+
+    const createIntent = readCreateIntent();
+    const returnToVetting = createIntent.thenVet;
+
     // ---------- boot ----------
     welcomeName.textContent = session.name || session.email.split('@')[0];
     (async function boot() {
@@ -777,6 +835,16 @@
       labelSizeOptions();
       renderBanner();
       renderCalendar();
+
+      if (createIntent.open) {
+        // Drop the query string first: a refresh, or a Back after saving,
+        // should land on plain Home rather than reopening an empty form.
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (e) { /* file:// and the like; the panel still opens */ }
+        const now = new Date();
+        openCreatePanel(now.getFullYear(), now.getMonth());
+      }
     })();
   }
 

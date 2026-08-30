@@ -70,7 +70,7 @@
 
 <!-- Side panel + backdrop: create / edit a submission -->
 <div class="side-panel-backdrop" id="panel-backdrop"></div>
-<aside class="side-panel" id="side-panel" aria-hidden="true" aria-labelledby="panel-title">
+<aside class="side-panel" id="side-panel" aria-hidden="true" inert aria-labelledby="panel-title">
   <header class="side-panel__header">
     <div>
       <h2 class="side-panel__title" id="panel-title">Submission</h2>
@@ -119,7 +119,9 @@
     </div>
 
     <!-- Derived from the lists recorded on Vet & Upload — never typed in here. -->
-    <div class="side-panel__section">
+    <!-- Hidden while creating: a submission that does not exist yet has no
+         waves and no contacts, so the meter would only ever read 0. -->
+    <div class="side-panel__section" id="panel-cap-section">
       <div class="side-panel__section-title">Sponsor Cap</div>
       <div class="sub-cap" id="panel-cap">
         <div class="sub-cap__head">

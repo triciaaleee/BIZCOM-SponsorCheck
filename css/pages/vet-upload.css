@@ -310,6 +310,10 @@
 .year-nav__label {
   display: flex;
   flex-direction: column;
+  /* Centred so the year sits between the two arrows rather than
+     hugging the left of a fixed-width column. */
+  align-items: center;
+  text-align: center;
   min-width: 104px;
 }
 
@@ -547,13 +551,6 @@
   background-color: var(--surface-card);
   border: 1px dashed var(--border-default);
   border-radius: var(--radius-lg);
-}
-
-.sub-empty b {
-  display: block;
-  color: var(--text-secondary);
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: 4px;
 }
 
 /* ============================================================
