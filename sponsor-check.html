@@ -18,7 +18,6 @@
 
   <link rel="stylesheet" href="./css/components/buttons.css">
   <link rel="stylesheet" href="./css/components/forms.css">
-  <link rel="stylesheet" href="./css/components/cards.css">
   <link rel="stylesheet" href="./css/components/pills.css">
   <link rel="stylesheet" href="./css/components/tables.css">
   <link rel="stylesheet" href="./css/components/modals.css">
@@ -99,19 +98,19 @@
                     <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
                     <div class="size-tile__name">Small</div>
                     <div class="size-tile__attendees">Under 50 attendees</div>
-                    <div class="size-tile__cap">Cap: 300 sponsors</div>
+                    <div class="size-tile__cap">Cap: <span data-cap-value>&hellip;</span></div>
                   </button>
                   <button type="button" class="size-tile" data-event-size="medium" role="radio" aria-checked="false">
                     <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
                     <div class="size-tile__name">Medium</div>
                     <div class="size-tile__attendees">50 to 150 attendees</div>
-                    <div class="size-tile__cap">Cap: 600 sponsors</div>
+                    <div class="size-tile__cap">Cap: <span data-cap-value>&hellip;</span></div>
                   </button>
                   <button type="button" class="size-tile" data-event-size="large" role="radio" aria-checked="false">
                     <div class="size-tile__check"><i class="bi bi-check-lg"></i></div>
                     <div class="size-tile__name">Large</div>
                     <div class="size-tile__attendees">Over 150 attendees</div>
-                    <div class="size-tile__cap">Cap: 1,000 sponsors</div>
+                    <div class="size-tile__cap">Cap: <span data-cap-value>&hellip;</span></div>
                   </button>
                 </div>
               </div>
@@ -203,7 +202,7 @@
                 <div>
                   <h2 class="preview-card__title">Ready to check</h2>
                   <div class="preview-card__sub">
-                    <strong id="preview-total">0</strong> distinct companies
+                    <strong id="preview-total">0</strong> distinct companies<span id="preview-dupes"></span>
                   </div>
                 </div>
                 <div class="preview-card__actions">
@@ -328,7 +327,7 @@
               <table class="table">
                 <thead>
                   <tr>
-                    <th style="width: 48px">#</th>
+                    <th style="width: 56px" title="Row number in the file you uploaded">Row</th>
                     <th>Company</th>
                     <th>Status</th>
                     <th>Industry</th>
@@ -461,7 +460,7 @@
     <div class="container">
       <div class="footer__bottom">
         <span>© 2026 SMU BIZCOM</span>
-        <span><a href="./standing-order.html">Standing order</a> &middot; <a href="mailto:biz.secretary@sa.smu.edu.sg">Contact</a></span>
+        <span><a href="./standing-order.html">Standing order</a> &middot; <a href="mailto:biz.secretary@smu.edu.sg">Contact</a></span>
       </div>
     </div>
   </footer>

@@ -22,8 +22,12 @@
 .text-xs { font-size: var(--font-size-xs) !important; }
 .text-sm { font-size: var(--font-size-sm) !important; }
 
-/* ---------- Reveal on scroll (paired with JS) ---------- */
-.reveal {
+/* ---------- Reveal on scroll (paired with JS) ----------
+   Gated behind .js-reveal on <html>, which the inline head script sets and
+   removes again if reveal.js never takes over. Hiding unconditionally meant a
+   blocked CDN, a script error, or a bot that does not run IntersectionObserver
+   left the middle of the landing page permanently blank, with no fallback. */
+.js-reveal .reveal {
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -31,13 +35,13 @@
     transform var(--duration-slow) var(--ease-out);
 }
 
-.reveal.is-visible {
+.js-reveal .reveal.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  .js-reveal .reveal {
     opacity: 1;
     transform: none;
     transition: none;

@@ -17,13 +17,29 @@
   <link rel="stylesheet" href="./css/layout.css">
 
   <link rel="stylesheet" href="./css/components/buttons.css">
-  <link rel="stylesheet" href="./css/components/cards.css">
   <link rel="stylesheet" href="./css/components/pills.css">
-  <link rel="stylesheet" href="./css/components/states.css">
 
   <link rel="stylesheet" href="./css/pages/landing.css">
 
   <link rel="stylesheet" href="./css/utilities.css">
+
+  <!-- Arms the scroll-reveal animation. Not deferred on purpose: it has to run
+       during parsing, before the first paint, or the .reveal sections would
+       flash in and then be hidden again.
+
+       The class is what allows utilities.css to hide them at all, so with
+       scripting off nothing is ever hidden. The timer covers the other failure:
+       reveal.js loading but never finishing (blocked CDN, script error, an
+       IntersectionObserver that never fires), which used to leave the whole
+       middle of this page blank with no way back. -->
+  <script>
+    document.documentElement.classList.add('js-reveal');
+    setTimeout(function () {
+      if (!window.__revealReady) {
+        document.documentElement.classList.remove('js-reveal');
+      }
+    }, 3000);
+  </script>
 </head>
 <body>
 
@@ -265,7 +281,7 @@
           <div>
             <div class="footer__heading">For BIZCOM</div>
             <ul class="footer__list">
-              <li><a href="mailto:biz.secretary@sa.smu.edu.sg">Contact Secretarial</a></li>
+              <li><a href="mailto:biz.secretary@smu.edu.sg">Contact Secretarial</a></li>
               <li><a href="https://www.smusa.sg/smusa-gazette" rel="noopener" target="_blank">SMUSA Gazette</a></li>
             </ul>
           </div>

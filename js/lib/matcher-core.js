@@ -19,6 +19,16 @@
    STATUS values: clear | cooldown | alumni | prohibited | restricted |
                   closed | unverified | duplicate.
 
+   MATCHING runs in three passes, most confident first:
+     exact     the normalise() key is identical
+     contains  one name's whole word set sits inside the other's, on a
+               compare key with locale words stripped. Catches "DBS" for
+               "DBS Bank" and "Durex Singapore" for "Durex", which are the
+               two ways clubs habitually differ from the register.
+     fuzzy     trigram similarity >= 0.55 on the compare key
+   Anything below that stays unverified, with the near-miss named in the
+   reason. matchType on the result says which pass hit.
+
    Annex A companies report "prohibited" (remove them from the list); Annex B
    report "restricted" (KEEP them on the list, BIZCOM decides). The annex comes
    from sponsors.annex_category_id, resolved onto each sponsor by attachAnnex().
@@ -48,6 +58,89 @@
     });
     n = n.replace(/\s+/g, ' ').trim();
     return n;
+  }
+
+  // ---- compareKey: the key used for SIMILARITY SCORING only ----
+  // normalise() is the stored lookup key and must stay stable, so the locale
+  // words come off here instead. Without this, "Singapore" dominates the
+  // trigram score and "AIA Singapore" reports a 45% likeness to "Nano
+  // Singapore", which is a worse than useless hint.
+  // Containment deliberately does NOT use this key; see containmentMatch().
+  var LOCALE_TOKENS = ['singapore', 'sg', 'spore'];
+
+  // Words too generic to carry a containment match on their own. Without this
+  // a one-word sponsor called e.g. "Bank" would swallow every name containing
+  // it. No current sponsor reduces to only these, so the guard rarely fires.
+  var GENERIC_TOKENS = [
+    'the', 'and', 'group', 'holdings', 'company', 'asia', 'pacific', 'global',
+    'international', 'national', 'services', 'solutions', 'systems', 'centre',
+    'center', 'studio', 'cafe', 'bank', 'shop', 'store', 'food', 'tech',
+    'media', 'digital', 'club', 'house', 'world', 'city', 'new'
+  ];
+
+  function compareKey(name) {
+    var toks = normalise(name).split(' ').filter(Boolean);
+    var kept = toks.filter(function (t) { return LOCALE_TOKENS.indexOf(t) === -1; });
+    // Never strip a name down to nothing: "Singapore" alone stays "singapore".
+    return (kept.length ? kept : toks).join(' ');
+  }
+
+  // Cached per sponsor object. Callers rebuild the sponsor array on every load,
+  // so the cache cannot outlive a rename.
+  function sponsorKey(s) {
+    if (s._compareKey === undefined) s._compareKey = compareKey(s.name);
+    return s._compareKey;
+  }
+
+  function isSubset(a, b) {
+    return a.length > 0 && a.every(function (t) { return b.indexOf(t) !== -1; });
+  }
+
+  // The smaller side is what actually carries the match, so it has to be
+  // distinctive: at least three characters, and not made up entirely of
+  // generic words. Locale words count as generic here too, or the single
+  // word "Singapore" would match "Nano Singapore" and read as Restricted.
+  var WEAK_TOKENS = GENERIC_TOKENS.concat(LOCALE_TOKENS);
+
+  function carriesMatch(toks) {
+    if (toks.join('').length < 3) return false;
+    return toks.some(function (t) { return WEAK_TOKENS.indexOf(t) === -1; });
+  }
+
+  // Match when one name's whole word set sits inside the other's. This covers
+  // the two ways clubs habitually differ from the register: writing less than
+  // the full name ("DBS" for "DBS Bank", "AIA" for "AIA Insurance") and writing
+  // more ("Durex Singapore", "LAC Nutrition"). Both directions matter because
+  // either side can be the longer one.
+  //
+  // This runs on the FULL normalise() key, never the locale-stripped one. The
+  // stripped key is fine for scoring similarity but dangerous here: it reduces
+  // "Singapore Pools" to "pools" and "Nano Singapore" to "nano", and a
+  // one-generic-word set swallows any name containing that word. On the full
+  // key, "Pools and Spas SG" no longer matches "Singapore Pools" because
+  // {singapore, pools} is not inside it, which is the right answer.
+  //
+  // Ties break toward the sponsor needing the fewest extra words, then the
+  // highest trigram score, so "DBS" prefers "DBS Bank" over a looser candidate.
+  function containmentMatch(inputKey, normalisedInput, sponsors) {
+    var inTok = normalisedInput.split(' ').filter(Boolean);
+    if (!inTok.length) return null;
+    var best = null, bestExtra = Infinity, bestScore = -1;
+    sponsors.forEach(function (s) {
+      var sTok = String(s.normalised || '').split(' ').filter(Boolean);
+      if (!sTok.length) return;
+      var smaller, larger;
+      if (isSubset(sTok, inTok)) { smaller = sTok; larger = inTok; }
+      else if (isSubset(inTok, sTok)) { smaller = inTok; larger = sTok; }
+      else return;
+      if (!carriesMatch(smaller)) return;
+      var extra = larger.length - smaller.length;
+      var score = similarity(inputKey, sponsorKey(s));
+      if (extra < bestExtra || (extra === bestExtra && score > bestScore)) {
+        best = s; bestExtra = extra; bestScore = score;
+      }
+    });
+    return best;
   }
 
   // ---- tier-2 industry keyword classifier ----
@@ -136,19 +229,28 @@
 
   function checkOne(inputName, providedIndustry, ctx) {
     var normalisedInput = normalise(inputName);
+    var inputKey = compareKey(inputName);
     var sponsors = ctx.sponsors;
 
     // 1. Exact match on the shared normalise key.
     var matched = sponsors.find(function (s) { return s.normalised === normalisedInput; });
+    var matchType = matched ? 'exact' : null;
 
-    // 2. Fuzzy fallback; keep the best candidate + score for a "possible match".
+    // 2. Containment on the compare key, for the short-form and
+    // extra-words cases the exact key cannot see.
+    if (!matched) {
+      var contained = containmentMatch(inputKey, normalisedInput, sponsors);
+      if (contained) { matched = contained; matchType = 'contains'; }
+    }
+
+    // 3. Fuzzy fallback; keep the best candidate + score for a "possible match".
     var fuzzy = null, best = { score: 0, sponsor: null };
-    if (!matched && normalisedInput.length >= 3) {
+    if (!matched && inputKey.length >= 3) {
       sponsors.forEach(function (s) {
-        var score = similarity(normalisedInput, s.normalised);
+        var score = similarity(inputKey, sponsorKey(s));
         if (score > best.score) best = { score: score, sponsor: s };
       });
-      if (best.score >= 0.55) fuzzy = best.sponsor;
+      if (best.score >= 0.55) { fuzzy = best.sponsor; matchType = 'fuzzy'; }
     }
 
     // 3. Industry.
@@ -164,7 +266,6 @@
 
     // 4. Status.
     var effectiveMatch = matched || fuzzy;
-    var matchType = matched ? 'exact' : (fuzzy ? 'fuzzy' : null);
     var capSt = effectiveMatch ? ctx.capState(effectiveMatch.id) : null;
     var outreachCount = capSt ? capSt.count : 0;
 
@@ -252,7 +353,8 @@
       matchedCategory: effectiveMatch ? effectiveMatch.category : null,
       matchedAnnex: effectiveMatch ? (effectiveMatch.annex || null) : null,
       matchType: matchType,
-      matchScore: matched ? 100 : (fuzzy ? Math.round(best.score * 100) : null),
+      matchScore: matchType === 'exact' ? 100
+        : (effectiveMatch ? Math.round(similarity(inputKey, sponsorKey(effectiveMatch)) * 100) : null),
       suggestion: suggestion,
       industry: industry,
       classificationSource: classificationSource,
@@ -269,9 +371,13 @@
       var norm = normalise(row.name), oneIdx = i + 1;
       if (seenAt.has(norm)) {
         var firstIdx = seenAt.get(norm);
+        // Name the company as it was written on the row being pointed at, not
+        // as it was written here: "Duplicate of row 1 (KOI)" reads correctly
+        // when this row says "KOI Pte Ltd".
+        var firstName = (rows[firstIdx - 1] || row).name;
         results.push({
           input: row.name, status: 'duplicate', matched: null, industry: null,
-          classificationSource: null, reason: 'Duplicate of row ' + firstIdx + ' (' + row.name + ')'
+          classificationSource: null, reason: 'Duplicate of row ' + firstIdx + ' (' + firstName + ')'
         });
         if (!dupesOfCanonical.has(firstIdx)) dupesOfCanonical.set(firstIdx, []);
         dupesOfCanonical.get(firstIdx).push(oneIdx);

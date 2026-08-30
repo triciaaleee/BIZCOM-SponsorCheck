@@ -57,12 +57,21 @@
   }
 
   // ---------- Active link highlighting ----------
-  const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+  // Compare filenames, not paths. The links are written relative
+  // ("./dashboard.html") while location.pathname is absolute
+  // ("/dashboard.html"), so a direct string compare never matched and no link
+  // ever highlighted. The .html suffix is dropped on both sides so this also
+  // works where the host serves clean URLs ("/dashboard").
+  function pageId(path) {
+    const file = (path.split('?')[0].split('#')[0].split('/').pop() || 'index.html');
+    return file.toLowerCase().replace(/\.html$/, '') || 'index';
+  }
+
+  const current = pageId(window.location.pathname);
   navbar.querySelectorAll('.navbar__link').forEach(function (link) {
     const href = link.getAttribute('href');
-    if (!href) return;
-    const normalised = href.replace(/\/$/, '') || '/';
-    if (normalised === currentPath) {
+    if (!href || /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href)) return;
+    if (pageId(href) === current) {
       link.classList.add('is-active');
     }
   });

@@ -16,14 +16,7 @@
   <link rel="stylesheet" href="./css/base.css">
   <link rel="stylesheet" href="./css/layout.css">
 
-  <link rel="stylesheet" href="./css/components/buttons.css">
-  <link rel="stylesheet" href="./css/components/cards.css">
-  <link rel="stylesheet" href="./css/components/pills.css">
-  <link rel="stylesheet" href="./css/components/skeletons.css">
-  <link rel="stylesheet" href="./css/components/states.css">
-
   <link rel="stylesheet" href="./css/pages/dashboard.css">
-  <link rel="stylesheet" href="./css/utilities.css">
 </head>
 <body>
 
@@ -89,41 +82,20 @@
         </div>
 
         <div class="annex-panel">
-          <!-- Annex A — Prohibited. Static: mirrors the public Sponsorship
-               Standing Order, so naming the Board of Trustees companies is fine. -->
+          <!-- Annex A — Prohibited. Both halves render from Supabase, so the
+               page cannot drift from what the checker actually enforces. -->
           <div class="annex-card annex-card--prohibited">
             <div class="annex-card__head">
               <span class="annex-card__title"><i class="bi bi-x-circle-fill"></i> Annex A — Prohibited</span>
             </div>
             <div class="annex-card__body">
               <div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>
-              <ul class="annex-list">
-                <li>Banyan Tree Group</li>
-                <li>Global Business Integrators</li>
-                <li>Reed Exhibitions</li>
-                <li>Hup Soon Global Corporation</li>
-                <li>Singapore Telecommunications (Singtel)</li>
-                <li>Chinatrust Commercial Bank</li>
-                <li>Kuok (S)</li>
-                <li>Raffles Medical Corp</li>
-                <li>Phoenix Advisers</li>
-                <li>Infosys Technologies</li>
-                <li>WongPartnership LLP</li>
-                <li>SMRT</li>
-                <li>Bangkok Bank</li>
-                <li>Symphony Asia Holdings</li>
-                <li>Dane Court</li>
-              </ul>
+              <div id="public-annex-a-trustees">
+                <!-- Rendered by dashboard.js -->
+              </div>
               <div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>
-              <div class="annex-tags">
-                <span class="annex-tag">Foundations</span>
-                <span class="annex-tag">Alcohol</span>
-                <span class="annex-tag">Tobacco</span>
-                <span class="annex-tag">Gaming &amp; Betting</span>
-                <span class="annex-tag">Sexual Products</span>
-                <span class="annex-tag">Insurance</span>
-                <span class="annex-tag">Multi-Level Marketing</span>
-                <span class="annex-tag">SMU Commencement Sponsors</span>
+              <div class="annex-tags" id="public-annex-a-tags">
+                <!-- Rendered by dashboard.js -->
               </div>
             </div>
           </div>
@@ -141,10 +113,8 @@
               </div>
               <div class="annex-restricted-types">
                 <div class="annex-group__label">Other restricted types <span class="annex-group__kind">types</span></div>
-                <div class="annex-tags">
-                  <span class="annex-tag">Government Entities</span>
-                  <span class="annex-tag">Banks &amp; Financial Institutions</span>
-                  <span class="annex-tag">SMU Alumni</span>
+                <div class="annex-tags" id="public-annex-b-tags">
+                  <!-- Rendered by dashboard.js -->
                 </div>
                 <div class="annex-callout" role="note">
                   <i class="bi bi-exclamation-triangle-fill annex-callout__icon"></i>
@@ -177,7 +147,7 @@
             </div>
             <div class="annex-card__body">
               <p class="annex-note">
-                Businesses founded or run by SMU alumni needs to be cleared by Office of Alumni Relations (OAR) before you approach them. If you are unsure that a company alumni-affiliated, confirm sign-off with BIZCOM first.
+                Businesses founded or run by SMU alumni need to be cleared by the Office of Alumni Relations (OAR) before you approach them. If you are unsure whether a company is alumni-affiliated, confirm sign-off with BIZCOM first.
               </p>
             </div>
           </div>
@@ -204,7 +174,7 @@
         <div>
           <div class="footer__heading">For BIZCOM</div>
           <ul class="footer__list">
-            <li><a href="mailto:biz.secretary@sa.smu.edu.sg">Contact Secretarial</a></li>
+            <li><a href="mailto:biz.secretary@smu.edu.sg">Contact Secretarial</a></li>
             <li><a href="https://www.smusa.sg/smusa-gazette" target="_blank" rel="noopener">SMUSA Gazette</a></li>
           </ul>
         </div>

@@ -88,6 +88,11 @@
   flex-wrap: wrap;
 }
 
+/* An author `display` always beats the UA sheet's [hidden] rule, so the
+   single-page case needs this or the pager renders as an empty grey bar. */
+.table-footer[hidden],
+.admin-table-footer[hidden] { display: none; }
+
 .table-footer__nav,
 .admin-table-footer__nav {
   display: flex;

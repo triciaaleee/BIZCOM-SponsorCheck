@@ -69,7 +69,7 @@
       ['   File > Save As > CSV UTF-8 (Comma delimited) (.csv)'],
       ['7. Upload the saved .csv to the SponsorCheck website.'],
       [''],
-      ['Need help? Email biz.secretary@sa.smu.edu.sg']
+      ['Need help? Email biz.secretary@smu.edu.sg']
     ];
     const instWs = XLSX.utils.aoa_to_sheet(instructions);
     instWs['!cols'] = [{ wch: 80 }];
@@ -81,7 +81,8 @@
   function downloadXlsxTemplate() {
     const wb = buildWorkbook();
     if (!wb) {
-      alert('Excel template generator failed to load. Please use the CSV template instead.');
+      alert('The Excel template could not be generated. Build the file yourself with two ' +
+            'columns, company_name and industry_code, and save it as CSV.');
       return;
     }
     XLSX.writeFile(wb, 'sponsor-check-template.xlsx');

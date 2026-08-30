@@ -52,6 +52,7 @@
 
   // Live data (loaded from Supabase at boot).
   let sponsors = [];
+  let annexCategories = [];
 
   function todayISO() {
     const d = new Date();
@@ -84,11 +85,20 @@
   // labels them "prohibited" and never shows contract dates — just the company
   // names, so an external reader can't infer anything negative from the page.
 
-  // Annex B partners = prohibited sponsors that carry a contract_ends date. Only
-  // ACTIVE contracts are shown; a lapsed partner is no longer restricted.
+  // Annex B partners come from the partner category, not from "has a
+  // contract_ends date". The date was only ever a proxy for the category, and
+  // it quietly dropped any partner recorded without an end date.
+  //
+  // A missing contract_ends means an open-ended partnership, so it counts as
+  // live. That matches isLiveContract() in matcher-core.js, which decides the
+  // same question for the checker; the two must not disagree about who is
+  // restricted. Lapsed partners drop off: they are no longer restricted.
   function annexBPartners() {
+    const cat = annexCatsFor('B').filter(isPartnerCategory)[0];
+    if (!cat) return [];
     return sponsors.filter(function (s) {
-      return s.category === 'prohibited' && s.contract_ends && String(s.contract_ends) >= todayStr;
+      if (s.annex_category_id !== cat.id) return false;
+      return !s.contract_ends || String(s.contract_ends) >= todayStr;
     });
   }
 
@@ -104,12 +114,62 @@
     }).join('') + '</ul>';
   }
 
-  // Only the Annex B partner list is data-driven. The Closed and Alumni cards
-  // are intentionally static notes on the public page — they describe the
+  // -- Annex A --
+  // Both annex cards have the same two halves, now read from Supabase instead
+  // of being typed into the markup: one named category listed company by
+  // company, and the type-level restrictions as tags underneath.
+  //
+  // Which category gets named is editorial, not structural. Annex A names the
+  // Board of Trustees because the standing order does; the other Annex A
+  // entries ban a whole type, so their members are not listed. Annex B names
+  // BIZCOM's own partners for the same reason. Nothing in the data marks that
+  // distinction, so these two are matched by name. If either is renamed in the
+  // admin, its list renders empty and the category joins the tag row instead,
+  // which is wrong but not misleading.
+  const TRUSTEES_CATEGORY = 'board of trustees';
+  const PARTNER_CATEGORY  = 'bizcom partner';
+
+  function annexCatsFor(letter) {
+    return annexCategories
+      .filter(function (c) { return c.annex === letter; })
+      .sort(function (a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+  }
+
+  function nameIs(target) {
+    return function (c) { return String(c.name || '').trim().toLowerCase() === target; };
+  }
+  const isTrusteesCategory = nameIs(TRUSTEES_CATEGORY);
+  const isPartnerCategory  = nameIs(PARTNER_CATEGORY);
+
+  function trusteeCompanies() {
+    const cat = annexCatsFor('A').filter(isTrusteesCategory)[0];
+    if (!cat) return [];
+    return sponsors.filter(function (s) { return s.annex_category_id === cat.id; });
+  }
+
+  // Renders the tag row for one annex, leaving out the category whose members
+  // are already named in the list above it.
+  function renderAnnexTags(containerId, letter, isNamed) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const cats = annexCatsFor(letter).filter(function (c) { return !isNamed(c); });
+    el.innerHTML = cats.length
+      ? cats.map(function (c) {
+          return '<span class="annex-tag">' + escapeHtml(c.name) + '</span>';
+        }).join('')
+      : '<div class="annex-empty">Categories unavailable, please try again later.</div>';
+  }
+
+  // The Closed and Alumni cards stay as static notes: they describe the
   // restriction without naming any specific company.
   function renderReferenceCards() {
+    renderNameList('public-annex-a-trustees', trusteeCompanies(),
+      'No companies currently listed.');
+    renderAnnexTags('public-annex-a-tags', 'A', isTrusteesCategory);
+
     renderNameList('public-annex-b-list', annexBPartners(),
       'No partner companies currently under contract.');
+    renderAnnexTags('public-annex-b-tags', 'B', isPartnerCategory);
   }
 
   function escapeHtml(str) {
@@ -131,9 +191,15 @@
       requestAnimationFrame(boot);
       return;
     }
-    Promise.resolve(window.PublicData.allSponsors())
-      .then(function (rows) { sponsors = rows || []; })
-      .catch(function (e) { console.error('[dashboard] could not load sponsors', e); sponsors = []; })
+    Promise.all([
+      window.PublicData.allSponsors(),
+      window.PublicData.listAnnexCategories()
+    ])
+      .then(function (out) { sponsors = out[0] || []; annexCategories = out[1] || []; })
+      .catch(function (e) {
+        console.error('[dashboard] could not load the annex data', e);
+        sponsors = []; annexCategories = [];
+      })
       .then(function () {
         renderReferenceCards();
       });

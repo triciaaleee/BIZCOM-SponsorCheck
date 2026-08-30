@@ -128,14 +128,17 @@
   }
   function matchCtx() { return { sponsors: sponsors, capState: capState, today: todayStr }; }
 
-  // Per-size sponsor caps, read from the live settings row loaded at boot.
-  // Falls back to the PRD defaults if settings are missing.
+  // Per-size sponsor caps, read from the live settings row. There is
+  // deliberately NO fallback: hardcoding a number here is how the page ended
+  // up contradicting both the Settings screen and the standing order. When
+  // settings have not loaded the caps are null, the tiles say so, and the cap
+  // check is skipped rather than enforced against a guess.
   function eventCaps() {
     const s = settings || {};
     return {
-      small:  (s.event_cap_small  != null) ? s.event_cap_small  : 300,
-      medium: (s.event_cap_medium != null) ? s.event_cap_medium : 600,
-      large:  (s.event_cap_large  != null) ? s.event_cap_large  : 1000
+      small:  (s.event_cap_small  != null) ? s.event_cap_small  : null,
+      medium: (s.event_cap_medium != null) ? s.event_cap_medium : null,
+      large:  (s.event_cap_large  != null) ? s.event_cap_large  : null
     };
   }
   const SIZE_LABELS = {
@@ -143,6 +146,20 @@
     medium: 'Medium (50 to 150 attendees)',
     large:  'Large (over 150 attendees)'
   };
+
+  // Rows collapse on the shared normalise key, so "KOI", "koi" and "KOI Pte
+  // Ltd" are one company. The standing order caps DISTINCT sponsors, so that
+  // is the number the cap is measured against and the number the preview
+  // reports; the duplicates are counted separately and reported alongside.
+  function tallyRows(rows) {
+    const seen = Object.create(null);
+    let distinct = 0, duplicates = 0;
+    rows.forEach(function (r) {
+      const key = window.Matcher.normalise(r.name);
+      if (seen[key]) { duplicates++; } else { seen[key] = true; distinct++; }
+    });
+    return { distinct: distinct, duplicates: duplicates, total: rows.length };
+  }
 
   // ---------- Email validation ----------
   // The "Email to BIZCOM" button stays clickable at all times. A greyed-out
@@ -191,8 +208,22 @@
       btn.setAttribute('aria-checked', 'true');
       eventSize = btn.getAttribute('data-event-size');
       updateEmailButtonState();
+      revalidateCap();
     });
   });
+
+  // The cap depends on event size, so a list that passed on upload can stop
+  // fitting the moment the student reclassifies the event. Without this, a
+  // 250-row list uploaded as Medium stayed checkable after switching to Small.
+  // showCapExceededModal() resets back to the upload step, which is the same
+  // outcome as failing the check on upload.
+  function revalidateCap() {
+    if (!parsedRows.length) return;
+    const cap = eventCaps()[eventSize];
+    if (cap == null) return;
+    const distinct = tallyRows(parsedRows).distinct;
+    if (distinct > cap) showCapExceededModal(distinct);
+  }
 
   // ---------- Drag-and-drop ----------
   if (dropZone) {
@@ -294,13 +325,14 @@
 
     const rows = [];
     const headerLine = lines[0];
-    const headerCols = parseCsvLine(headerLine).map(function (c) { return c.toLowerCase().trim(); });
+    const delim = detectDelimiter(headerLine);
+    const headerCols = parseCsvLine(headerLine, delim).map(function (c) { return c.toLowerCase().trim(); });
     const hasHeader = headerCols.some(function (c) { return /name|company/.test(c); });
     const nameIdx = hasHeader ? headerCols.findIndex(function (c) { return /name|company/.test(c); }) : 0;
     const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type|code/.test(c); }) : -1;
     const dataLines = hasHeader ? lines.slice(1) : lines;
     dataLines.forEach(function (line) {
-      const cols = parseCsvLine(line);
+      const cols = parseCsvLine(line, delim);
       const name = (cols[nameIdx] || '').trim();
       if (!name) return;
       const industry = indIdx >= 0 ? (cols[indIdx] || '').trim() : '';
@@ -311,8 +343,9 @@
       throw new Error('No company names found in the file.');
     }
 
-    if (rows.length > eventCaps()[eventSize]) {
-      showCapExceededModal(rows.length);
+    const cap = eventCaps()[eventSize];
+    if (cap != null && tallyRows(rows).distinct > cap) {
+      showCapExceededModal(tallyRows(rows).distinct);
       return;
     }
 
@@ -320,13 +353,32 @@
     showPreview();
   }
 
-  function parseCsvLine(line) {
+  // Excel writes ';' instead of ',' in several European locales, and '\t' when
+  // a student saves as "Unicode Text". Both used to collapse the whole row into
+  // one column, so every company name arrived mangled and came back Unverified
+  // with no error. Take the separator the header line actually uses, counting
+  // only outside quotes so a comma inside "Kuok (S), Singapore" does not vote.
+  function detectDelimiter(line) {
+    const counts = { ',': 0, ';': 0, '\t': 0 };
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (!inQ && counts[c] !== undefined) counts[c]++;
+    }
+    let best = ',';
+    Object.keys(counts).forEach(function (d) { if (counts[d] > counts[best]) best = d; });
+    return best;
+  }
+
+  function parseCsvLine(line, delim) {
+    const sep = delim || ',';
     const out = [];
     let buf = '', inQ = false;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
       if (c === '"') { inQ = !inQ; continue; }
-      if (c === ',' && !inQ) { out.push(buf); buf = ''; continue; }
+      if (c === sep && !inQ) { out.push(buf); buf = ''; continue; }
       buf += c;
     }
     out.push(buf);
@@ -346,7 +398,18 @@
     uploadState.classList.add('d-none');
     previewState.classList.remove('d-none');
 
-    previewTotal.textContent = parsedRows.length.toLocaleString();
+    // "12 distinct companies" on a clean list, "12 distinct companies,
+    // 3 duplicates" when rows repeat. The duplicate rows are still checked and
+    // still shown in the results, they just do not count toward the total.
+    const tally = tallyRows(parsedRows);
+    previewTotal.textContent = tally.distinct.toLocaleString();
+    const dupesEl = document.getElementById('preview-dupes');
+    if (dupesEl) {
+      dupesEl.textContent = tally.duplicates
+        ? ', ' + tally.duplicates.toLocaleString() +
+          (tally.duplicates === 1 ? ' duplicate' : ' duplicates')
+        : '';
+    }
 
     previewBody.innerHTML = parsedRows.slice(0, 10).map(function (r, i) {
       const indCell = r.industry
@@ -399,6 +462,10 @@
       syncTileCaps();
       setTimeout(function () {
         results = window.Matcher.checkBatch(parsedRows, matchCtx());
+        // Stamp the position in the uploaded file. checkBatch preserves input
+        // order, so the index is the row number, and it has to be captured
+        // before filtering or paging renumbers anything.
+        results.forEach(function (r, i) { r.rowNumber = i + 1; });
         renderResults();
       }, 700);
     }, function (e) {
@@ -442,6 +509,13 @@
       }
     }
 
+    // Reset the filter as well as the page. A filter left over from the last
+    // check applies to the new one, so checking a second file after filtering
+    // to Prohibited opened on "no matches for this filter".
+    activeFilter = 'all';
+    filterChips.forEach(function (c) {
+      c.classList.toggle('is-active', c.getAttribute('data-filter') === 'all');
+    });
     resultsPage = 1;
     renderTable();
 
@@ -478,8 +552,12 @@
       // deliberately excluded: those stay on the list for BIZCOM to decide.
       const flagClass = (r.status === 'prohibited' || r.status === 'closed' || r.status === 'cooldown') ? 'is-flagged' : '';
       return (
+        // The number is the row in the student's own file, not the position
+        // within the current filter. Filtering to Prohibited used to restart at
+        // 1, which made the count unreadable against the CSV and left the
+        // "Duplicate of row 3" reasons pointing at nothing on screen.
         '<tr class="' + flagClass + '">' +
-          '<td class="table__cell-secondary" data-label="#">' + (start + i + 1) + '</td>' +
+          '<td class="table__cell-secondary" data-label="Row">' + (r.rowNumber != null ? r.rowNumber : start + i + 1) + '</td>' +
           '<td data-label="Company">' +
             '<div class="table__cell-primary">' + escapeHtml(r.input) + '</div>' +
           '</td>' +
@@ -676,7 +754,10 @@
         '  Event: ' + event + '\n' +
         '  Club:  ' + club + '\n' +
         '  Size:  ' + SIZE_LABELS[eventSize] + '\n' +
-        '  Total: ' + results.length + ' sponsors\n\n' +
+        // Distinct companies, to match what the preview and the cap count.
+        // Duplicate rows are not separate sponsors.
+        '  Total: ' + results.filter(function (r) { return r.status !== 'duplicate'; }).length +
+        ' sponsors\n\n' +
         'Attachments:\n' +
         '  1. Annotated sponsor list (sponsor-check-results.csv)\n' +
         '  2. Sponsorship deck\n' +
@@ -718,16 +799,18 @@
     isFromSample = true;
   };
 
-  // Overwrite the static "Cap: N sponsors" text on each size tile with the
-  // admin-configured cap, so the public page matches the Settings page.
+  // Fill the "Cap: ..." placeholder on each size tile from the live settings,
+  // so the public page always matches the Settings screen. If settings could
+  // not be read the tile says so rather than showing a number nobody set.
   function syncTileCaps() {
     const caps = eventCaps();
     eventSizeBtns.forEach(function (btn) {
       const size = btn.getAttribute('data-event-size');
-      const capEl = btn.querySelector('.size-tile__cap');
-      if (capEl && caps[size] != null) {
-        capEl.textContent = 'Cap: ' + caps[size].toLocaleString() + ' sponsors';
-      }
+      const capEl = btn.querySelector('[data-cap-value]');
+      if (!capEl) return;
+      capEl.textContent = (caps[size] != null)
+        ? caps[size].toLocaleString() + ' sponsors'
+        : 'set by BIZCOM';
     });
   }
 
