@@ -164,6 +164,16 @@
       ).then(function (res) { if (res.error) throw res.error; });
     },
 
+    // One sponsor by its normalised lookup key, or null. Used by the Annex B
+    // "Add" panel to tell "this company is new" from "this company is already
+    // on the database under another status", so the second case can offer to
+    // convert the existing row instead of dead-ending on a unique violation.
+    findByNormalised: function (normalised) {
+      return Promise.resolve(
+        sb().from('sponsors').select('*').eq('normalised', normalised).maybeSingle()
+      ).then(unwrap);
+    },
+
     getSponsor: function (id) {
       return Promise.resolve(
         sb().from('sponsors').select('*').eq('id', id).maybeSingle()
@@ -312,6 +322,18 @@
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 
+    // Every company filed under one annex category, alphabetically. Backs the
+    // Sponsors page's Annex A card, which names the Board of Trustees companies
+    // rather than listing a type. Only the categories that name their members
+    // are read this way, so the result set stays small.
+    listByAnnexCategory: function (annexCategoryId) {
+      return Promise.resolve(
+        sb().from('sponsors').select('id, name, industry, contract_ends')
+          .eq('annex_category_id', annexCategoryId)
+          .order('name')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
     // ---------- submissions (admin Home calendar) ----------
     // Admin-only under RLS (the public checker emails BIZCOM; it doesn't insert).
     listSubmissions: function () {
@@ -385,14 +407,6 @@
           p_entries: entries || []
         })
       ).then(unwrap);
-    },
-
-    // Remove one company from a submission (recorded against the wrong club, or
-    // withdrawn). The trigger re-derives submissions.sponsor_count.
-    deleteSubmissionSponsor: function (id) {
-      return Promise.resolve(
-        sb().from('submission_sponsors').delete().eq('id', id)
-      ).then(function (res) { if (res.error) throw res.error; });
     },
 
     // ---------- admins (team) — read: any admin; write: super-admin (RLS) ----------

@@ -17,11 +17,19 @@
 
     const params = new URLSearchParams(window.location.search);
     const sponsorId = params.get('id');
-    const isCreate = !sponsorId;
+
+    // This page only ever edits an existing sponsor. Nothing links here without
+    // an id, and new companies are added from the Sponsors page's bulk dialog or
+    // the Annex B panel, so a bare URL goes back to the list rather than opening
+    // a second, unreachable create form.
+    if (!sponsorId) {
+      window.location.href = 'sponsors.html';
+      return;
+    }
 
     const session = window.AdminShell.mount({
       currentPage: 'sponsors.html',  // highlight the parent nav item
-      pageTitle: isCreate ? 'Add sponsor' : 'Edit sponsor'
+      pageTitle: 'Edit sponsor'
     });
     if (!session) return;
 
@@ -32,17 +40,16 @@
     const statusBtns = document.querySelectorAll('[data-status]');
     const industryEl = document.getElementById('sp-industry');
     const notesEl = document.getElementById('sp-notes');
+    const notesLabelEl = document.getElementById('sp-notes-label');
     const annexCatEl = document.getElementById('sp-annex-category');
-    const closedNotesEl = document.getElementById('sp-closed-notes');
+    const contractEl = document.getElementById('sp-contract-ends');
 
-    const grpNotes = document.getElementById('grp-notes');
     const grpAnnex = document.getElementById('grp-annex-category');
-    const grpClosed = document.getElementById('grp-closed-notes');
+    const grpContract = document.getElementById('grp-contract-ends');
 
     const dangerZone = document.getElementById('danger-zone');
     const deleteBtn = document.getElementById('sp-delete');
     const saveBtn = document.getElementById('sp-save');
-    const saveLabel = document.getElementById('sp-save-label');
 
     // ---------- helpers ----------
     function toastMsg(o) { if (window.toast) window.toast(o); }
@@ -58,6 +65,39 @@
 
     let currentStatus = 'approved';
     let original = null;   // the loaded sponsor row (edit mode), for change detection
+    const annexById = {};  // annex_categories id -> { annex, name }
+
+    // Local calendar date as YYYY-MM-DD, to compare against a date input's value.
+    function todayISODate() {
+      const d = new Date();
+      const p = function (n) { return String(n).padStart(2, '0'); };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
+    // contract_ends is the BIZCOM partner contract, not a general annex field:
+    // Banks & Financial Institution and Government Entity are permanent
+    // restrictions with no end date. Only the partner category is time-boxed,
+    // so only it gets the date field. Mirrors the Annex B "Add" modal on the
+    // sponsors page, which files every company it adds under this category.
+    function isPartnerCategory(id) {
+      const cat = id ? annexById[id] : null;
+      return !!(cat && cat.annex === 'B' && (cat.name || '').toLowerCase() === 'bizcom partner');
+    }
+
+    // Notes live in one column for every status, so only the wording changes.
+    const NOTES_COPY = {
+      approved:   { label: 'Notes', placeholder: 'Any context for BIZCOM, e.g. previous events...' },
+      alumni:     { label: 'Notes', placeholder: 'e.g. Founder is an SMU alumnus, OAR sign-off obtained.' },
+      prohibited: { label: 'Notes', placeholder: 'e.g. Signed for AY25/26 orientation season.' },
+      closed:     { label: 'Closed notes', placeholder: 'e.g. Ceased operations 2020' }
+    };
+
+    // The contract date row only makes sense for the partner category, so it is
+    // re-evaluated whenever either the status or the annex category changes.
+    function syncContractField() {
+      const show = currentStatus === 'prohibited' && isPartnerCategory(annexCatEl.value);
+      grpContract.style.display = show ? '' : 'none';
+    }
 
     function setStatus(s) {
       currentStatus = s;
@@ -66,11 +106,17 @@
         b.classList.toggle('is-active', on);
         b.setAttribute('aria-checked', String(on));
       });
-      // Show only the relevant status-specific field. Alumni reuses the general
-      // (optional) notes field — there is no dedicated alumni-owner field.
-      grpNotes.style.display  = (s === 'approved' || s === 'alumni') ? '' : 'none';
-      grpAnnex.style.display  = (s === 'prohibited') ? '' : 'none';
-      grpClosed.style.display = (s === 'closed') ? '' : 'none';
+      // Notes apply to every status, so the field always shows and only its
+      // wording changes. The annex picker and the partner contract date are the
+      // genuinely status-specific rows.
+      const copy = NOTES_COPY[s] || NOTES_COPY.approved;
+      if (notesLabelEl) {
+        notesLabelEl.innerHTML = copy.label +
+          ' <span class="form-label__optional">optional</span>';
+      }
+      notesEl.placeholder = copy.placeholder;
+      grpAnnex.style.display = (s === 'prohibited') ? '' : 'none';
+      syncContractField();
     }
 
     statusBtns.forEach(function (btn) {
@@ -79,10 +125,16 @@
       });
     });
 
+    annexCatEl.addEventListener('change', syncContractField);
+
     // Build the row values from the form. normalised uses the shared matcher key
     // so a saved sponsor is found by the same lookup the checker uses.
-    // Leaving 'prohibited' clears annex_category_id + contract_ends to satisfy the
-    // DB check constraint (both only allowed when prohibited).
+    //
+    // annex_category_id and contract_ends are written on every save, not only
+    // when they have a value, because the DB check constraint allows both only
+    // while category = 'prohibited'. Sending them as null is what clears a
+    // former partner's date when it is approved, or when its annex category
+    // moves from BIZCOM Partner to a permanent one.
     function buildValues() {
       const name = nameEl.value.trim();
       const values = {
@@ -90,13 +142,16 @@
         normalised: window.Matcher.normalise(name),
         industry: industryEl.value,
         category: currentStatus,
-        notes: '',
-        annex_category_id: null
+        notes: notesEl.value.trim(),
+        annex_category_id: null,
+        contract_ends: null
       };
-      if (currentStatus === 'approved' || currentStatus === 'alumni') values.notes = notesEl.value.trim();
-      else if (currentStatus === 'closed') values.notes = closedNotesEl.value.trim();
-      else if (currentStatus === 'prohibited') values.annex_category_id = annexCatEl.value || null;
-      if (currentStatus !== 'prohibited') values.contract_ends = null;
+      if (currentStatus === 'prohibited') {
+        values.annex_category_id = annexCatEl.value || null;
+        if (isPartnerCategory(values.annex_category_id)) {
+          values.contract_ends = contractEl.value || null;
+        }
+      }
       return values;
     }
 
@@ -107,6 +162,7 @@
       if (a.category !== b.category) out.push('Status: ' + a.category + ' → ' + b.category);
       if ((a.notes || '') !== (b.notes || '')) out.push('Notes updated');
       if ((a.annex_category_id || '') !== (b.annex_category_id || '')) out.push('Annex category updated');
+      if ((a.contract_ends || '') !== (b.contract_ends || '')) out.push('Contract end date updated');
       return out;
     }
 
@@ -120,13 +176,29 @@
       }
       if (currentStatus === 'prohibited' && !annexCatEl.value) {
         toastMsg({ type: 'error', title: 'Annex category required', message: 'Pick the Annex A or Annex B category.' });
+        annexCatEl.focus();
         return;
+      }
+      if (currentStatus === 'prohibited' && isPartnerCategory(annexCatEl.value)) {
+        if (!contractEl.value) {
+          toastMsg({ type: 'error', title: 'Contract end date required', message: 'Pick when the partnership ends.' });
+          contractEl.focus();
+          return;
+        }
+        // A date already past would file the company straight into the lapsed
+        // half of the Annex B panel and hide it from the sponsors table, which
+        // is never what someone editing a live partner means to do.
+        if (contractEl.value < todayISODate() &&
+            !confirm('That contract end date has already passed, so this partner will read as ended and drop out of the sponsors list. Save anyway?')) {
+          contractEl.focus();
+          return;
+        }
       }
 
       const values = buildValues();
 
-      // Edit with no actual change — skip the write.
-      if (!isCreate && original) {
+      // No actual change, so skip the write.
+      if (original) {
         const diffs = describeDiff(original, values);
         if (diffs.length === 0) {
           toastMsg({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
@@ -136,13 +208,8 @@
 
       saveBtn.disabled = true;
       try {
-        if (isCreate) {
-          await window.AdminAPI.addSponsor(values);
-          toastMsg({ type: 'success', title: 'Sponsor created', message: name });
-        } else {
-          await window.AdminAPI.updateSponsor(sponsorId, values);
-          toastMsg({ type: 'success', title: 'Saved', message: name });
-        }
+        await window.AdminAPI.updateSponsor(sponsorId, values);
+        toastMsg({ type: 'success', title: 'Saved', message: name });
       } catch (err) {
         saveBtn.disabled = false;
         if (window.AdminAPI.isUniqueViolation(err)) {
@@ -200,6 +267,8 @@
         toastError('Could not load annex categories', e);
         annexCats = [];
       }
+      annexCats.forEach(function (a) { annexById[a.id] = a; });
+
       annexCatEl.appendChild(new Option('Select a category...', ''));
       [['A', 'Annex A, prohibited'], ['B', 'Annex B, restricted']].forEach(function (pair) {
         const inAnnex = annexCats.filter(function (a) { return a.annex === pair[0]; });
@@ -210,16 +279,6 @@
         annexCatEl.appendChild(grp);
       });
 
-      if (isCreate) {
-        heading.textContent = 'Add sponsor';
-        saveLabel.textContent = 'Create sponsor';
-        setStatus('approved');
-        industryEl.value = 'other';
-        document.getElementById('sponsor-side').style.display = 'none';
-        return;
-      }
-
-      // Edit: load the existing record.
       let sponsor;
       try {
         sponsor = await window.AdminAPI.getSponsor(sponsorId);
@@ -236,13 +295,14 @@
 
       original = sponsor;
       heading.innerHTML = 'Edit ' + window.AdminShell.mapsLink(sponsor.name);
-      saveLabel.textContent = 'Save changes';
       nameEl.value = sponsor.name;
       industryEl.value = sponsor.industry;
-      setStatus(sponsor.category);
-      notesEl.value = sponsor.notes || '';        // approved + alumni notes
+      notesEl.value = sponsor.notes || '';
+      // The annex category and contract date are set before setStatus, because
+      // setStatus decides whether the contract row shows by reading the picker.
       annexCatEl.value = sponsor.annex_category_id || '';
-      closedNotesEl.value = sponsor.notes || '';  // closed uses notes field
+      contractEl.value = sponsor.contract_ends || '';
+      setStatus(sponsor.category);
 
       // Side panel
       document.getElementById('meta-id').textContent = sponsor.id;
@@ -257,10 +317,11 @@
         document.getElementById('meta-outreach').textContent = '—';
       }
 
-      // Danger zone (delete) is super-admin only.
-      if (session.role === 'super_admin') {
-        dangerZone.style.display = '';
-      }
+      // Delete is open to any admin, matching the trash icon on the sponsors
+      // table, the Annex B panel's Remove, and the sponsors_write RLS policy,
+      // which is what actually decides. Gating this on super_admin here only
+      // hid a button the same person could press one screen earlier.
+      dangerZone.style.display = '';
     })();
   }
 

@@ -69,11 +69,6 @@
         </div>
 
         <!-- Status-specific fields -->
-        <div class="form-group" id="grp-notes">
-          <label class="form-label" for="sp-notes">Notes (optional)</label>
-          <textarea class="form-input" id="sp-notes" rows="3" placeholder="Any context for BIZCOM, e.g. previous events..."></textarea>
-        </div>
-
         <div class="form-group" id="grp-annex-category" style="display: none">
           <label class="form-label" for="sp-annex-category">Annex category <span class="form-label__required">*</span></label>
           <select class="form-input" id="sp-annex-category"></select>
@@ -83,15 +78,25 @@
           </div>
         </div>
 
-        <div class="form-group" id="grp-closed-notes" style="display: none">
-          <label class="form-label" for="sp-closed-notes">Closed notes</label>
-          <input type="text" class="form-input" id="sp-closed-notes" placeholder="e.g. Ceased operations 2020">
+        <!-- Only BIZCOM Partner is time-boxed; every other annex category is
+             permanent, so this field appears for that category alone. -->
+        <div class="form-group" id="grp-contract-ends" style="display: none">
+          <label class="form-label" for="sp-contract-ends">Contract end date <span class="form-label__required">*</span></label>
+          <input type="date" class="form-input" id="sp-contract-ends">
+          <div class="form-helper">Restricted under Annex B until this date, then automatically flagged to clear.</div>
+        </div>
+
+        <!-- One notes field for every status. The label and placeholder change
+             with the status; the column behind it does not. -->
+        <div class="form-group" id="grp-notes">
+          <label class="form-label" for="sp-notes" id="sp-notes-label">Notes <span class="form-label__optional">optional</span></label>
+          <textarea class="form-input" id="sp-notes" rows="3" placeholder="Any context for BIZCOM, e.g. previous events..."></textarea>
         </div>
 
         <div class="sponsor-detail__form-actions">
           <a href="sponsors.html" class="btn btn--secondary btn--sm">Cancel</a>
           <button type="submit" class="btn btn--primary btn--sm" id="sp-save">
-            <i class="bi bi-check-lg"></i> <span id="sp-save-label">Save changes</span>
+            <i class="bi bi-check-lg"></i> Save changes
           </button>
         </div>
       </form>

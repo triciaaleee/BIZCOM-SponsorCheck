@@ -99,10 +99,21 @@
       }).join('');
     }
 
+    // BIZCOM Partner is deliberately absent from this picker. A partner needs a
+    // contract end date, which this table has no column for, so filing one here
+    // would create a partner that never lapses and never appears in the Annex B
+    // panel. Partners are added from that panel's own "Add" button instead.
+    function isPartnerCategory(cat) {
+      return cat.annex === 'B' && (cat.name || '').toLowerCase() === 'bizcom partner';
+    }
+
     // Grouped A then B, so it is obvious which half of the Standing Order a
-    // category comes from.
+    // category comes from. SMU Alumni is not offered here even though the
+    // Standing Order files it under Annex B: it is not an annex_categories row,
+    // and the Status column already has an Alumni option, which is the field the
+    // database actually stores it in.
     function annexOptions(selected) {
-      const cats = getAnnexCats();
+      const cats = getAnnexCats().filter(function (a) { return !isPartnerCategory(a); });
       let out = '<option value="">' + esc(DETAIL_META.prohibited.placeholder) + '</option>';
       [['A', 'Prohibited (Annex A)'], ['B', 'Restricted (Annex B)']].forEach(function (pair) {
         const inAnnex = cats.filter(function (a) { return a.annex === pair[0]; });
@@ -155,6 +166,7 @@
         }).join('');
       }
       updateCount();
+      syncSelectAll();
     }
 
     function rowByUid(uid) {
@@ -323,16 +335,26 @@
         return;
       }
       const added = inserted.length;
-      const dbSkipped = payloads.length - added;
 
-      // 4. Drop the committed rows; keep only the unticked ones.
+      // The upsert skips duplicates silently, so the names it dropped are the
+      // payloads that came back with no inserted row. Worth naming: on the
+      // Sponsors page the admin typed these by hand and a bare count leaves
+      // them guessing which one was already there.
+      const insertedNorm = new Set(inserted.map(function (r) { return r.normalised; }));
+      const dbSkippedNames = payloads
+        .filter(function (p) { return !insertedNorm.has(p.normalised); })
+        .map(function (p) { return p.name; });
+
+      // 4. Drop the committed rows; keep only the unticked ones. render()
+      //    re-derives the save button's disabled state from what is left, so
+      //    it must not be force-enabled afterwards.
       rows = rows.filter(function (r) { return !r.include; });
       render();
-      saveBtn.disabled = false;
 
       onCommitted({
         added: added,
-        skipped: skipped.length + dbSkipped,
+        skipped: skipped.length + dbSkippedNames.length,
+        skippedNames: skipped.concat(dbSkippedNames),
         payloads: payloads,
         inserted: inserted
       });
@@ -350,14 +372,9 @@
           return window.Matcher.normalise(r.name);
         }).filter(Boolean));
       },
-      clear: function () { rows = []; render(); },
       count: function () { return rows.length; }
     };
   }
 
-  window.StagingTable = {
-    create: create,
-    STATUS_OPTIONS: STATUS_OPTIONS,
-    DETAIL_META: DETAIL_META
-  };
+  window.StagingTable = { create: create };
 })();

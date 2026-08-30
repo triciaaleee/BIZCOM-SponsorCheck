@@ -147,17 +147,31 @@
     return sponsors.filter(function (s) { return s.annex_category_id === cat.id; });
   }
 
-  // Renders the tag row for one annex, leaving out the category whose members
-  // are already named in the list above it.
+  // Annex B types the Standing Order lists but annex_categories deliberately
+  // does not hold. SMU Alumni is restricted on paper, yet a company is filed
+  // under the top-level 'alumni' sponsor category rather than under an annex
+  // category, so there is no row for it to render from. Hardcoded here so the
+  // card still lists what the Standing Order lists. Keep in step with the same
+  // constant in js/admin/sponsors-page.js.
+  const EXTRA_ANNEX_TAGS = { B: ['SMU Alumni'] };
+
+  // The tag row for one annex, leaving out the category whose members are
+  // already named in the list above it.
   function renderAnnexTags(containerId, letter, isNamed) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const cats = annexCatsFor(letter).filter(function (c) { return !isNamed(c); });
-    el.innerHTML = cats.length
-      ? cats.map(function (c) {
-          return '<span class="annex-tag">' + escapeHtml(c.name) + '</span>';
-        }).join('')
-      : '<div class="annex-empty">Categories unavailable, please try again later.</div>';
+    // A failed category read must not hide behind the hardcoded chips, so the
+    // unavailable notice is keyed on the database half alone.
+    if (!cats.length) {
+      el.innerHTML = '<div class="annex-empty">Categories unavailable, please try again later.</div>';
+      return;
+    }
+    const names = cats.map(function (c) { return c.name; })
+      .concat(EXTRA_ANNEX_TAGS[letter] || []);
+    el.innerHTML = names.map(function (n) {
+      return '<span class="annex-tag">' + escapeHtml(n) + '</span>';
+    }).join('');
   }
 
   // The Closed and Alumni cards stay as static notes: they describe the

@@ -29,10 +29,10 @@
 
 <main class="admin-main admin-main--wide">
 
-  <section class="cap-alert" id="cap-alert">
+  <section class="cap-alert">
     <div class="cap-alert__head">
       <span class="cap-alert__title">
-        <i class="bi bi-clock-history"></i> Companies in Cooldown
+        <i class="bi bi-clock-history"></i> Companies in cooldown
       </span>
     </div>
     <ul class="cap-alert__list" id="cap-list"></ul>
@@ -46,41 +46,14 @@
       </div>
       <div class="annex-card__body">
         <div class="annex-group__label">SMU Board of Trustees &amp; associated <span class="annex-group__kind">companies</span></div>
-        <ul class="annex-list">
-          <li>Banyan Tree Group</li>
-          <li>Global Business Integrators</li>
-          <li>Reed Exhibitions</li>
-          <li>Hup Soon Global Corporation</li>
-          <li>Singapore Telecommunications (Singtel)</li>
-          <li>Chinatrust Commercial Bank</li>
-          <li>Kuok (S)</li>
-          <li>Raffles Medical Corp</li>
-          <li>Phoenix Advisers</li>
-          <li>Infosys Technologies</li>
-          <li>WongPartnership LLP</li>
-          <li>SMRT</li>
-          <li>Bangkok Bank</li>
-          <li>Symphony Asia Holdings</li>
-          <li>Dane Court</li>
-        </ul>
+        <div id="annex-a-trustees"><!-- rendered by sponsors-page.js --></div>
         <div class="annex-group__label">Prohibited categories <span class="annex-group__kind">types</span></div>
-        <div class="annex-tags">
-          <span class="annex-tag">Foundation</span>
-          <span class="annex-tag">Alcoholic Products</span>
-          <span class="annex-tag">Tobacco Products</span>
-          <span class="annex-tag">Gaming &amp; Betting</span>
-          <span class="annex-tag">Sexual Products</span>
-          <span class="annex-tag">Insurance</span>
-          <span class="annex-tag">Multi-Level Marketing</span>
-          <span class="annex-tag">SMU Commencement Sponsor</span>
-        </div>
+        <div class="annex-tags" id="annex-a-tags"><!-- rendered by sponsors-page.js --></div>
       </div>
     </div>
     <div class="annex-card annex-card--restricted">
       <div class="annex-card__head">
-        <div class="annex-card__headings">
-          <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
-        </div>
+        <span class="annex-card__title"><i class="bi bi-shield-fill-exclamation"></i> Annex B — Restricted</span>
         <button type="button" class="btn btn--primary btn--sm" id="annex-b-add-btn">
           <i class="bi bi-plus-lg"></i> Add
         </button>
@@ -92,11 +65,7 @@
 
         <div class="annex-restricted-types">
           <div class="annex-group__label">Other restricted types <span class="annex-group__kind">types</span></div>
-          <div class="annex-tags">
-            <span class="annex-tag">Government Entity</span>
-            <span class="annex-tag">Banks &amp; Financial Institution</span>
-            <span class="annex-tag">SMU Alumni</span>
-          </div>
+          <div class="annex-tags" id="annex-b-tags"><!-- rendered by sponsors-page.js --></div>
           <div class="annex-callout" role="note">
             <i class="bi bi-exclamation-triangle-fill annex-callout__icon"></i>
             <div class="annex-callout__text">
@@ -166,7 +135,7 @@
       </button>
     </div>
     <div class="admin-table-footer" id="sponsors-pager" hidden>
-      <div class="admin-table-footer__range" id="sponsors-range"></div>
+      <div id="sponsors-range"></div>
       <nav class="admin-table-footer__nav" id="sponsors-pager-nav" aria-label="Pagination"></nav>
     </div>
   </div>
@@ -240,9 +209,7 @@
       <div>
         <h2 class="modal__title" id="add-sponsors-title">Add sponsors</h2>
         <p class="modal__sub">
-          Add as many companies as you like at once. Set each one's status and industry,
-          untick any you do not want, then add them all together. Names already on the
-          database are skipped.
+          Names already in the database are skipped.
         </p>
       </div>
       <button class="modal__close" data-modal-close aria-label="Close">

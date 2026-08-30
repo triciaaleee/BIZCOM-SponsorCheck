@@ -103,6 +103,58 @@
       return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear();
     }
 
+    // The date half of a timestamp, as YYYY-MM-DD in local time, to compare
+    // against a <input type="date"> value (which is always local, date-only).
+    function localDateOf(iso) {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const p = function (n) { return String(n).padStart(2, '0'); };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
+    // Two submissions are "the same" if the same club sent the same event name.
+    // Case and spacing vary between one admin typing it and the next pasting
+    // it, so neither can be trusted to differ meaningfully.
+    function sameSubmissionKey(eventName, club) {
+      const flat = function (s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); };
+      return flat(eventName) + '::' + flat(club);
+    }
+
+    // The existing submission this form would duplicate, or null. `exceptId`
+    // keeps a row from matching itself while it is being edited.
+    function duplicateOf(form, exceptId) {
+      const key = sameSubmissionKey(form.event_name, form.club);
+      return submissions.find(function (s) {
+        return s.id !== exceptId && sameSubmissionKey(s.event_name, s.club) === key;
+      }) || null;
+    }
+
+    // Warn rather than block: a club really can run the same event again next
+    // year, and the two rows are then both correct. What is not acceptable is
+    // creating the second one by accident, because the pending list and the
+    // Vet & Upload picker show the pair identically and a wave can then be
+    // recorded against the wrong one.
+    function confirmDuplicate(existing) {
+      return confirm(
+        existing.club + ' already has a submission called "' + existing.event_name +
+        '", filed under ' + formatDate(existing.submitted_at) + '.\n\n' +
+        'Two submissions with the same name look identical everywhere else in ' +
+        'the console, including when you pick one to vet a list against.\n\n' +
+        'Save this one anyway?'
+      );
+    }
+
+    // A club cannot be given a deadline that falls before they sent the list
+    // in. Blocking the earlier date is what catches a mistyped year, which is
+    // otherwise saved happily and lands at the top of the queue as months
+    // overdue. Measured against the submission's own month rather than today,
+    // so back-filling a past month still works.
+    function applyCompleteByFloor(submittedIso) {
+      const floor = localDateOf(submittedIso);
+      if (floor) panelCompleteByInput.min = floor;
+      else panelCompleteByInput.removeAttribute('min');
+    }
+
     // ISO stamp used when creating a submission into a given month.
     function monthIso(year, month) {
       const now = new Date();
@@ -395,6 +447,7 @@
       panelClubInput.value = sub.club;
       panelSizeInput.value = sub.event_size;
       panelCompleteByInput.value = sub.complete_by || '';
+      applyCompleteByFloor(sub.submitted_at);
       setPanelStatus(sub.status);
 
       panelSubmittedEl.textContent = formatDate(sub.submitted_at);
@@ -420,6 +473,7 @@
       panelClubInput.value = '';
       panelSizeInput.value = 'small';
       panelCompleteByInput.value = '';
+      applyCompleteByFloor(pendingSubmittedAt);
       setPanelStatus('new');
 
       panelSubmittedLine.style.display = 'none';
@@ -433,16 +487,82 @@
       openPanelUi();
     }
 
+    // The card or + button the panel was opened from, so focus can go back
+    // where it came from on close rather than to the top of the document.
+    let panelOpener = null;
+
+    // Everything inside the panel a Tab can reach right now. The delete and
+    // vet buttons carry the `hidden` attribute in the modes they do not apply
+    // to, and offsetParent filters those out along with anything else the
+    // layout is not showing.
+    function panelFocusables() {
+      return Array.prototype.filter.call(
+        panel.querySelectorAll('button, input, select, textarea, a[href]'),
+        function (el) { return !el.disabled && el.offsetParent !== null; }
+      );
+    }
+
+    // Keep Tab inside the panel while it is open. Without this the next Tab
+    // leaves for the page underneath, which the backdrop has covered.
+    function trapTab(e) {
+      if (e.key !== 'Tab') return;
+      const items = panelFocusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    // Hiding the page's scrollbar widens the viewport, which shifts the layout
+    // under the panel. Pad by exactly what the scrollbar was taking so nothing
+    // visibly moves.
+    function lockPageScroll() {
+      const gap = window.innerWidth - document.documentElement.clientWidth;
+      document.body.classList.add('has-panel-open');
+      if (gap > 0) document.body.style.paddingRight = gap + 'px';
+    }
+
+    function unlockPageScroll() {
+      document.body.classList.remove('has-panel-open');
+      document.body.style.paddingRight = '';
+    }
+
     function openPanelUi() {
+      panelOpener = document.activeElement;
       backdrop.classList.add('is-open');
       panel.classList.add('is-open');
       panel.setAttribute('aria-hidden', 'false');
+      lockPageScroll();
+      panel.addEventListener('keydown', trapTab);
+
+      // Reopening otherwise keeps the last panel's scroll position, which can
+      // land the admin halfway down someone else's wave history.
+      const body = panel.querySelector('.side-panel__body');
+      if (body) body.scrollTop = 0;
+
+      // Straight into the first field, so the form is usable without first
+      // tabbing through the sidebar and the whole calendar.
+      panelEventInput.focus();
     }
 
     function closePanel() {
       backdrop.classList.remove('is-open');
       panel.classList.remove('is-open');
       panel.setAttribute('aria-hidden', 'true');
+      panel.removeEventListener('keydown', trapTab);
+      unlockPageScroll();
+
+      // The opener may have been re-rendered away (a deleted submission, or a
+      // card the save rebuilt), in which case there is nothing to go back to.
+      if (panelOpener && document.contains(panelOpener)) panelOpener.focus();
+      panelOpener = null;
+
       openSubmissionId = null;
       pendingStatus = null;
       pendingSubmittedAt = null;
@@ -464,10 +584,17 @@
       };
     }
 
-    function validateForm(form) {
+    // `submittedIso` is the stamp the row is filed under: the existing
+    // submitted_at when editing, the month being added to when creating.
+    function validateForm(form, submittedIso) {
       if (!form.event_name) return 'Event name is required.';
       if (!form.club) return 'Club is required.';
       if (!form.complete_by) return 'Complete by date is required.';
+      const floor = localDateOf(submittedIso);
+      if (floor && form.complete_by < floor) {
+        return 'Complete by cannot be earlier than ' + formatDate(submittedIso) +
+               ', the date this submission is filed under.';
+      }
       return null;
     }
 
@@ -475,11 +602,14 @@
       const sub = submissions.find(function (s) { return s.id === openSubmissionId; });
       if (!sub) return;
       const form = readPanelForm();
-      const err = validateForm(form);
+      const err = validateForm(form, sub.submitted_at);
       if (err) {
-        toastMsg({ type: 'error', title: 'Missing field', message: err });
+        toastMsg({ type: 'error', title: 'Check the form', message: err });
         return;
       }
+
+      const clash = duplicateOf(form, sub.id);
+      if (clash && !confirmDuplicate(clash)) return;
 
       const statusChanged = sub.status !== form.status;
       let anyChanged = statusChanged;
@@ -516,11 +646,14 @@
 
     async function saveCreate() {
       const form = readPanelForm();
-      const err = validateForm(form);
+      const err = validateForm(form, pendingSubmittedAt);
       if (err) {
-        toastMsg({ type: 'error', title: 'Missing field', message: err });
+        toastMsg({ type: 'error', title: 'Check the form', message: err });
         return;
       }
+
+      const clash = duplicateOf(form, null);
+      if (clash && !confirmDuplicate(clash)) return;
 
       const payload = {
         event_name: form.event_name,

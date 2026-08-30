@@ -1,6 +1,14 @@
 /* ============================================================
    js/components/toast.js
    Simple toast notification. Use: window.toast({ ... })
+
+   `title` and `message` are TEXT, never markup. Both are escaped
+   before they reach innerHTML: almost every caller passes a name
+   it did not write (an event name, a club, a sponsor, a company
+   read out of a club's uploaded CSV on Vet & Upload), and an
+   unescaped one of those ran script in the signed-in admin's
+   browser, where window.sb holds the live session. Keep them
+   escaped: no caller passes HTML, so nothing needs the hole.
    ============================================================ */
 
 (function () {
@@ -22,6 +30,17 @@
     warning: 'bi-exclamation-triangle-fill'
   };
 
+  // Same rules as AdminShell.escapeHtml, repeated here because toast.js loads
+  // on the public pages too, which never load the admin shell.
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function show(opts) {
     const {
       title = '',
@@ -35,8 +54,8 @@
     toast.innerHTML = `
       <i class="bi ${ICONS[type] || ICONS.info} toast__icon"></i>
       <div class="toast__body">
-        ${title ? `<div class="toast__title">${title}</div>` : ''}
-        ${message ? `<div class="toast__message">${message}</div>` : ''}
+        ${title ? `<div class="toast__title">${escapeHtml(title)}</div>` : ''}
+        ${message ? `<div class="toast__message">${escapeHtml(message)}</div>` : ''}
       </div>
       <button class="toast__close" aria-label="Dismiss"><i class="bi bi-x"></i></button>
     `;

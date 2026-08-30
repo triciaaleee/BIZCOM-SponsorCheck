@@ -69,6 +69,13 @@
       return ind ? ind.display_name : code;
     }
 
+    // Local calendar date as YYYY-MM-DD, to compare against a date input's value.
+    function todayISODate() {
+      const d = new Date();
+      const p = function (n) { return String(n).padStart(2, '0'); };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
     // Date only — "8 May 2026".
     function formatDate(d) {
       if (!d) return '';
@@ -109,13 +116,33 @@
         '<i class="bi ' + m.icon + '"></i>' + m.label + '</span>';
     }
 
+    // Which category names its members and which is only a type is editorial,
+    // not structural: nothing in the data marks the difference. Annex A names
+    // the Board of Trustees because the standing order does, and Annex B names
+    // BIZCOM's own partners. Both are matched by name, the same way the public
+    // directory does it in js/pages/dashboard.js. Keep the two in step: if a
+    // category is renamed in the database, its list renders empty and it joins
+    // the tag row instead, which is wrong but not misleading.
+    const TRUSTEES_CATEGORY = 'board of trustees';
+    const PARTNER_CATEGORY  = 'bizcom partner';
+
+    function annexCatsFor(letter) {
+      return annexCats
+        .filter(function (a) { return a.annex === letter; })
+        .sort(function (a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+    }
+
+    function nameIs(target) {
+      return function (c) { return String(c.name || '').trim().toLowerCase() === target; };
+    }
+    const isTrusteesCategory = nameIs(TRUSTEES_CATEGORY);
+    const isPartnerCategory  = nameIs(PARTNER_CATEGORY);
+
     // The status pills mix plain categories with the two annex pills. Annex A
     // and Annex B are not categories in the database, so they are turned into
     // the annex_categories ids they cover and filtered on annex_category_id.
     function annexIdsFor(letter) {
-      return annexCats
-        .filter(function (a) { return a.annex === letter; })
-        .map(function (a) { return a.id; });
+      return annexCatsFor(letter).map(function (a) { return a.id; });
     }
 
     function statusParams() {
@@ -144,9 +171,16 @@
       return cat ? 'Annex ' + cat.annex + ', ' + cat.name : '';
     }
 
+    // Prohibited rows lead with the annex label, because that is what the club
+    // acts on, but the notes are appended rather than discarded: a partner's
+    // "Signed for AY25/26 orientation season" is the only place that context
+    // lives, and hiding it here made it look like an empty field.
     function notesFor(sponsor) {
-      if (sponsor.category === 'prohibited') return annexLabel(sponsor) || (sponsor.notes || '');
-      return sponsor.notes || '';
+      const notes = sponsor.notes || '';
+      if (sponsor.category !== 'prohibited') return notes;
+      const label = annexLabel(sponsor);
+      if (!label) return notes;
+      return notes ? label + ' · ' + notes : label;
     }
 
     function isFiltering() {
@@ -167,20 +201,28 @@
       } catch (e) {
         toastError('Could not load cooldowns', e);
         capList.innerHTML = '';
-        if (capEmpty) capEmpty.hidden = false;
+        if (capEmpty) {
+          capEmpty.hidden = false;
+          // "No companies are in cooldown" would be a claim, and the read just
+          // failed, so say what actually happened instead.
+          capEmpty.textContent = 'Could not load cooldowns. Refresh to try again.';
+        }
         return;
       }
 
       if (!rows.length) {
         capList.innerHTML = '';
-        if (capEmpty) capEmpty.hidden = false;
+        if (capEmpty) {
+          capEmpty.textContent = 'No companies are in cooldown.';
+          capEmpty.hidden = false;
+        }
         return;
       }
       if (capEmpty) capEmpty.hidden = true;
 
       capList.innerHTML = rows.map(function (r) {
         return (
-          '<li class="cap-item">' +
+          '<li>' +
             '<a class="cap-item__link" href="sponsor.html?id=' + encodeURIComponent(r.id) + '">' +
               '<span class="cap-item__name">' + esc(r.name) + '</span>' +
               '<span class="cap-item__meter"><span class="cap-item__bar cap-item__bar--over" style="width:100%"></span></span>' +
@@ -192,8 +234,72 @@
     }
 
     // ----------------- Annex A / B -----------------
-    // Annex A is a fixed policy reference — hardcoded directly in sponsors.html
-    // for instant load (no DB query). See the "Annex A — Prohibited" card there.
+    // Both cards read from the database, so this page cannot drift from what the
+    // checker actually enforces. Each card has the same two halves: one named
+    // category listed company by company, and the remaining categories as type
+    // tags underneath. This mirrors the public Sponsor Directory (dashboard.js).
+
+    // Plain reference list of company names, matching the public directory.
+    function renderNameList(el, rows, emptyMsg) {
+      if (!rows.length) {
+        el.innerHTML = '<div class="annex-empty">' + esc(emptyMsg) + '</div>';
+        return;
+      }
+      el.innerHTML = '<ul class="annex-list">' + rows.map(function (r) {
+        return '<li>' + esc(r.name) + '</li>';
+      }).join('') + '</ul>';
+    }
+
+    // Annex B types the Standing Order lists but annex_categories deliberately
+    // does not hold. SMU Alumni is restricted on paper, yet a company is filed
+    // under the top-level 'alumni' sponsor category rather than under an annex
+    // category, so there is no row for it to render from. Hardcoded here so the
+    // card still lists what the Standing Order lists. Keep in step with the same
+    // constant in js/pages/dashboard.js.
+    const EXTRA_ANNEX_TAGS = { B: ['SMU Alumni'] };
+
+    // The tag row for one annex, leaving out the category whose members are
+    // already named in the list above it.
+    function renderAnnexTags(containerId, letter, isNamed) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const cats = annexCatsFor(letter).filter(function (c) { return !isNamed(c); });
+      // A failed category read must not hide behind the hardcoded chips, so the
+      // unavailable notice is keyed on the database half alone.
+      if (!cats.length) {
+        el.innerHTML = '<div class="annex-empty">Categories unavailable, please try again later.</div>';
+        return;
+      }
+      const names = cats.map(function (c) { return c.name; })
+        .concat(EXTRA_ANNEX_TAGS[letter] || []);
+      el.innerHTML = names.map(function (n) {
+        return '<span class="annex-tag">' + esc(n) + '</span>';
+      }).join('');
+    }
+
+    // Annex A companies: everything filed under Board of Trustees. Read-only:
+    // Annex A is standing-order policy, so it is not editable from this card the
+    // way BIZCOM's own partners are.
+    async function renderAnnexAList() {
+      const listEl = document.getElementById('annex-a-trustees');
+      if (!listEl) return;
+
+      const cat = annexCatsFor('A').filter(isTrusteesCategory)[0];
+      if (!cat) {
+        renderNameList(listEl, [], 'Board of Trustees category unavailable.');
+        return;
+      }
+
+      let rows;
+      try {
+        rows = await window.AdminAPI.listByAnnexCategory(cat.id);
+      } catch (e) {
+        toastError('Could not load Annex A companies', e);
+        renderNameList(listEl, [], 'Could not load companies. Refresh to try again.');
+        return;
+      }
+      renderNameList(listEl, rows, 'No companies currently listed.');
+    }
 
     // Annex B partner list — active partners show normally; lapsed ones are
     // muted with a Remove button so the team can clear them from the database.
@@ -232,47 +338,118 @@
           '</span>' +
           '<span class="annex-partner__meta">' +
             '<span class="annex-partner__date">' + esc(dateText) + '</span>' +
-            '<button type="button" class="annex-partner__remove" data-remove-id="' + esc(p.id) + '" title="Remove from database" aria-label="Remove ' + esc(p.name) + '">' +
-              '<i class="bi bi-trash"></i>' + (expired ? ' Remove' : '') +
+            '<button type="button" class="annex-partner__restore" data-restore-id="' + esc(p.id) + '" title="Move back to Approved" aria-label="Move ' + esc(p.name) + ' back to Approved">' +
+              '<i class="bi bi-arrow-counterclockwise"></i>' + (expired ? ' Approve' : '') +
             '</button>' +
           '</span>' +
         '</li>';
       }).join('') + '</ul>';
 
-      listEl.querySelectorAll('[data-remove-id]').forEach(function (btn) {
-        btn.addEventListener('click', function () { removeAnnexBPartner(btn.getAttribute('data-remove-id')); });
+      listEl.querySelectorAll('[data-restore-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () { restorePartnerToApproved(btn.getAttribute('data-restore-id')); });
       });
     }
 
     function renderAnnexes() {
+      renderAnnexAList();
+      renderAnnexTags('annex-a-tags', 'A', isTrusteesCategory);
       renderAnnexBList();
+      renderAnnexTags('annex-b-tags', 'B', isPartnerCategory);
     }
 
     // ---- Annex B add / remove ----
+    // Plain-word standing of a company already on the database, for the
+    // convert prompt below.
+    function describeExisting(s) {
+      const status = displayStatus(s);
+      if (status === 'restricted') {
+        return s.contract_ends
+          ? 'already a BIZCOM partner until ' + formatDate(new Date(s.contract_ends))
+          : 'already restricted under ' + (annexLabel(s) || 'Annex B');
+      }
+      if (status === 'prohibited') return 'currently ' + (annexLabel(s) || 'prohibited under Annex A');
+      if (status === 'approved') return 'currently approved';
+      return 'currently ' + status;
+    }
+
     async function addAnnexBPartner(name, dateStr, industry, notes) {
       // Every company added through this panel is a BIZCOM partner by
       // definition, so it takes that Annex B category.
-      const partnerCat = annexCats.find(function (a) {
-        return a.annex === 'B' && (a.name || '').toLowerCase() === 'bizcom partner';
-      });
+      const partnerCat = annexCatsFor('B').filter(isPartnerCategory)[0];
       if (!partnerCat) {
-        toastMsg({ type: 'error', title: 'Missing annex category',
-          message: 'The "BIZCOM Partner" Annex B category is missing. Run migration 0018.' });
-        return;
+        // Reached whenever the category list is unavailable, which is far more
+        // often a failed read than a missing row, so the message does not guess.
+        toastMsg({ type: 'error', title: 'Could not add partner',
+          message: 'The BIZCOM Partner category is not available. Refresh and try again.' });
+        return false;
       }
-      const payload = {
+
+      const normalised = window.Matcher.normalise(name);
+      const values = {
         name: name,
-        normalised: window.Matcher.normalise(name),
+        normalised: normalised,
         industry: industry || 'other',
         category: 'prohibited',
         annex_category_id: partnerCat.id,
         notes: notes || '',
         contract_ends: dateStr
       };
+
+      // A company signing with BIZCOM is usually one already on the database as
+      // Approved, so look first rather than inserting and reporting the unique
+      // violation as a dead end. Converting is an update on the existing row,
+      // which keeps its id and therefore its outreach history.
+      let existing = null;
       try {
-        await window.AdminAPI.addSponsor(payload);
+        existing = await window.AdminAPI.findByNormalised(normalised);
+      } catch (e) {
+        toastError('Could not check for an existing company', e);
+        return false;
+      }
+
+      if (existing) {
+        // Re-adding an existing partner is a renewal, not a conversion, so the
+        // prompt says which one is happening.
+        const renewing = displayStatus(existing) === 'restricted' && !!existing.contract_ends;
+        const until = formatDate(new Date(dateStr));
+        const ok = confirm(renewing
+          ? existing.name + ' is ' + describeExisting(existing) + '. Extend the contract to ' + until + '?'
+          : existing.name + ' is already on the database, ' + describeExisting(existing) + '. ' +
+            'Convert it to a BIZCOM partner until ' + until + '? Its outreach history is kept.'
+        );
+        if (!ok) return false;
+        // Only the partner standing is written. The existing row's name and
+        // industry were vetted when it was first added and the modal's fields
+        // default to 'other', so patching them here would quietly downgrade a
+        // correctly filed company. Notes are appended rather than replaced, for
+        // the same reason: the earlier context is the part worth keeping.
+        const patch = {
+          category: 'prohibited',
+          annex_category_id: partnerCat.id,
+          contract_ends: dateStr
+        };
+        const added = (notes || '').trim();
+        const prior = (existing.notes || '').trim();
+        if (added) patch.notes = prior && prior !== added ? prior + ' ' + added : added;
+        try {
+          await window.AdminAPI.updateSponsor(existing.id, patch);
+        } catch (e) {
+          toastError('Could not convert to a partner', e);
+          return false;
+        }
+        toastMsg({ type: 'success', title: 'Converted to partner', message: existing.name });
+        // renderAnnexes(), not just the B list: converting a company that was
+        // filed under Board of Trustees moves it off the Annex A card too.
+        renderAnnexes();
+        render();
+        return true;
+      }
+
+      try {
+        await window.AdminAPI.addSponsor(values);
       } catch (e) {
         if (window.AdminAPI.isUniqueViolation(e)) {
+          // Only reachable if the row appeared between the lookup and the insert.
           toastMsg({ type: 'error', title: 'Already exists', message: name + ' is already in the database.' });
         } else {
           toastError('Could not add partner', e);
@@ -285,18 +462,38 @@
       return true;
     }
 
-    async function removeAnnexBPartner(id) {
+    // Ending a partnership is not a deletion. The company stays on the database
+    // and goes back to Approved, which keeps its id and therefore its outreach
+    // history, and puts it back in the sponsors table where it can be found and
+    // approached again. Clearing the annex category and the contract date is
+    // required, not tidying: the DB check constraint allows both only while the
+    // category is 'prohibited'. Notes are left alone, since why the partnership
+    // existed is still worth knowing afterwards.
+    async function restorePartnerToApproved(id) {
       const partner = contractPartnersCache.find(function (s) { return s.id === id; });
       const name = partner ? partner.name : 'this partner';
-      if (!confirm('Remove ' + name + ' from the database? This cannot be undone.')) return;
+      const expired = partner && partnerIsExpired(partner);
+      const when = partner && partner.contract_ends
+        ? formatDate(new Date(partner.contract_ends)) : '';
+
+      const ask = expired
+        ? name + "'s contract ended " + when + '. Move it back to Approved so clubs can approach it again?'
+        : name + ' is still under contract until ' + when +
+          '. End the partnership now and move it back to Approved?';
+      if (!confirm(ask)) return;
+
       try {
-        await window.AdminAPI.deleteSponsor(id);
+        await window.AdminAPI.updateSponsor(id, {
+          category: 'approved',
+          annex_category_id: null,
+          contract_ends: null
+        });
       } catch (e) {
-        toastError('Could not remove partner', e);
+        toastError('Could not move the partner back to Approved', e);
         return;
       }
-      toastMsg({ type: 'success', title: 'Removed', message: name });
-      renderAnnexBList();
+      toastMsg({ type: 'success', title: 'Moved to Approved', message: name });
+      renderAnnexes();
       render();
     }
 
@@ -351,7 +548,7 @@
             '<td><div class="table__cell-primary">' + mapsLink(s.name) + '</div></td>' +
             '<td>' + statusPill(s) + '</td>' +
             '<td><span class="tag tag--rounded">' + esc(industryDisplay(s.industry)) + '</span></td>' +
-            '<td><div class="table__cell-secondary truncate" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
+            '<td><div class="table__cell-secondary" title="' + esc(notes) + '">' + esc(notes) + '</div></td>' +
             '<td>' +
               '<div class="table__actions">' +
                 '<a href="sponsor.html?id=' + encodeURIComponent(s.id) + '" class="table__action" title="Edit ' + esc(s.name) + '" aria-label="Edit ' + esc(s.name) + '">' +
@@ -557,7 +754,7 @@
         pendingDeleteId = null;
         pendingDeleteName = '';
         window.closeModal && window.closeModal('delete-sponsor-modal');
-        renderAnnexBList();   // in case the deleted row was an active Annex B partner
+        renderAnnexes();   // the deleted row may have been named on either card
         render();
       });
     }
@@ -599,6 +796,15 @@
           annexDate.focus();
           return;
         }
+        // A date already past files the partner straight into the lapsed half of
+        // this panel and hides it from the sponsors table, which is never what
+        // someone adding a live partnership means.
+        if (date < todayISODate()) {
+          toastMsg({ type: 'error', title: 'Date already passed',
+            message: 'Pick a date from today onwards, or the partnership reads as ended.' });
+          annexDate.focus();
+          return;
+        }
         // Keep the modal open on failure so the typed values are not lost.
         const submitBtn = annexForm.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.disabled = true;
@@ -634,7 +840,16 @@
       onCommitted: function (summary) {
         const parts = ['Added ' + summary.added +
           (summary.added === 1 ? ' sponsor' : ' sponsors') + '.'];
-        if (summary.skipped) parts.push(summary.skipped + ' skipped (already in the database).');
+        if (summary.skipped) {
+          // These names were typed into this table by hand, so say which ones
+          // were already there rather than leaving a bare count to guess at.
+          const names = summary.skippedNames || [];
+          const shown = names.slice(0, 3).join(', ');
+          const more = names.length - 3;
+          parts.push(shown
+            ? 'Skipped (already in the database): ' + shown + (more > 0 ? ' and ' + more + ' more.' : '.')
+            : summary.skipped + ' skipped (already in the database).');
+        }
         toastMsg({ type: 'success', title: 'Database updated', message: parts.join(' ') });
         if (addStaging.count() === 0 && window.closeModal) window.closeModal('add-sponsors-modal');
         render();

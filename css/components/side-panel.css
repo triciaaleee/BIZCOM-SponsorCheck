@@ -31,12 +31,25 @@
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform var(--duration-base) var(--ease-out);
+  /* Sliding the panel out of sight does not take it out of the tab order: its
+     inputs stayed focusable while it sat off screen marked aria-hidden, so a
+     keyboard admin tabbed off the calendar into an invisible form. visibility
+     removes it properly. The 0s delay holds it visible for the length of the
+     slide-out, then hides it, so the animation still plays. */
+  visibility: hidden;
+  transition: transform var(--duration-base) var(--ease-out),
+              visibility 0s linear var(--duration-base);
 }
 
 .side-panel.is-open {
   transform: translateX(0);
+  visibility: visible;
+  transition: transform var(--duration-base) var(--ease-out),
+              visibility 0s;
 }
+
+/* The page behind must not scroll while the panel is over it. */
+body.has-panel-open { overflow: hidden; }
 
 .side-panel__header {
   padding: var(--space-4) var(--space-5);

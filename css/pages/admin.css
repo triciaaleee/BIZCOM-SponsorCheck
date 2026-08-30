@@ -577,7 +577,10 @@
 
 .annex-partner__date { color: var(--text-secondary); font-size: var(--font-size-xs); }
 
-.annex-partner__remove {
+/* Ends the partnership and returns the company to Approved. It does not delete
+   anything, so it is deliberately not styled as a destructive action: the hover
+   picks up the Approved green, which is where the company is headed. */
+.annex-partner__restore {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -593,15 +596,15 @@
               background-color var(--duration-fast) var(--ease-out);
 }
 
-.annex-partner__remove:hover {
-  color: var(--color-orange-dark);
+.annex-partner__restore:hover {
+  color: var(--color-green-dark);
   background-color: var(--surface-muted);
 }
 
-/* Contract lapsed: mute the whole row, and surface the Remove action. */
+/* Contract lapsed: mute the row, and surface the move-back-to-Approved action. */
 .annex-partner.is-expired { opacity: 0.6; }
 .annex-partner.is-expired .annex-partner__name { text-decoration: line-through; }
-.annex-partner.is-expired .annex-partner__remove { color: var(--color-orange-dark); }
+.annex-partner.is-expired .annex-partner__restore { color: var(--color-green-dark); }
 
 /* Elevated guidance callout (e.g. SMU alumni approval) — a proper notice, not
    fine print. Uses the restricted card's caution palette so it reads as an
@@ -713,18 +716,22 @@
 .calendar__legend-dot--reviewing { background-color: var(--color-gold); }
 .calendar__legend-dot--completed { background-color: var(--color-green-dark); }
 
+/* minmax(0, 1fr) rather than 1fr: a track's automatic minimum is its content,
+   so one long unbroken event name widened its month, squeezed the other two
+   and pushed the whole page into a horizontal scroll. Capping the minimum lets
+   the ellipsis on .cal-sub__name do its job instead. */
 .calendar__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
 @media (max-width: 900px) {
-  .calendar__grid { grid-template-columns: repeat(2, 1fr); }
+  .calendar__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {
-  .calendar__grid { grid-template-columns: 1fr; }
+  .calendar__grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .cal-cell {
