@@ -56,7 +56,6 @@
 
     const inviteName = document.getElementById('invite-name');
     const inviteEmail = document.getElementById('invite-email');
-    const inviteRole = document.getElementById('invite-role');
     const inviteSubmit = document.getElementById('invite-submit');
 
     const transferTargetEl = document.getElementById('transfer-target-email');
@@ -229,7 +228,6 @@
     function resetInviteForm() {
       inviteName.value = '';
       inviteEmail.value = '';
-      inviteRole.value = 'admin';
     }
 
     async function submitInvite() {
@@ -239,7 +237,6 @@
       }
       const name = inviteName.value.trim();
       const email = inviteEmail.value.trim().toLowerCase();
-      const role = inviteRole.value;
 
       if (!name) {
         toastMsg({ type: 'error', title: 'Name required', message: 'Enter the admin’s name.' });
@@ -253,17 +250,13 @@
         toastMsg({ type: 'error', title: 'Already an admin', message: email + ' is already on the team.' });
         return;
       }
-      // One super-admin at a time — invite as admin, then Transfer.
-      if (role === 'super_admin') {
-        toastMsg({ type: 'warning', title: 'Use transfer instead', message: 'Invite as Admin first, then use Transfer super-admin.' });
-        inviteRole.value = 'admin';
-        return;
-      }
-
+      // Everyone joins as an admin. There is one super-admin at a time (a
+      // partial unique index enforces it), and the seat moves with Transfer,
+      // so the invite form does not offer the role at all.
       inviteSubmit.disabled = true;
       let created;
       try {
-        created = await window.AdminAPI.inviteAdmin({ email: email, name: name, role: role });
+        created = await window.AdminAPI.inviteAdmin({ email: email, name: name, role: 'admin' });
       } catch (e) {
         inviteSubmit.disabled = false;
         if (window.AdminAPI.isUniqueViolation(e)) {
@@ -275,7 +268,7 @@
       }
       inviteSubmit.disabled = false;
 
-      admins.push(created || { email: email, name: name, role: role });
+      admins.push(created || { email: email, name: name, role: 'admin' });
       toastMsg({
         type: 'success',
         title: 'Admin added',
@@ -383,11 +376,11 @@
 
     async function saveSettings() {
       const fields = [
-        { el: setCap,         label: 'Outreach cap' },
-        { el: setCooldown,    label: 'Cooldown period' },
-        { el: setEventSmall,  label: 'Small event cap' },
-        { el: setEventMedium, label: 'Medium event cap' },
-        { el: setEventLarge,  label: 'Large event cap' }
+        { el: setCap,         label: 'Outreach cap',      key: 'outreach_cap' },
+        { el: setCooldown,    label: 'Cooldown period',   key: 'cooldown_days' },
+        { el: setEventSmall,  label: 'Small event cap',   key: 'event_cap_small' },
+        { el: setEventMedium, label: 'Medium event cap',  key: 'event_cap_medium' },
+        { el: setEventLarge,  label: 'Large event cap',   key: 'event_cap_large' }
       ];
       const vals = {};
       for (let i = 0; i < fields.length; i++) {
@@ -416,6 +409,21 @@
         toastMsg({ type: 'info', title: 'No changes', message: 'Nothing to save.' });
         return;
       }
+
+      // Confirm, and name every number that moves. These are not this screen's
+      // own settings: they re-cap every event at once, including submissions
+      // already part-way through their outreach, so lowering an event cap can
+      // put a live submission over it and lock its outreach button. Adding a
+      // handful of sponsors already asks; this reaches further than that.
+      const changes = fields
+        .filter(function (f) { return Number(settings[f.key]) !== patch[f.key]; })
+        .map(function (f) {
+          const was = settings[f.key];
+          return f.label + ': ' + (was == null ? 'unset' : was) + ' to ' + patch[f.key];
+        });
+      if (!confirm('Change the outreach and event limits?\n\n' + changes.join('\n') +
+                   '\n\nThis applies to every club and every event straight away, ' +
+                   'including submissions already in progress.')) return;
 
       settingsSave.disabled = true;
       let updated;

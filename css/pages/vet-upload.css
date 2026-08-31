@@ -583,7 +583,6 @@
   margin-bottom: var(--space-5);
 }
 
-.vet-sub[hidden] { display: none; }
 
 .vet-sub__head {
   margin-bottom: var(--space-5);

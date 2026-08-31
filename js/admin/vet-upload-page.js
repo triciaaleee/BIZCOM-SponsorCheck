@@ -60,19 +60,20 @@
 
      1. Vet a list — upload a CSV of company names (company_name +
         optional industry_code, the same template the public checker
-        uses) and run it through AdminMatcher against the LIVE sponsor
+        uses) and run it through Matcher against the LIVE sponsor
         list. Matched companies are flagged by their database status;
         companies not on record are listed for individual review.
 
      2. Add to database — an editable staging table. The admin sets
         each company's status + industry and adds them all at once via
-        a bulk insert. This step works without a submission attached,
-        so it doubles as the bulk entry screen for the sponsor list.
-        It records no outreach: a contact belongs to an event, so it
-        is logged in step 1 against a recorded submission.
+        a bulk insert. It sits inside #vet-detail, so it needs a
+        submission open like step 1 does; the Sponsors page carries its
+        own copy of the same table for adding companies outside a club
+        list. It records no outreach: a contact belongs to an event, so
+        it is logged in step 1 against a recorded submission.
 
    Data layer (Supabase, no MOCK_DATA):
-     * Matching:      AdminMatcher.checkBatch(rows, ctx) over live data
+     * Matching:      Matcher.checkBatch(rows, ctx) over live data
                       loaded by AdminAPI (reuses Matcher.normalise).
      * Log outreach:  AdminAPI.logOutreach() -> log_outreach RPC,
                       passed the submission so it stamps the line item
@@ -159,15 +160,13 @@
     const yearCount     = document.getElementById('year-count');
     const tabsEl        = document.getElementById('vet-tabs');
 
-    // Screen B — one submission (or step 2 on its own).
+    // Screen B — one submission. Every section of it lives inside #vet-detail,
+    // so hiding that one element hides the lot.
     const detailEl      = document.getElementById('vet-detail');
     const backBtn       = document.getElementById('vet-back');
-    const sectionVet    = document.getElementById('section-vet');
-    const sectionWaves  = document.getElementById('section-waves');
     const wavesList     = document.getElementById('waves-list');
     const wavesEmpty    = document.getElementById('waves-empty');
 
-    const subCard       = document.getElementById('vet-sub');
     const subEventEl    = document.getElementById('vet-sub-event');
     const subClubEl     = document.getElementById('vet-sub-club');
     const subStatusEl   = document.getElementById('vet-sub-status');
@@ -207,7 +206,6 @@
     let submissionList = [];    // every submission, for the picker
     let submissionId = null;    // the one this run is attached to, or null
     let submission = null;      // its row (sponsor_count/wave_count are derived)
-    let screen = 'browse';             // 'browse' | 'detail'
     let browseYear = new Date().getFullYear();
     let browseTab = 'active';          // 'active' | 'completed' | 'all'
     let lastAppliedId = undefined;     // guards the results reset on a real change
@@ -474,12 +472,8 @@
 
     // ---------- screen switching ----------
     function showScreen(which) {
-      screen = which;
       browseEl.hidden = which !== 'browse';
       detailEl.hidden = which === 'browse';
-      if (subCard) subCard.hidden = which !== 'detail';
-      if (sectionWaves) sectionWaves.hidden = which !== 'detail';
-      if (sectionVet) sectionVet.hidden = which !== 'detail';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1008,10 +1002,6 @@
       return window.AdminAPI.countsTowardCap(bucket);
     }
 
-    function countedCompanies() {
-      return listedCompanies().filter(function (r) { return countsTowardCap(classify(r)); });
-    }
-
     // Which rows an outreach can be logged against. Deliberately the SAME test
     // as the cap: a company the event may approach is a company the club will
     // go and contact, so anything that consumes the cap has to be loggable
@@ -1279,9 +1269,17 @@
 
       if (submissionId && !submission) {
         // Linked from a stale tab, or the submission was deleted meanwhile.
+        // Fall back to the picker rather than staying on the detail screen: the
+        // toast says to pick one, and a detail screen with no submission behind
+        // it has nothing to pick from — blank event and club, "0 / 0", and a
+        // drop zone that refuses the file. Only the back button escaped it.
+        // syncUrl() below then drops the dead ?submission=, so a refresh lands
+        // on the picker instead of repeating this.
         toastMsg({ type: 'warning', title: 'Submission not found',
                    message: 'That submission no longer exists. Pick one to carry on.' });
         submissionId = null;
+        showScreen('browse');
+        renderBrowse();
       }
 
       // A different submission means a different list, so clear the last one
@@ -1745,7 +1743,7 @@
         const rowCls = r.suggestion ? 'vet-suggest-row' : '';
         return (
           '<tr class="' + rowCls + '">' +
-            '<td data-label="Log"><input type="checkbox" class="vet-review-check bulk-staging__check" data-ri="' + ri + '" aria-label="Select for adding or outreach"></td>' +
+            '<td data-label="Add"><input type="checkbox" class="vet-review-check bulk-staging__check" data-ri="' + ri + '" aria-label="Select for adding to the database"></td>' +
             '<td class="table__cell-secondary" data-label="#">' + (ri + 1) + '</td>' +
             '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(r.input) + '</div></td>' +
             '<td data-label="Suggested industry">' +

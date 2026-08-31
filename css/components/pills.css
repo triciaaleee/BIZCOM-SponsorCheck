@@ -100,10 +100,9 @@
 .status-pill--closed   { background-color: var(--surface-muted); color: var(--text-muted); border-color: var(--border-subtle); }
 .status-pill--alumni   { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); border-color: rgba(46, 82, 157, 0.25); }
 
-/* Submission status modifiers */
-.status-pill--new        { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
-.status-pill--reviewing  { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
-.status-pill--completed  { background-color: var(--status-clear-bg, rgba(42, 148, 99, 0.10)); color: var(--color-green-dark); }
+/* Sponsor categories are the only thing this pill carries. A submission's
+   status (new / reviewing / completed) is drawn by .sub-status on Vet & Upload
+   and by .cal-sub__dot on Home, so the modifiers for those live there. */
 
 /* ---------- Industry tag (neutral, smaller) ---------- */
 
