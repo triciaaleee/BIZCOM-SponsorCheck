@@ -1,0 +1,11 @@
+# Files kept in the repo but not served by the site.
+#
+# The database definition. No secrets live here (the publishable key ships in
+# js/lib/supabase-config.js on purpose, and the secret key is never in the
+# repo), but the migrations spell out the schema and every RLS policy, and
+# nothing on the site loads them.
+supabase/
+
+# Club sponsor lists used as test input for the checker and the vetting page.
+# Sample data for development; no page links to them.
+sponsor_data/
