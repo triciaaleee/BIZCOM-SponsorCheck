@@ -679,6 +679,36 @@
 .wave__body { display: none; }
 .wave.is-open .wave__body { display: block; }
 
+/* What is still outstanding on a wave, and the way back into step 1. Above the
+   table rather than below it, so a wave holding a hundred companies does not
+   put its own action several screens out of reach. */
+.wave__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.wave__actions-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+
+/* A wave's table scrolls inside its own box past roughly a dozen rows, so the
+   waves after it and the whole of step 1 stay within reach. .table thead th is
+   already sticky, so the column labels come along for free. */
+.wave__table {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+}
+
 /* Status of a company at the time its wave was recorded. */
 .wave-tag {
   display: inline-block;
@@ -747,6 +777,15 @@
 #vet-detail .table thead th,
 #vet-detail .admin-table thead th {
   position: static;
+}
+
+/* The one exception: a wave's table scrolls inside its own box, so its header
+   sticks to the top of that box and can never travel far enough to meet the
+   bar above. Sixty rows without column labels is worse than the collision this
+   rule exists to prevent. */
+#vet-detail .wave__table .table thead th {
+  position: sticky;
+  top: 0;
 }
 
 /* Panel A carries eight columns and needs ~990px; the content column is

@@ -685,6 +685,73 @@
         esc(labels[status] || status || 'Unvetted') + '</span>';
     }
 
+    // Statuses nothing on this event will ever make contactable. Everything
+    // else is still in play: an approved company simply has not been logged
+    // yet, a cooldown will lapse, an unvetted one may be added to the database.
+    const WAVE_TERMINAL = { prohibited: 1, restricted: 1, closed: 1 };
+
+    // The companies on a wave that could still be contacted for this event.
+    // Drives whether the wave can be pulled back into step 1: once every row is
+    // either logged or terminal there is nothing left to do with it.
+    function wavePending(rows) {
+      return rows.filter(function (r) {
+        return !r.outreach_logged_at && !WAVE_TERMINAL[r.status];
+      });
+    }
+
+    // Put a recorded wave back into step 1, vetted against TODAY's database.
+    //
+    // Without this the outreach action is only reachable while the admin still
+    // has the club's CSV to hand: open the submission tomorrow and step 1 is
+    // empty, so a wave that was recorded but not logged, or one whose cooldowns
+    // have since lapsed, has no way back. The line items carry the company
+    // names, which is all checkBatch needs, and indexRecorded() has already
+    // rebuilt any confirmed "same company" links from their sponsor_id.
+    function loadWave(waveNo) {
+      const rows = recordedRows.filter(function (r) { return (r.wave || 1) === waveNo; });
+      if (!rows.length) return;
+
+      // Industry is not kept on the line item. The matcher inherits it from the
+      // matched sponsor or guesses it, exactly as it does for a fresh upload.
+      parsedRows = rows.map(function (r) { return { name: r.company_name, industry: null }; });
+      results = applyLinks(window.Matcher.checkBatch(parsedRows, matchCtx()));
+
+      if (fileInput) fileInput.value = '';
+      if (uploadStatus) uploadStatus.innerHTML = '';
+      renderCheck();
+      setCheckState('results');
+      checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toastMsg({
+        type: 'success', title: 'Wave ' + waveNo + ' loaded',
+        message: rows.length + (rows.length === 1 ? ' company' : ' companies') +
+                 ' checked against the database as it stands today.'
+      });
+    }
+
+    // Sits ABOVE the wave's table, not below it: a club that sent 120 names makes
+    // a table several screens long, and a button under it is a button nobody
+    // will scroll to. Expanding the wave now puts what is outstanding, and the
+    // way to act on it, in view straight away.
+    function waveActionsHtml(waveNo, rows) {
+      if (!wavePending(rows).length) {
+        return '<div class="wave__actions">' +
+          '<span class="wave__actions-note">Nothing left to contact on this wave.</span>' +
+        '</div>';
+      }
+      // The wave header already carries the counts (approachable, unvetted,
+      // outreach logged), so this says what to do rather than repeating them.
+      return (
+        '<div class="wave__actions">' +
+          '<span class="wave__actions-note">' +
+            'Load wave ' + waveNo + ' again to continue vetting and log outreach.' +
+          '</span>' +
+          '<button type="button" class="btn btn--secondary btn--sm" data-load-wave="' + waveNo + '">' +
+            '<i class="bi bi-box-arrow-in-down"></i> Load into step 1' +
+          '</button>' +
+        '</div>'
+      );
+    }
+
     function renderWaves() {
       if (!wavesList) return;
 
@@ -694,6 +761,14 @@
         return;
       }
       if (wavesEmpty) wavesEmpty.hidden = true;
+
+      // Recording and logging both re-render this list. Remember which waves
+      // were open so the one being worked on does not fold shut underneath the
+      // admin every time they write something.
+      const wasOpen = new Set();
+      wavesList.querySelectorAll('.wave.is-open').forEach(function (el) {
+        wasOpen.add(el.getAttribute('data-wave'));
+      });
 
       const byWave = new Map();
       recordedRows.forEach(function (r) {
@@ -740,7 +815,11 @@
                 '<i class="bi bi-chevron-right wave__chev"></i>' +
               '</button>' +
               '<div class="wave__body">' +
-                '<div class="table-wrapper table-wrapper--responsive">' +
+                waveActionsHtml(w, rows) +
+                // Capped height, so one long wave cannot bury every wave after
+                // it and the whole of step 1 below. The table's own sticky
+                // thead keeps the column labels in place while it scrolls.
+                '<div class="table-wrapper table-wrapper--responsive wave__table">' +
                   '<table class="table">' +
                     '<thead><tr>' +
                       '<th>Company</th><th>Matched record</th><th>Status</th>' +
@@ -753,10 +832,19 @@
             '</div>'
           );
         }).join('');
+
+      wavesList.querySelectorAll('.wave').forEach(function (el) {
+        if (wasOpen.has(el.getAttribute('data-wave'))) el.classList.add('is-open');
+      });
     }
 
     if (wavesList) {
       wavesList.addEventListener('click', function (e) {
+        const load = e.target.closest('[data-load-wave]');
+        if (load) {
+          loadWave(parseInt(load.getAttribute('data-load-wave'), 10));
+          return;
+        }
         const head = e.target.closest('.wave__head');
         if (head) head.parentNode.classList.toggle('is-open');
       });
