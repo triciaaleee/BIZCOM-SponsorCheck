@@ -139,7 +139,10 @@
     const matchedTbody  = document.getElementById('matched-tbody');
     const matchedEmpty  = document.getElementById('matched-empty');
     const logBtn        = document.getElementById('log-outreach-btn');
-    const logCountEl    = document.getElementById('log-count');
+    const logTextEl     = document.getElementById('log-outreach-text');
+    const logProgress   = document.getElementById('log-progress');
+    const logProgressTx = document.getElementById('log-progress-text');
+    const logProgressBar= document.getElementById('log-progress-bar');
     const reviewTbody   = document.getElementById('review-tbody');
     const reviewEmpty   = document.getElementById('review-empty');
     const reviewFoot    = document.getElementById('review-foot');
@@ -930,6 +933,7 @@
     // item's sponsor_id, so leaving linkedByNorm holding it would have
     // applyLinks re-apply the very judgement the admin just withdrew.
     async function removeLineItem(id, name) {
+      if (busy) return;
       const row = recordedRows.find(function (r) { return r.id === id; });
       if (!row) return;
       if (row.outreach_logged_at) return;   // the button is not rendered for these
@@ -965,11 +969,14 @@
       wavesList.addEventListener('click', function (e) {
         const load = e.target.closest('[data-load-wave]');
         if (load) {
-          loadWave(parseInt(load.getAttribute('data-load-wave'), 10));
+          // Expanding a wave stays available while a write runs; anything that
+          // replaces or deletes the list underneath it does not.
+          if (!busy) loadWave(parseInt(load.getAttribute('data-load-wave'), 10));
           return;
         }
         const remove = e.target.closest('[data-remove]');
         if (remove) {
+          if (busy) return;
           removeLineItem(remove.getAttribute('data-remove'),
                          remove.getAttribute('data-remove-name'));
           return;
@@ -1099,7 +1106,7 @@
       // Over cap keeps the button visible but disabled, so the banner has
       // something to point at.
       logBtn.disabled = over;
-      if (logCountEl) logCountEl.textContent = out.loggable;
+      if (logTextEl) logTextEl.textContent = 'Log outreach for all ' + out.loggable;
 
       let step;   // 1 = record, 2 = outreach, 3 = both finished
 
@@ -1194,21 +1201,56 @@
       return recordedByNorm.get(window.Matcher.normalise(r.input)) || null;
     }
 
+    // ---------- long writes ----------
+    // Logging outreach is one request per company and the server serialises
+    // them on a row lock, so a wave of a hundred names runs for a long time.
+    // While it does, every other control on the page has to be shut: recording
+    // again, removing a line item the loop is about to log, or dropping a new
+    // CSV underneath it would all act on a list that is being written.
+    //
+    // Nothing here restores state on the way out. The renders that run after
+    // the loop own these buttons anyway and set them correctly from the data,
+    // so setBusy(false) only has to clear the lock and let them.
+    let busy = false;
+
+    function setBusy(on) {
+      busy = on;
+      [recordBtn, logBtn, addRowBtn, clearBtn, saveBtn].forEach(function (b) {
+        if (b) b.disabled = on;
+      });
+      if (fileInput) fileInput.disabled = on || !submission;
+      if (dropZone) dropZone.classList.toggle('is-locked', on || !submission);
+      if (wavesList) wavesList.classList.toggle('is-busy', on);
+    }
+
+    // A refresh mid-loop abandons the calls that have not been sent, leaving
+    // the wave half logged with nothing on screen saying how far it got. This
+    // is the browser's own guard; it cannot be styled or worded, but it is the
+    // only thing that can interrupt a reload.
+    window.addEventListener('beforeunload', function (e) {
+      if (!busy) return;
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    });
+
     // Step 1 is locked until a submission is chosen: every list vetted here
     // belongs to a club, so there is nothing sensible to do without one.
     function setUploadGate() {
-      const open = !!submission;
+      const open = !!submission && !busy;
       if (dropZone) dropZone.classList.toggle('is-locked', !open);
       if (fileInput) fileInput.disabled = !open;
+      // Two different reasons to be shut, and they need different words: no
+      // submission chosen yet, or a write in flight over the list on screen.
       if (dropZoneTitle) {
-        dropZoneTitle.textContent = open
-          ? 'Drop a .csv list here'
-          : 'Open a submission to start';
+        dropZoneTitle.textContent = busy
+          ? 'Logging outreach'
+          : (submission ? 'Drop a .csv list here' : 'Open a submission to start');
       }
       if (dropZoneHint) {
-        dropZoneHint.textContent = open
-          ? 'or click to browse'
-          : 'every list belongs to a club submission';
+        dropZoneHint.textContent = busy
+          ? 'wait for this wave to finish before uploading another list'
+          : (submission ? 'or click to browse' : 'every list belongs to a club submission');
       }
       if (sampleLink) {
         sampleLink.classList.toggle('is-disabled', !open);
@@ -1279,7 +1321,7 @@
 
     if (recordBtn) {
       recordBtn.addEventListener('click', async function () {
-        if (!submission) return;
+        if (busy || !submission) return;
         const entries = waveEntries();
         if (!entries.length) return;
 
@@ -1383,7 +1425,7 @@
     if (sampleLink) {
       sampleLink.addEventListener('click', function (e) {
         e.preventDefault();
-        if (submissionRequired()) return;
+        if (busy || submissionRequired()) return;
         parseAndCheck(SAMPLE_TEXT);
       });
     }
@@ -1399,6 +1441,7 @@
     }
 
     function handleFile(file) {
+      if (busy) return;
       if (submissionRequired()) return;
       if (!/\.csv$/i.test(file.name)) {
         toastMsg({ type: 'error', title: 'Wrong file type', message: 'Only .csv is accepted. Save your Excel file as CSV first.' });
@@ -1896,6 +1939,7 @@
     // ---- Panel A outreach logging: one action for the whole wave ----
     if (logBtn) {
       logBtn.addEventListener('click', async function () {
+        if (busy) return;
         const targets = loggableCompanies();
         if (targets.length === 0) return;
         const waves = waveLabel(openWaves());
@@ -1904,15 +1948,42 @@
                      'This adds 1 to each running count and closes ' + waves +
                      ' for outreach. It cannot be undone.')) return;
 
-        logBtn.disabled = true;
+        // One request per company, and the server takes a row lock on the
+        // submission for each, so this is genuinely slow on a real wave. Report
+        // every step of it: the action used to grey the button out and then
+        // change nothing at all until the last request came back, which read as
+        // a hung page and had admins refreshing part-way through the write.
+        const total = targets.length;
+        function showProgress(done) {
+          if (logTextEl) {
+            logTextEl.textContent = 'Logging ' + done + ' of ' + total + '…';
+          }
+          if (logProgressTx) {
+            logProgressTx.textContent = done === total
+              ? 'Saving the results…'
+              : 'Logging outreach for ' + waves + ', ' + done + ' of ' + total +
+                ' done. Leave this page open.';
+          }
+          if (logProgressBar) {
+            logProgressBar.style.width = Math.round((done / total) * 100) + '%';
+          }
+        }
+
+        setBusy(true);
+        setUploadGate();
+        if (logProgress) logProgress.hidden = false;
+        showProgress(0);
+
         let logged = 0, capped = 0, skipped = 0, duplicate = 0, notRecorded = 0,
             eventCapped = 0, notApproachable = 0, failed = 0;
+        let done = 0;
         for (const t of targets) {
           let res;
           try {
             res = await window.AdminAPI.logOutreach(t.matchedId, null, submissionId);
           } catch (e) {
             failed++;
+            showProgress(++done);
             continue;
           }
           if (res === 'logged') logged++;
@@ -1922,6 +1993,7 @@
           else if (res === 'not_recorded') notRecorded++;
           else if (res === 'event_capped') eventCapped++;
           else if (res === 'not_approachable') notApproachable++;
+          showProgress(++done);
         }
 
         // Reload the line items so the closed wave shows as closed. The
@@ -1929,10 +2001,13 @@
         // moved by logging outreach, not by recording, so this is the write
         // that changes sponsor_count.
         await Promise.all([refreshOutreach(), loadRecorded(), refreshSubmission()]);
-        logBtn.disabled = false;
+        setBusy(false);
+        if (logProgress) logProgress.hidden = true;
+        setUploadGate();
         renderSubmissionCard();   // the meter moves on THIS action now
         renderWaves();            // the contacted stamps land in the history too
         revet();                  // refresh status, remarks, outreach and panels
+        renderActions();          // restores the button label revet() may not reach
 
         if (window.toast) {
           let msg = 'Added 1 outreach to ' + (logged === 1 ? '1 company' : logged + ' companies') + '.';

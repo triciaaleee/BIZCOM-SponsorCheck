@@ -61,12 +61,27 @@
     `;
     container.appendChild(toast);
 
-    requestAnimationFrame(function () {
-      toast.classList.add('is-visible');
-    });
+    // Reveal WITHOUT requestAnimationFrame.
+    //
+    // rAF does not fire while the page is not being painted — a background tab,
+    // a minimised window — but the auto-dismiss below is a setTimeout, which
+    // keeps running. The two clocks drift apart, and the toast was created,
+    // never given `is-visible`, and then removed on schedule having never been
+    // seen: opacity 0 for its whole life. Reading offsetWidth forces the style
+    // flush the CSS transition needs, synchronously, whatever the paint state.
+    //
+    // This bites hardest after a long write. Logging outreach for a whole wave
+    // is one request per company and can run for tens of seconds, so the admin
+    // looks away, and the toast is the only thing that reports the result.
+    void toast.offsetWidth;
+    toast.classList.add('is-visible');
+
+    let timer = null;
 
     const closeBtn = toast.querySelector('.toast__close');
     function dismiss() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       toast.classList.remove('is-visible');
       setTimeout(function () {
         toast.remove();
@@ -74,8 +89,22 @@
     }
     closeBtn.addEventListener('click', dismiss);
 
+    // Hold the countdown while the page is hidden, so a toast raised while the
+    // admin is in another tab is still waiting when they come back rather than
+    // having expired unseen.
+    function startTimer() {
+      if (duration <= 0 || timer) return;
+      timer = setTimeout(dismiss, duration);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      startTimer();
+    }
+
     if (duration > 0) {
-      setTimeout(dismiss, duration);
+      if (document.visibilityState === 'visible') startTimer();
+      else document.addEventListener('visibilitychange', onVisibilityChange);
     }
   }
 

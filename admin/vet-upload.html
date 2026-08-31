@@ -213,9 +213,21 @@
             <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="vet-record-btn" hidden>
               <i class="bi bi-journal-plus"></i> <span id="vet-record-text">Record to submission</span>
             </button>
+            <!-- Label set from JS: it doubles as the progress readout while
+                 the wave is being logged, which is one request per company and
+                 can run for tens of seconds. -->
             <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="log-outreach-btn" hidden>
-              <i class="bi bi-graph-up-arrow"></i> Log outreach for all <span id="log-count">0</span>
+              <i class="bi bi-graph-up-arrow"></i> <span id="log-outreach-text">Log outreach</span>
             </button>
+          </div>
+
+          <!-- Only shown while outreach is being logged. Before this the whole
+               action was silent: the button greyed out and nothing else on the
+               page moved until every request had finished, which read as a
+               hung page and had admins refreshing mid-write. -->
+          <div class="vet-next__progress" id="log-progress" hidden>
+            <div class="vet-next__progress-text" id="log-progress-text"></div>
+            <div class="progress"><div class="progress__bar" id="log-progress-bar" style="width:0%"></div></div>
           </div>
         </div>
 

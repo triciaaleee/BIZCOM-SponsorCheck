@@ -771,6 +771,16 @@
   color: var(--color-orange-dark);
 }
 
+/* While outreach is being logged, the history may not be edited: removing a
+   line item the loop is about to write, or pulling another wave into step 1,
+   would both act on a list that is mid-write. Expanding a wave still works,
+   so the buttons are dimmed rather than the whole panel. */
+.waves.is-busy .wave-remove,
+.waves.is-busy [data-load-wave] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ---------- The next action ---------- */
 /* Recording and logging outreach are two ordered writes, and only one of them
    is ever the admin's next move. Rendering both at once read as a pile of
@@ -795,6 +805,23 @@
 }
 
 .vet-next[hidden] { display: none; }
+
+/* Shown only while a wave's outreach is being logged. Sits inside the sticky
+   bar, so the one slow write on this page reports itself wherever the admin
+   has scrolled to. */
+.vet-next__progress {
+  padding: 0 var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.vet-next__progress[hidden] { display: none; }
+
+.vet-next__progress-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
 
 /* Only this bar is sticky. The tables' own headers scroll away with their rows,
    so they can never reach the top of the viewport and collide with it. */
