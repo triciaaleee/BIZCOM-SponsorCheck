@@ -296,20 +296,43 @@
     // can be undone.
     let linkedByNorm = new Map();   // normalised(input) -> sponsor row
 
-    // Fold confirmed links into the matcher's output so everything downstream —
-    // classify, the panels, the cap count, the wave payload — sees a normal match.
+    // Build the row by running the confirmed sponsor back through the matcher,
+    // rather than hand-copying fields onto it. The Annex A/B split and the
+    // lapsed-contract case both live in checkOne(), and the copy that used to
+    // sit here drifted: it carried the category across but not the annex
+    // letter, so confirming a match against an Annex B partner filed it as
+    // *prohibited*, and waveEntries() wrote that wrong status onto the
+    // submission for good. The sponsor is handed over under the input's own
+    // lookup key so checkOne's exact-match pass fires on it, which is precisely
+    // what confirming a link asserts.
+    function linkedResult(r, s) {
+      const standIn = {};
+      Object.keys(s).forEach(function (k) { standIn[k] = s[k]; });
+      standIn.normalised = window.Matcher.normalise(r.input);
+
+      const out = window.Matcher.checkOne(r.input, null, {
+        sponsors: [standIn], capState: capState, today: todayStr
+      });
+      // A sponsor with no industry on record should not wipe the guess the
+      // matcher already made for this row.
+      if (!out.industry) out.industry = r.industry;
+      out.matchType = 'linked';
+      out.matchScore = null;
+      out.matched = s.name;
+      out.matchedName = s.name;
+      out.reason = 'Confirmed by an admin as the same company as ' + s.name;
+      return out;
+    }
+
+    // Fold confirmed links into the matcher's output so everything downstream,
+    // classify, the panels, the cap count and the wave payload, sees a normal match.
     function applyLinks(rows) {
       rows.forEach(function (r) {
         if (r.status === 'duplicate' || r.matchedId) return;
         const s = linkedByNorm.get(window.Matcher.normalise(r.input));
         if (!s) return;
-        r.matchedId = s.id;
-        r.matchedName = s.name;
-        r.matchedCategory = s.category;
-        r.matchType = 'linked';
-        r.matchScore = null;
-        r.reason = 'Confirmed by an admin as the same company as ' + s.name;
-        if (s.industry) r.industry = s.industry;
+        // Mutated in place: renderMatched/renderReview hold results.indexOf(r).
+        Object.assign(r, linkedResult(r, s));
       });
       return rows;
     }
@@ -765,6 +788,18 @@
       return listedCompanies().filter(function (r) { return countsTowardCap(classify(r)); });
     }
 
+    // Which rows an outreach can be logged against. Deliberately the SAME test
+    // as the cap: a company the event may approach is a company the club will
+    // go and contact, so anything that consumes the cap has to be loggable
+    // here. This used to read `classify(r) === 'approved'`, which quietly left
+    // alumni out. They took up a cap place and then sat in the wave history as
+    // "Not logged" for ever, with no control anywhere that could log them. The
+    // server was never the constraint: log_outreach only answers
+    // 'not_approachable' when counts_toward_cap() is false.
+    function canLogOutreach(r) {
+      return !!r.matchedId && countsTowardCap(classify(r));
+    }
+
     // Companies already on the submission whose verdict has moved since they
     // were recorded: an unknown that has since been added or linked, or a
     // cooldown that has lapsed. Re-recording refreshes them, which is how they
@@ -789,11 +824,11 @@
       });
     }
 
-    // How the approved companies on this list stand for outreach.
+    // How the approachable companies on this list stand for outreach.
     function outreachTotals() {
       let approachable = 0, loggable = 0, locked = 0, logged = 0;
       results.forEach(function (r) {
-        if (classify(r) !== 'approved' || !r.matchedId) return;
+        if (!canLogOutreach(r)) return;
         approachable++;
         const line = lineFor(r);
         if (!line) locked++;
@@ -1159,14 +1194,35 @@
       return out;
     }
 
+    // Header labels, matched in FULL rather than by substring. A substring test
+    // read a first row of "Nameless Cafe" as a header and dropped it without a
+    // word, which is the worst way for a company to go missing: the club's list
+    // comes out one name short and nothing on screen says so. Row 1 is data
+    // unless it says one of these outright.
+    const NAME_HEADERS = ['company name', 'company', 'name', 'sponsor', 'sponsor name'];
+    const IND_HEADERS  = ['industry code', 'industry', 'category', 'type', 'code'];
+
+    function headerKey(cell) {
+      return String(cell == null ? '' : cell)
+        .toLowerCase().replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
     function parseRows(text) {
       const lines = text.split(/\r?\n/).filter(function (l) { return l.trim().length > 0; });
       if (lines.length === 0) throw new Error('This file appears to be empty.');
 
-      const headerCols = parseCsvLine(lines[0]).map(function (c) { return c.toLowerCase().trim(); });
-      const hasHeader = headerCols.some(function (c) { return /name|company/.test(c); });
-      const nameIdx = hasHeader ? headerCols.findIndex(function (c) { return /name|company/.test(c); }) : 0;
-      const indIdx  = hasHeader ? headerCols.findIndex(function (c) { return /industry|category|type|code/.test(c); }) : -1;
+      const headerCols = parseCsvLine(lines[0]).map(headerKey);
+      const hasHeader = headerCols.some(function (c) { return NAME_HEADERS.indexOf(c) !== -1; });
+      const nameIdx = hasHeader
+        ? headerCols.findIndex(function (c) { return NAME_HEADERS.indexOf(c) !== -1; })
+        : 0;
+      // Without a header the columns are positional, in the order the format
+      // hint on the page documents: company_name first, industry_code second.
+      // Reading only column 1 threw the club's industry codes away and let the
+      // keyword guesser answer in their place.
+      const indIdx = hasHeader
+        ? headerCols.findIndex(function (c) { return IND_HEADERS.indexOf(c) !== -1; })
+        : 1;
       const dataLines = hasHeader ? lines.slice(1) : lines;
 
       const rows = [];
@@ -1174,7 +1230,8 @@
         const cols = parseCsvLine(line);
         const name = (cols[nameIdx] || '').trim();
         if (!name) return;
-        const industry = indIdx >= 0 ? (cols[indIdx] || '').trim() : '';
+        // Codes are stored lowercase, so a club writing "Food_Beverage" still lands.
+        const industry = indIdx >= 0 ? (cols[indIdx] || '').trim().toLowerCase() : '';
         rows.push({ name: name, industry: industry || null });
       });
 
@@ -1193,7 +1250,16 @@
           toastMsg({ type: 'error', title: 'Database not loaded', message: 'Could not load the sponsor list. Refresh and try again.' });
           return;
         }
-        results = applyLinks(window.Matcher.checkBatch(rows, matchCtx()));
+        // An industry code only means something against the loaded list, and an
+        // unrecognised one is worse than none: it reaches step 2's picker, where
+        // no <option> matches it, so the browser quietly selects whichever
+        // industry happens to be first and that is what gets saved. Dropping it
+        // lets the matcher fall back to its keyword guess, which is visible.
+        parsedRows = rows.map(function (row) {
+          const known = row.industry && industries.some(function (i) { return i.code === row.industry; });
+          return known ? row : { name: row.name, industry: null };
+        });
+        results = applyLinks(window.Matcher.checkBatch(parsedRows, matchCtx()));
         renderCheck();
         setCheckState('results');
         checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1290,7 +1356,7 @@
         // Outreach is scoped to the submission: a company must be recorded on
         // it, and can only be logged once for that event.
         const line = lineFor(r);
-        const approachable = bucket === 'approved' && r.matchedId;
+        const approachable = canLogOutreach(r);
         const canLog = approachable && line && !line.outreach_logged_at;
 
         // No tick boxes: outreach is a single wave-wide action, so this column
@@ -1331,7 +1397,7 @@
     function loggableCompanies() {
       if (!submission) return [];
       return results.filter(function (r) {
-        if (classify(r) !== 'approved' || !r.matchedId) return false;
+        if (!canLogOutreach(r)) return false;
         const line = lineFor(r);
         return !!line && !line.outreach_logged_at;
       });
@@ -1449,8 +1515,15 @@
       return '<span class="table__cell-primary">' + esc(name) + '</span>' + approx;
     }
 
+    // The sponsor's own running outreach count, which is global and separate
+    // from the event cap. Keyed off the bucket, not the raw database category:
+    // the category alone reported "n/a" for an alumni company the page is about
+    // to log, and for a lapsed Annex B partner sitting under an Approved pill.
+    // Cooldown is included because the count and its end date are the whole
+    // reason that row is flagged.
+    const HAS_OUTREACH_COUNT = { approved: 1, alumni: 1, cooldown: 1 };
     function outreachCell(r) {
-      if (r.matchedCategory !== 'approved' || !r.matchedId) {
+      if (!r.matchedId || !HAS_OUTREACH_COUNT[classify(r)]) {
         return '<span class="text-muted text-xs">n/a</span>';
       }
       const st = capState(r.matchedId);
