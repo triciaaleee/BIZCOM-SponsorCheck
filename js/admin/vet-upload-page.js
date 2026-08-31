@@ -174,7 +174,7 @@
     const actionsBar    = document.getElementById('vet-actions');
     const actionsTrack  = document.getElementById('vet-next-track');
     const actionsTitle  = document.getElementById('vet-next-title');
-    const recordCountEl = document.getElementById('vet-record-count');
+    const recordTextEl  = document.getElementById('vet-record-text');
     const recordBtn     = document.getElementById('vet-record-btn');
     const capBanner     = document.getElementById('cap-banner');
     const capBannerMsg  = document.getElementById('cap-banner-msg');
@@ -337,13 +337,67 @@
       return rows;
     }
 
+    // Two rows of the club's list can resolve to ONE database record without
+    // being spelled the same: "KOI" and "KOI Cafe Singapore" both land on KOI
+    // through the matcher's containment pass, and confirming a "Same company"
+    // link can do it too. checkBatch cannot see this — it de-dupes on the input
+    // name, which is genuinely different — so both rows travelled all the way
+    // through as separate companies.
+    //
+    // That broke outreach outright. Both were written as their own line item
+    // carrying the same sponsor_id, and log_outreach looks its line item up BY
+    // sponsor_id: it stamped one, answered 'duplicate' for the other, and the
+    // second row sat unloggable for ever while the button went on offering it
+    // ("Added 1 outreach to 0 companies"). The cap arithmetic was out by one
+    // for the same reason.
+    //
+    // Folding them into the matcher's existing 'duplicate' bucket fixes all of
+    // it at once: listedCompanies() already drops duplicates, so they leave the
+    // wave payload, the cap count and the outreach set together. Run AFTER
+    // applyLinks, since a confirmed link is one of the ways a collision arrives.
+    function markSameSponsor(rows) {
+      const firstAt = new Map();          // sponsorId -> 1-based row number
+      const alsoAt = new Map();           // that row number -> later row numbers
+      rows.forEach(function (r, i) {
+        if (r.status === 'duplicate' || !r.matchedId) return;
+        const seen = firstAt.get(r.matchedId);
+        if (seen === undefined) { firstAt.set(r.matchedId, i + 1); return; }
+        const name = r.matchedName || r.matched || 'the same record';
+        r.status = 'duplicate';
+        r.reason = 'Same company as row ' + seen + ' (' + rows[seen - 1].input +
+                   '). Both match ' + name + ' in the database.';
+        if (!alsoAt.has(seen)) alsoAt.set(seen, []);
+        alsoAt.get(seen).push(i + 1);
+      });
+
+      // Say so on the row that was kept, the way checkBatch does for a repeated
+      // name: the banner gives a count, but the admin needs to see which company
+      // the club listed twice and under what other spelling.
+      alsoAt.forEach(function (dupRows, canonical) {
+        const cr = rows[canonical - 1];
+        if (!cr) return;
+        const base = (cr.reason || '').replace(/\.$/, '');
+        cr.reason = base + '. Also listed as ' +
+          dupRows.map(function (n) { return '"' + rows[n - 1].input + '"'; }).join(', ') +
+          ' on row' + (dupRows.length > 1 ? 's ' : ' ') + dupRows.join(', ') + '.';
+      });
+
+      return rows;
+    }
+
+    // Everything that produces a result set goes through here, so the link pass
+    // and the collision pass can never be applied to one and not the other.
+    function vetted(rows) {
+      return markSameSponsor(applyLinks(rows));
+    }
+
     function linkSuggestion(ri) {
       const r = results[ri];
       if (!r || !r.suggestion) return;
       const s = sponsors.find(function (x) { return x.id === r.suggestion.id; });
       if (!s) return;
       linkedByNorm.set(window.Matcher.normalise(r.input), s);
-      applyLinks(results);
+      vetted(results);
       renderCheck();
       toastMsg({ type: 'success', title: 'Linked',
                  message: '“' + r.input + '” is recorded as ' + s.name + '.' });
@@ -620,7 +674,14 @@
       subClubEl.textContent = submission.club;
       subStatusEl.innerHTML = statusPillHtml(submission.status);
 
-      subCountEl.textContent = used.toLocaleString() + ' / ' + cap.toLocaleString() + ' sponsors';
+      // "N / cap sponsors" read as though the cap limited the size of the list.
+      // It limits contacts, so say so, and show listed_count beside it: the two
+      // numbers are far apart by design and the gap is the thing worth seeing.
+      // Home already shows it; this page had it in hand and never used it.
+      const listed = submission.listed_count || 0;
+      subCountEl.textContent =
+        used.toLocaleString() + ' / ' + cap.toLocaleString() + ' contacted' +
+        (listed ? ', ' + listed.toLocaleString() + ' listed' : '');
       subWavesEl.textContent =
         waves === 0 ? 'No waves yet' : waves + (waves === 1 ? ' wave' : ' waves');
 
@@ -658,6 +719,20 @@
       return '<span class="wave-nope">Not logged</span>';
     }
 
+    // The one control that can take a company back off a submission. Withheld
+    // once outreach is logged: the outreach_log row would stay behind with
+    // nothing on the event pointing at it, and the sponsor's global count would
+    // no longer be explainable from any submission. A contacted company is
+    // history, so it is read-only here.
+    function removeCellHtml(row) {
+      if (row.outreach_logged_at) return '<span class="text-muted text-xs">&mdash;</span>';
+      return '<button type="button" class="wave-remove" data-remove="' + esc(row.id) + '" ' +
+        'data-remove-name="' + esc(row.company_name) + '" ' +
+        'title="Remove this company from the submission" ' +
+        'aria-label="Remove ' + esc(row.company_name) + ' from the submission">' +
+        '<i class="bi bi-trash3"></i></button>';
+    }
+
     function waveRowHtml(row) {
       const matched = sponsorName(row.sponsor_id);
       const counts = window.AdminAPI.countsTowardCap(row.status);
@@ -671,6 +746,7 @@
           '<td data-label="Outreach">' + contactedCell(row) + '</td>' +
           '<td data-label="Logged by" class="text-secondary text-xs">' +
             esc(row.outreach_logged_by || '—') + '</td>' +
+          '<td data-label="Remove">' + removeCellHtml(row) + '</td>' +
         '</tr>'
       );
     }
@@ -714,7 +790,7 @@
       // Industry is not kept on the line item. The matcher inherits it from the
       // matched sponsor or guesses it, exactly as it does for a fresh upload.
       parsedRows = rows.map(function (r) { return { name: r.company_name, industry: null }; });
-      results = applyLinks(window.Matcher.checkBatch(parsedRows, matchCtx()));
+      results = vetted(window.Matcher.checkBatch(parsedRows, matchCtx()));
 
       if (fileInput) fileInput.value = '';
       if (uploadStatus) uploadStatus.innerHTML = '';
@@ -824,6 +900,7 @@
                     '<thead><tr>' +
                       '<th>Company</th><th>Matched record</th><th>Status</th>' +
                       '<th>Counts</th><th>Outreach</th><th>Logged by</th>' +
+                      '<th style="width: 48px"></th>' +
                     '</tr></thead>' +
                     '<tbody>' + rows.map(waveRowHtml).join('') + '</tbody>' +
                   '</table>' +
@@ -838,11 +915,63 @@
       });
     }
 
+    // Take one company back off the submission.
+    //
+    // Until this existed a line item was permanent, and three separate dead
+    // ends came out of that: an over-cap event whose banner said "contact N
+    // fewer" with no control that could; a "Same company" link confirmed by
+    // mistake, whose undo told the admin to remove the company from the
+    // submission when nothing could; and a company recorded twice under two
+    // spellings, where log_outreach stamps one line item and answers
+    // 'duplicate' for the other for ever, leaving the outreach button offering
+    // a company it can never log.
+    //
+    // The confirmed link is dropped with the row. A link lives on the line
+    // item's sponsor_id, so leaving linkedByNorm holding it would have
+    // applyLinks re-apply the very judgement the admin just withdrew.
+    async function removeLineItem(id, name) {
+      const row = recordedRows.find(function (r) { return r.id === id; });
+      if (!row) return;
+      if (row.outreach_logged_at) return;   // the button is not rendered for these
+
+      if (!confirm('Remove "' + name + '" from "' + submission.event_name + '"?\n\n' +
+                   'It comes off this submission and stops counting towards the cap. ' +
+                   'The company itself stays in the database, and the club\'s list is ' +
+                   'unchanged, so vetting the list again would record it once more.')) return;
+
+      try {
+        await window.AdminAPI.deleteSubmissionSponsor(id);
+      } catch (e) {
+        toastError('Could not remove this company', e);
+        return;
+      }
+
+      linkedByNorm.delete(row.normalised);
+
+      await Promise.all([loadRecorded(), refreshSubmission()]);
+      renderSubmissionCard();
+      renderWaves();
+      // Re-vet rather than re-render: the row falls back to whatever the
+      // matcher makes of it now that the confirmed link is gone. revet() is a
+      // no-op with nothing uploaded, so the actions bar is refreshed either way.
+      if (results.length) revet();
+      renderActions();
+
+      toastMsg({ type: 'success', title: 'Removed from submission',
+                 message: '“' + name + '” is no longer on ' + submission.event_name + '.' });
+    }
+
     if (wavesList) {
       wavesList.addEventListener('click', function (e) {
         const load = e.target.closest('[data-load-wave]');
         if (load) {
           loadWave(parseInt(load.getAttribute('data-load-wave'), 10));
+          return;
+        }
+        const remove = e.target.closest('[data-remove]');
+        if (remove) {
+          removeLineItem(remove.getAttribute('data-remove'),
+                         remove.getAttribute('data-remove-name'));
           return;
         }
         const head = e.target.closest('.wave__head');
@@ -958,7 +1087,13 @@
 
       recordBtn.hidden = recordDone;
       recordBtn.disabled = false;   // recording cannot breach the cap
-      recordCountEl.textContent = fresh || refreshable;
+      // The button says which of its two jobs it is about to do. It used to read
+      // "Record N to submission" under a title reading "Update N companies".
+      if (recordTextEl) {
+        recordTextEl.textContent = fresh === 0
+          ? 'Update ' + refreshable + ' on submission'
+          : 'Record ' + fresh + ' to submission';
+      }
 
       logBtn.hidden = recordDone ? out.loggable === 0 : true;
       // Over cap keeps the button visible but disabled, so the banner has
@@ -979,7 +1114,18 @@
         actionsTitle.textContent = 'Log outreach for ' + waveLabel(openWaves());
       } else {
         step = 3;
-        actionsTitle.textContent = out.logged ? 'This list is done' : 'Recorded';
+        // "This list is done" was shown while companies were still sitting in
+        // panel B with nothing known about them. Nothing on this list can be
+        // recorded or contacted any further, which is not the same as the list
+        // being finished, so say which it is.
+        const unvetted = results.filter(function (r) { return classify(r) === 'review'; }).length;
+        if (unvetted) {
+          actionsTitle.textContent =
+            (out.logged ? 'Outreach logged, ' : 'Recorded, ') + unvetted +
+            (unvetted === 1 ? ' company still unvetted' : ' companies still unvetted');
+        } else {
+          actionsTitle.textContent = out.logged ? 'This list is done' : 'Recorded';
+        }
       }
 
       actionsBar.classList.toggle('is-done', step === 3);
@@ -996,12 +1142,16 @@
         const show = over && step === 2;
         capBanner.hidden = !show;
         if (show) {
+          // Naming the escape hatch, not just the arithmetic: outreach is one
+          // action over the whole wave, so the only way to contact fewer is to
+          // take companies off the submission in Wave history above.
+          const excess = wouldBe - cap;
           capBannerMsg.textContent =
             submission.event_name + ' is a ' + (SIZE_LABEL[submission.event_size] || submission.event_size).toLowerCase() +
             ' event, capped at ' + cap + ' sponsors contacted. It has already contacted ' +
             used + ', and this would add ' + out.loggable + ' more (' + wouldBe + ' in total). ' +
-            'Contact ' + (wouldBe - cap) + ' fewer, or change the event size on Home ' +
-            'if the cap is wrong.';
+            'Remove at least ' + excess + (excess === 1 ? ' company' : ' companies') +
+            ' in Wave history above, or change the event size on Home if the cap is wrong.';
         }
       }
     }
@@ -1136,11 +1286,23 @@
         const fresh = unrecordedCompanies().length;
         const counting = unrecordedCompanies()
           .filter(function (r) { return countsTowardCap(classify(r)); }).length;
+        const refreshing = refreshableCompanies().length;
         const wave = (submission.wave_count || 0) + 1;
-        if (fresh && !confirm('Record ' + fresh + (fresh === 1 ? ' company' : ' companies') +
-                     ' against "' + submission.event_name + '" as wave ' + wave + '?\n\n' +
-                     counting + ' of them count towards the cap. The rest are kept on the ' +
-                     'record but do not use it up.')) return;
+
+        // Both paths write, so both ask. The refresh path used to go through on
+        // a single click because the guard was `if (fresh && !confirm(...))`,
+        // and it is the one that silently rewrites the status of companies
+        // already on the submission.
+        const question = fresh
+          ? 'Record ' + fresh + (fresh === 1 ? ' company' : ' companies') +
+            ' against "' + submission.event_name + '" as wave ' + wave + '?\n\n' +
+            counting + ' of them may be contacted and so can use up the cap. The rest ' +
+            'are kept on the record but never count.'
+          : 'Update ' + refreshing + (refreshing === 1 ? ' company' : ' companies') +
+            ' already on "' + submission.event_name + '"?\n\n' +
+            'Their status is rewritten to match the database as it stands now. ' +
+            'Nothing new is added, and companies already contacted are left alone.';
+        if (!confirm(question)) return;
 
         recordBtn.disabled = true;
         let res;
@@ -1162,15 +1324,20 @@
 
         res = res || {};
         const added = res.added || 0;
-        let msg = 'Wave ' + (res.wave || wave) + ': ' + added +
-                  (added === 1 ? ' company' : ' companies') + ' recorded.';
+        let msg = added
+          ? 'Wave ' + (res.wave || wave) + ': ' + added +
+            (added === 1 ? ' company' : ' companies') + ' recorded.'
+          : 'Wave ' + (res.wave || wave) + ': nothing new to record.';
         if (res.refreshed) msg += ' ' + res.refreshed + ' updated.';
         if (res.skipped) msg += ' ' + res.skipped + ' already on the list.';
-        msg += ' ' + submission.event_name + ' is at ' + (res.counted || 0) +
-               ' of ' + (res.cap || submissionCap()) + ' towards the cap';
-        msg += (res.listed && res.listed !== res.counted)
-          ? ' (' + res.listed + ' listed in all).'
-          : '.';
+        if (res.listed) msg += ' ' + res.listed + ' on the submission in all.';
+        // Since 0015 the cap only moves when outreach is logged, so this figure
+        // is unchanged by the write that just happened. Saying "is at 0 of 5
+        // towards the cap" straight after recording eleven companies read as a
+        // failure; name the reason instead of the bare number.
+        msg += ' Nothing counts towards the cap until outreach is logged: ' +
+               submission.event_name + ' is at ' + (res.counted || 0) + ' of ' +
+               (res.cap || submissionCap()) + ' contacted.';
         toastMsg({ type: 'success', title: 'Recorded to submission', message: msg });
       });
     }
@@ -1347,7 +1514,7 @@
           const known = row.industry && industries.some(function (i) { return i.code === row.industry; });
           return known ? row : { name: row.name, industry: null };
         });
-        results = applyLinks(window.Matcher.checkBatch(parsedRows, matchCtx()));
+        results = vetted(window.Matcher.checkBatch(parsedRows, matchCtx()));
         renderCheck();
         setCheckState('results');
         checkResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1357,7 +1524,7 @@
     // Re-run the vet on the same rows against the (now-refreshed) live data.
     function revet() {
       if (!parsedRows.length) return;
-      results = applyLinks(window.Matcher.checkBatch(parsedRows, matchCtx()));
+      results = vetted(window.Matcher.checkBatch(parsedRows, matchCtx()));
       renderCheck();
     }
 
@@ -1387,7 +1554,11 @@
     function renderCheck() {
       const counts = { approved: 0, cooldown: 0, prohibited: 0, restricted: 0, closed: 0, alumni: 0, review: 0, duplicate: 0 };
       results.forEach(function (r) { counts[classify(r)]++; });
-      counts.review = reviewCompanies().length;
+      // counts.review stays the true number of companies the database does not
+      // know. It used to be overwritten with panel B's outstanding count, so
+      // staging a row dropped the tile before anything had been added and the
+      // tiles stopped adding up to the list. What is left to deal with is
+      // panel B's job to report, not the summary's.
 
       const total = results.length;
       resultsHead.textContent = 'Checked ' + total + (total === 1 ? ' company' : ' companies') + ' against the database.';
@@ -1506,15 +1677,9 @@
       return waves.length === 1 ? 'wave ' + waves[0] : 'waves ' + waves.join(', ');
     }
 
-    function updateReviewTile(n) {
-      const el = summaryEl.querySelector('.bulk-stat--review .bulk-stat__value');
-      if (el) el.textContent = n;
-    }
-
     // Panel B — the separate review window for companies not on record.
     function renderReview() {
       const rows = reviewCompanies();
-      updateReviewTile(rows.length);
 
       if (rows.length === 0) {
         reviewTbody.innerHTML = '';
@@ -1597,10 +1762,28 @@
           ' <button type="button" class="vet-unlink" data-unlink="' + ri + '" ' +
           'title="Undo this link" aria-label="Undo this link"><i class="bi bi-x"></i></button>';
       }
-      const approx = (r.matchType === 'fuzzy')
-        ? ' <span class="vet-approx" title="Approximate match, please verify">approx. ' + (r.matchScore || '') + '%</span>'
-        : '';
-      return '<span class="table__cell-primary">' + esc(name) + '</span>' + approx;
+      // How the match was reached, whenever it was not an exact one. Panel B
+      // exists so an unconfident match gets a human decision, and a containment
+      // match used to skip that silently: "Bloom & Co Cafe" was filed against
+      // "Bloom and Company Cafe" at 65% similar and rendered with no marker at
+      // all, reading exactly like an exact match while carrying that sponsor's
+      // identity, status and cap treatment onto the submission.
+      //
+      // Containment is not a guess in the way the fuzzy pass is — it fires only
+      // when one name's whole word set sits inside the other's — so it gets a
+      // label of its own rather than being lumped in as "approx.". It is still
+      // an assertion the admin should be able to see and check: a club writing
+      // "KOI" may well mean a different business from "KOI Cafe Singapore".
+      let caveat = '';
+      if (r.matchType === 'fuzzy') {
+        caveat = ' <span class="vet-approx" title="Approximate match, please verify">approx. ' +
+          (r.matchScore || '') + '%</span>';
+      } else if (r.matchType === 'contains') {
+        caveat = ' <span class="vet-approx" title="One name is contained in the other, ' +
+          'so this is a shortened or extended form rather than the name as written. Please verify.">' +
+          'partial name' + (r.matchScore ? ', ' + r.matchScore + '%' : '') + '</span>';
+      }
+      return '<span class="table__cell-primary">' + esc(name) + '</span>' + caveat;
     }
 
     // The sponsor's own running outreach count, which is global and separate
@@ -1671,7 +1854,8 @@
       const r = results[ri];
       if (r && recordedNorms.has(window.Matcher.normalise(r.input))) {
         toastMsg({ type: 'error', title: 'Already recorded',
-                   message: 'This link is saved on the submission. Remove the company from the submission to change it.' });
+                   message: 'This link is saved on the submission. Remove the company in ' +
+                            'Wave history above to undo it, then vet the list again.' });
         return;
       }
       unlink(ri);

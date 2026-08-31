@@ -103,9 +103,13 @@
         <span class="sub-cap__waves" id="vet-sub-waves">No waves yet</span>
       </div>
       <div class="sub-cap__meter"><span class="sub-cap__bar" id="vet-sub-bar"></span></div>
-      <p class="sub-cap__hint" id="vet-sub-hint">
-        Only approved and alumni companies use up the cap. Prohibited, closed and
-        in-cooldown companies are kept on the record but do not count.
+      <!-- Rewritten for migration 0015: the cap moved from "recorded" to
+           "contacted", so the meter tracks outreach, not the size of the list. -->
+      <p class="sub-cap__hint">
+        The meter counts companies this event has actually contacted, so recording
+        a club's list costs nothing and a submission may hold far more names than
+        it is allowed to approach. Only approved and alumni companies can be
+        contacted at all, so only they ever reach the meter.
       </p>
     </div>
   </section>
@@ -202,8 +206,12 @@
             <div class="vet-next__text">
               <div class="vet-next__title" id="vet-next-title">&nbsp;</div>
             </div>
+            <!-- One button, two jobs: recording companies that are new to the
+                 submission, and updating ones whose verdict has moved since.
+                 The label is set from JS so it cannot disagree with the title
+                 beside it, which it did ("Update 2 companies" over "Record 2"). -->
             <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="vet-record-btn" hidden>
-              <i class="bi bi-journal-plus"></i> Record <span id="vet-record-count">0</span> to submission
+              <i class="bi bi-journal-plus"></i> <span id="vet-record-text">Record to submission</span>
             </button>
             <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="log-outreach-btn" hidden>
               <i class="bi bi-graph-up-arrow"></i> Log outreach for all <span id="log-count">0</span>
@@ -215,7 +223,7 @@
           <i class="bi bi-info-circle-fill banner__icon"></i>
           <div class="banner__body">
             <div class="banner__title"><span id="dup-count">0</span> duplicate rows in the file</div>
-            <div class="banner__message">The same company appeared more than once. Extra rows were ignored. Each company is checked once.</div>
+            <div class="banner__message">The same company appeared more than once, either under the same name or under two spellings that match one company in the database. Extra rows were ignored, and the row that was kept says which others it covers. Each company is checked, recorded and contacted once.</div>
           </div>
         </div>
 
@@ -228,13 +236,16 @@
             <table class="table">
               <thead>
                 <tr>
-                  <th style="width: 52px">Outreach</th>
+                  <!-- Two different things, so two different headings: the
+                       first is this event's outreach, the second is the
+                       company's own running total across every event. -->
+                  <th style="width: 52px">Logged</th>
                   <th style="width: 44px">#</th>
                   <th>Company (from list)</th>
                   <th>Matched in database</th>
                   <th>Status</th>
                   <th>Industry</th>
-                  <th>Outreach</th>
+                  <th>Outreach count</th>
                   <th>Remarks</th>
                 </tr>
               </thead>

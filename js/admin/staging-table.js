@@ -324,7 +324,23 @@
         return;
       }
 
-      // 3. Bulk insert (skips any that already exist by normalised).
+      // 3. Confirm. This is the write that puts companies on the sponsor
+      // database for every club and every event afterwards, and it went
+      // through on a single click with nothing to catch a mistyped name or a
+      // status left on its default. The count and the statuses are named
+      // because those are what an admin gets wrong here.
+      const byCategory = {};
+      payloads.forEach(function (p) { byCategory[p.category] = (byCategory[p.category] || 0) + 1; });
+      const breakdown = STATUS_OPTIONS
+        .filter(function (o) { return byCategory[o.value]; })
+        .map(function (o) { return byCategory[o.value] + ' ' + o.label.toLowerCase(); })
+        .join(', ');
+      if (!confirm('Add ' + payloads.length +
+                   (payloads.length === 1 ? ' company' : ' companies') + ' to the sponsor database?\n\n' +
+                   breakdown + '.\n\n' +
+                   'This affects every club and every event from now on, not just this list.')) return;
+
+      // 4. Bulk insert (skips any that already exist by normalised).
       saveBtn.disabled = true;
       let inserted;
       try {
@@ -345,7 +361,7 @@
         .filter(function (p) { return !insertedNorm.has(p.normalised); })
         .map(function (p) { return p.name; });
 
-      // 4. Drop the committed rows; keep only the unticked ones. render()
+      // 5. Drop the committed rows; keep only the unticked ones. render()
       //    re-derives the save button's disabled state from what is left, so
       //    it must not be force-enabled afterwards.
       rows = rows.filter(function (r) { return !r.include; });

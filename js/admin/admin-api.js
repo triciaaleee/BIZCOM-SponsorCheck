@@ -392,6 +392,23 @@
       ).then(unwrap).then(function (rows) { return rows || []; });
     },
 
+    // Drop one company from a submission. The only write the client makes to
+    // submission_sponsors directly: 0012 withholds insert and update so every
+    // addition goes through record_submission_wave, but grants delete outright
+    // "so an admin can drop a company recorded against the wrong submission".
+    //
+    // The trigger on the table re-derives sponsor_count / listed_count /
+    // wave_count, so the caller only has to re-read the submission afterwards.
+    // Deleting a row whose outreach is already logged would leave the
+    // outreach_log entry behind with nothing on the event pointing at it, so
+    // the page refuses that case rather than the database: the log is history,
+    // and history is not edited from here.
+    deleteSubmissionSponsor: function (id) {
+      return Promise.resolve(
+        sb().from('submission_sponsors').delete().eq('id', id)
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
     // Record one wave of a club's list against a submission. The event cap lives
     // server-side in record_submission_wave (see 0012), which de-dupes the
     // payload, skips companies already on the submission, and rejects the whole

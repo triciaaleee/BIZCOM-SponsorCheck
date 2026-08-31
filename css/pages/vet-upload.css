@@ -747,6 +747,30 @@
   white-space: nowrap;
 }
 
+/* Take one company back off the submission. Deliberately quiet until hovered:
+   it is the only destructive control in the wave history, and it sits beside
+   rows the admin is reading rather than acting on. Rendered only while the
+   company has no outreach logged against it. */
+.wave-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.wave-remove:hover {
+  background-color: rgba(202, 88, 28, 0.10);
+  color: var(--color-orange-dark);
+}
+
 /* ---------- The next action ---------- */
 /* Recording and logging outreach are two ordered writes, and only one of them
    is ever the admin's next move. Rendering both at once read as a pile of
