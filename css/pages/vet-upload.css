@@ -597,7 +597,8 @@
    approval loop is about to write, or linking one, would act on a list that
    is mid-write. The progress readout is not a control, so it stays bright. */
 #wave-content.is-busy button,
-#wave-content.is-busy select { pointer-events: none; }
+#wave-content.is-busy select,
+#wave-content.is-busy input { pointer-events: none; }
 #wave-content.is-busy .vet-panel { opacity: 0.6; }
 
 .wave-meta {
@@ -877,34 +878,56 @@
   margin-top: 2px;
 }
 
-/* ---------- Inline "Add to database" ---------- */
+/* ---------- Adding unknowns to the database ---------- */
+/* The "Not in the database" table doubles as the add form: one row per
+   unknown company, ticked by default, added in one go. */
 
-.vet-add-row > td { background-color: var(--surface-muted); }
-
-.vet-add {
+.vet-review-tools {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
 }
 
-.vet-add__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 180px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+.vet-review-tools__set {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 
-.vet-add__field[hidden] { display: none; }
+.vet-review-tools__set .form-input { width: auto; }
 
-.vet-add__actions {
+.vet-review-table td { vertical-align: top; }
+.vet-review-table select.form-input { min-width: 160px; }
+
+.vet-name-input { min-width: 200px; }
+
+.vet-annex-select { margin-top: var(--space-2); }
+.vet-annex-select[hidden] { display: none; }
+
+.vet-name-hint {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.vet-name-hint i { color: var(--color-gold); }
+.vet-name-hint.is-hard { color: var(--color-orange-dark); }
+.vet-name-hint.is-hard i { color: var(--color-orange-dark); }
+
+.vet-review-foot {
   display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.vet-review-foot__count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
 }
 
 /* ---------- Confirmation dialog ---------- */
@@ -957,6 +980,7 @@
 }
 
 .vet-dialog__list li { padding: 2px 0; }
+.vet-dialog__was { color: var(--text-muted); }
 .vet-dialog__more { color: var(--text-muted); }
 
 .vet-dialog__stat {

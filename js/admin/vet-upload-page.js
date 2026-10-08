@@ -28,9 +28,10 @@
    Working a wave:
 
      * Not in the database: confirm a possible match with "Same
-       company", or add the company to the database inline. Adding a
-       company that already exists under another name would duplicate
-       it, so confirming is the only correct move there.
+       company", or add the companies to the database in one go from
+       an editable table, correcting the name where the club spelled it
+       wrong. Adding a company that already exists under another name
+       would duplicate it, so confirming is the only correct move there.
      * Found in the database: any match that is not exact can be
        marked "Not the same company". That verdict is stored on the
        line item (rejected_sponsor_id, migration 0022) and the row is
@@ -59,7 +60,7 @@
      * Approve:       AdminAPI.logOutreach() -> log_outreach RPC, passed
                       the submission so it stamps the line item and owns
                       the event cap.
-     * Add sponsor:   AdminAPI.bulkAddSponsors() with one row.
+     * Add sponsors:  AdminAPI.bulkAddSponsors(), one call per batch.
      * submissions.sponsor_count / listed_count / wave_count are
        re-derived by a trigger (migrations 0012, 0013, 0015).
    ============================================================ */
@@ -159,7 +160,7 @@
     let recordedByNorm = new Map();    // normalised -> line item
     let currentView = [];              // recordedRows, vetted against today's database
     let activeTab = null;              // wave number, 'upload', or null
-    let addOpenFor = null;             // line id whose inline "add" form is open
+    let drafts = new Map();            // line id -> unsaved "add to database" row (see draftFor)
     let loadingWaves = false;          // a submission's line items are on their way
     let uploadIndustry = new Map();    // normalised -> industry code the club gave
     const todayStr = todayISODate();
@@ -813,7 +814,6 @@
       if (!btn || busy) return;
       const t = btn.getAttribute('data-wave-tab');
       activeTab = t === 'upload' ? 'upload' : parseInt(t, 10);
-      addOpenFor = null;
       renderAll();
     });
 
@@ -873,6 +873,7 @@
         (isCompleted() ? '' : actionBarHtml(st)) +
         reviewPanelHtml(rows) +
         foundPanelHtml(rows);
+      refreshReviewSelection();
     }
 
     function summaryHtml(rows) {
@@ -961,78 +962,15 @@
     }
 
     // ---------- Not in the database ----------
-    function reviewPanelHtml(rows) {
-      const list = rows.filter(function (v) { return v.bucket === 'review'; });
-      if (!list.length) return '';
-      const canEdit = editable();
-
-      const body = list.map(function (v) {
-        const r = v.r;
-        const idx = rows.indexOf(v) + 1;
-        const industryLabel = r.industry ? industryDisplay(r.industry) : '';
-        const rejected = sponsorById(v.line.rejected_sponsor_id);
-        const open = canEdit && addOpenFor === v.line.id;
-
-        let actions = '<span class="text-muted text-xs">-</span>';
-        if (canEdit) {
-          actions =
-            (r.suggestion
-              ? '<button type="button" class="btn btn--secondary btn--sm vet-link-btn" data-act="link" data-id="' + esc(v.line.id) + '">' +
-                  '<i class="bi bi-link-45deg"></i> Same company</button> '
-              : '') +
-            '<button type="button" class="btn btn--secondary btn--sm" data-act="add-open" data-id="' + esc(v.line.id) + '"' +
-              (open ? ' aria-expanded="true"' : '') + '>' +
-              '<i class="bi bi-plus-lg"></i> Add new</button>';
-        }
-
-        return (
-          '<tr class="' + (r.suggestion ? 'vet-suggest-row' : '') + '">' +
-            '<td class="table__cell-secondary" data-label="#">' + idx + '</td>' +
-            '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(r.input) + '</div>' +
-              (rejected
-                ? '<div class="vet-rejected">Not ' + esc(rejected.name) +
-                    (canEdit ? ' <button type="button" class="vet-textbtn" data-act="unreject" data-id="' + esc(v.line.id) + '">Undo</button>' : '') +
-                  '</div>'
-                : '') +
-            '</td>' +
-            '<td data-label="Suggested industry">' +
-              (industryLabel ? '<span class="tag">' + esc(industryLabel) + '</span>' : '<span class="text-muted text-xs">unknown</span>') +
-            '</td>' +
-            '<td data-label="Possible match in database">' + suggestionCell(r) + '</td>' +
-            '<td data-label="Action"><div class="vet-row-actions">' + actions + '</div></td>' +
-            '<td data-label="Remove">' + removeCellHtml(v) + '</td>' +
-          '</tr>' +
-          (open ? '<tr class="vet-add-row"><td colspan="6">' + addFormHtml(v) + '</td></tr>' : '')
-        );
-      }).join('');
-
-      return (
-        '<div class="vet-panel vet-panel--review">' +
-          '<div class="vet-panel__head">' +
-            '<h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>' +
-            '<span class="vet-panel__sub">No confident match was found. If a possible match is the same ' +
-              'company, use &ldquo;Same company&rdquo;; adding it again would duplicate the record it ' +
-              'already has. Otherwise add it to the database here. None of this holds up approving the ' +
-              'rest of the wave.</span>' +
-          '</div>' +
-          '<div class="table-wrapper table-wrapper--responsive">' +
-            '<table class="table">' +
-              '<thead><tr>' +
-                '<th style="width: 44px">#</th>' +
-                '<th>Company (from list)</th>' +
-                '<th>Suggested industry</th>' +
-                '<th>Possible match in database</th>' +
-                '<th style="width: 230px">Action</th>' +
-                '<th style="width: 48px"></th>' +
-              '</tr></thead>' +
-              '<tbody>' + body + '</tbody>' +
-            '</table>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-
-    // ---------- inline "Add to database" ----------
+    // An editable table rather than one form per company: a club list can carry
+    // dozens of unknowns, and most of them go in as approved, so the common
+    // case is "check the list, click once". Each row keeps a draft that
+    // survives re-renders, so a correction is not lost when something else on
+    // the wave is saved.
+    //
+    // The name field is the name the company goes into the database under.
+    // Clubs misspell and abbreviate, so it can be corrected; the club's own
+    // spelling stays on the submission as the record of what they sent.
     const STATUS_OPTIONS = [
       { value: 'approved',   label: 'Approved' },
       { value: 'prohibited', label: 'Prohibited / Restricted' },
@@ -1040,50 +978,232 @@
       { value: 'alumni',     label: 'Alumni' }
     ];
 
+    function draftFor(v) {
+      let d = drafts.get(v.line.id);
+      if (!d) {
+        // The matcher's keyword guess may name a code the industries table
+        // does not have. Left as it is, the picker shows its first option
+        // while the draft quietly saves the unknown code.
+        const known = function (code) { return industries.some(function (i) { return i.code === code; }); };
+        const industry = known(v.r.industry) ? v.r.industry
+          : (known('other') ? 'other' : (industries[0] ? industries[0].code : 'other'));
+        d = { name: v.line.company_name, category: 'approved',
+              industry: industry, annex: '', checked: true };
+        drafts.set(v.line.id, d);
+      }
+      return d;
+    }
+
+    function isEdited(v, d) {
+      return window.Matcher.normalise(d.name) !== v.line.normalised;
+    }
+
+    // Is a corrected name already a company on the database? An exact match
+    // (the same lookup key) cannot be added at all, so the row is held back
+    // and offered as a link. A partial or close match is only a warning: the
+    // admin may know they are different businesses. The club's own spelling
+    // has already been through the matcher, so only an edited name is checked.
+    function nameConflict(v, d) {
+      if (!isEdited(v, d)) return null;
+      const norm = window.Matcher.normalise(d.name);
+      if (!norm) return null;
+      const exact = sponsors.find(function (s) { return s.normalised === norm; });
+      if (exact) return { sponsor: exact, hard: true };
+      const r = vetName(d.name, null, v.line.rejected_sponsor_id, null);
+      const s = r.matchedId ? sponsorById(r.matchedId) : null;
+      return s ? { sponsor: s, hard: false } : null;
+    }
+
+    function selectedForAdd(v) {
+      const d = draftFor(v);
+      if (!d.checked) return false;
+      const c = nameConflict(v, d);
+      return !(c && c.hard);
+    }
+
+    function nameHintHtml(v, d) {
+      const c = nameConflict(v, d);
+      if (c) {
+        return '<div class="vet-name-hint' + (c.hard ? ' is-hard' : '') + '">' +
+          '<i class="bi bi-exclamation-triangle-fill"></i> ' +
+          (c.hard ? 'Already in the database as ' : 'Close to ') + esc(c.sponsor.name) + '. ' +
+          '<button type="button" class="vet-textbtn" data-act="link-to" data-id="' + esc(v.line.id) + '" ' +
+            'data-sponsor="' + esc(c.sponsor.id) + '">Link instead</button>' +
+        '</div>';
+      }
+      return isEdited(v, d) ? '<div class="vet-name-hint">Edited from the club’s spelling</div>' : '';
+    }
+
+    function optionsHtml(list, selected) {
+      return list.map(function (o) {
+        return '<option value="' + esc(o.value) + '"' + (o.value === selected ? ' selected' : '') + '>' +
+          esc(o.label) + '</option>';
+      }).join('');
+    }
+
     // BIZCOM Partner is absent on purpose: a partner needs a contract end date,
-    // which this form has no field for. Partners are added from the Annex B
+    // which this table has no field for. Partners are added from the Annex B
     // panel on the Sponsors page instead. (Same rule as staging-table.js.)
     function isPartnerCategory(cat) {
       return cat.annex === 'B' && (cat.name || '').toLowerCase() === 'bizcom partner';
     }
 
-    function annexOptionsHtml() {
+    function annexOptionsHtml(selected) {
       const cats = annexCats.filter(function (a) { return !isPartnerCategory(a); });
-      let out = '<option value="">Pick the annex category…</option>';
+      let out = '<option value="">Annex category…</option>';
       [['A', 'Prohibited (Annex A)'], ['B', 'Restricted (Annex B)']].forEach(function (pair) {
         const inAnnex = cats.filter(function (a) { return a.annex === pair[0]; });
         if (!inAnnex.length) return;
         out += '<optgroup label="' + esc(pair[1]) + '">' +
-          inAnnex.map(function (a) { return '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>'; }).join('') +
+          inAnnex.map(function (a) {
+            return '<option value="' + esc(a.id) + '"' + (a.id === selected ? ' selected' : '') + '>' +
+              esc(a.name) + '</option>';
+          }).join('') +
           '</optgroup>';
       });
       return out;
     }
 
-    function addFormHtml(v) {
-      const ind = v.r.industry || 'other';
+    function statusLabel(d) {
+      if (d.category === 'prohibited') {
+        const cat = annexCats.find(function (a) { return a.id === d.annex; });
+        return cat && cat.annex === 'B' ? 'Restricted' : 'Prohibited';
+      }
+      return STATUS_OPTIONS.find(function (o) { return o.value === d.category; }).label;
+    }
+
+    function rejectedNoteHtml(v, canEdit) {
+      const rejected = sponsorById(v.line.rejected_sponsor_id);
+      if (!rejected) return '';
+      return '<div class="vet-rejected">Not ' + esc(rejected.name) +
+        (canEdit ? ' <button type="button" class="vet-textbtn" data-act="unreject" data-id="' + esc(v.line.id) + '">Undo</button>' : '') +
+        '</div>';
+    }
+
+    function reviewPanelHtml(rows) {
+      const list = rows.filter(function (v) { return v.bucket === 'review'; });
+      if (!list.length) return '';
+      const canEdit = editable();
+
+      const head =
+        '<div class="vet-panel__head">' +
+          '<h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>' +
+          '<span class="vet-panel__sub">' +
+            (canEdit
+              ? 'No confident match was found. If a possible match is the same company, use ' +
+                '&ldquo;Same company&rdquo;; adding it again would duplicate the record it already has. ' +
+                'Otherwise tick the companies to add, correct any name the club spelled wrong, and add ' +
+                'them in one go. The club’s spelling stays on the submission. None of this holds up ' +
+                'approving the rest of the wave.'
+              : 'These companies were never vetted.') +
+          '</span>' +
+        '</div>';
+
+      if (!canEdit) {
+        return (
+          '<div class="vet-panel vet-panel--review">' + head +
+            '<div class="table-wrapper table-wrapper--responsive">' +
+              '<table class="table">' +
+                '<thead><tr><th style="width: 44px">#</th><th>Company (from list)</th>' +
+                  '<th>Possible match in database</th></tr></thead>' +
+                '<tbody>' + list.map(function (v) {
+                  return '<tr>' +
+                    '<td class="table__cell-secondary" data-label="#">' + (rows.indexOf(v) + 1) + '</td>' +
+                    '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(v.r.input) + '</div>' +
+                      rejectedNoteHtml(v, false) + '</td>' +
+                    '<td data-label="Possible match in database">' + suggestionCell(v.r) + '</td>' +
+                  '</tr>';
+                }).join('') + '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+
+      const industryOpts = industries.map(function (i) { return { value: i.code, label: i.display_name }; });
+      const body = list.map(function (v) {
+        const r = v.r;
+        const d = draftFor(v);
+        const c = nameConflict(v, d);
+        const blocked = !!(c && c.hard);
+        return (
+          '<tr class="' + (r.suggestion ? 'vet-suggest-row' : '') + '" data-row="' + esc(v.line.id) + '">' +
+            '<td data-label="Add"><input type="checkbox" class="bulk-staging__check" data-draft="checked"' +
+              (d.checked && !blocked ? ' checked' : '') + (blocked ? ' disabled' : '') +
+              ' aria-label="Add ' + esc(v.line.company_name) + ' to the database"></td>' +
+            '<td class="table__cell-secondary" data-label="#">' + (rows.indexOf(v) + 1) + '</td>' +
+            '<td data-label="Company (from list)"><div class="table__cell-primary">' + mapsLink(r.input) + '</div>' +
+              rejectedNoteHtml(v, true) + '</td>' +
+            '<td data-label="Name in database">' +
+              '<input type="text" class="form-input vet-name-input" data-draft="name" value="' + esc(d.name) + '" ' +
+                'aria-label="Name to add ' + esc(v.line.company_name) + ' under">' +
+              '<div data-hint>' + nameHintHtml(v, d) + '</div>' +
+            '</td>' +
+            '<td data-label="Status">' +
+              '<select class="form-input" data-draft="category">' + optionsHtml(STATUS_OPTIONS, d.category) + '</select>' +
+              '<select class="form-input vet-annex-select" data-draft="annex"' + (d.category === 'prohibited' ? '' : ' hidden') + '>' +
+                annexOptionsHtml(d.annex) + '</select>' +
+            '</td>' +
+            '<td data-label="Industry"><select class="form-input" data-draft="industry">' +
+              optionsHtml(industryOpts, d.industry) + '</select></td>' +
+            '<td data-label="Possible match in database">' + suggestionCell(r) +
+              (r.suggestion
+                ? '<div><button type="button" class="btn btn--secondary btn--sm vet-link-btn" data-act="link" data-id="' + esc(v.line.id) + '">' +
+                    '<i class="bi bi-link-45deg"></i> Same company</button></div>'
+                : '') +
+            '</td>' +
+            '<td data-label="Remove">' + removeCellHtml(v) + '</td>' +
+          '</tr>'
+        );
+      }).join('');
+
+      const allOn = list.every(selectedForAdd);
       return (
-        '<div class="vet-add" data-add-for="' + esc(v.line.id) + '">' +
-          '<label class="vet-add__field"><span>Status</span>' +
-            '<select class="form-input" data-add="category">' +
-              STATUS_OPTIONS.map(function (o) { return '<option value="' + o.value + '">' + o.label + '</option>'; }).join('') +
-            '</select></label>' +
-          '<label class="vet-add__field"><span>Industry</span>' +
-            '<select class="form-input" data-add="industry">' +
-              industries.map(function (i) {
-                return '<option value="' + esc(i.code) + '"' + (i.code === ind ? ' selected' : '') + '>' +
-                  esc(i.display_name) + '</option>';
-              }).join('') +
-            '</select></label>' +
-          '<label class="vet-add__field" data-add-annex hidden><span>Annex category</span>' +
-            '<select class="form-input" data-add="annex">' + annexOptionsHtml() + '</select></label>' +
-          '<div class="vet-add__actions">' +
-            '<button type="button" class="btn btn--secondary btn--sm" data-act="add-cancel">Cancel</button>' +
-            '<button type="button" class="btn btn--primary btn--sm" data-act="add-save" data-id="' + esc(v.line.id) + '">' +
-              '<i class="bi bi-database-add"></i> Add to database</button>' +
+        '<div class="vet-panel vet-panel--review">' + head +
+          '<div class="vet-review-tools">' +
+            '<label class="vet-review-tools__set">Set selected to ' +
+              '<select class="form-input" data-bulk="category">' +
+                '<option value="">Choose a status…</option>' + optionsHtml(STATUS_OPTIONS, '') +
+              '</select></label>' +
+          '</div>' +
+          '<div class="table-wrapper table-wrapper--responsive">' +
+            '<table class="table vet-review-table">' +
+              '<thead><tr>' +
+                '<th style="width: 40px"><input type="checkbox" class="bulk-staging__check" data-draft-all' +
+                  (allOn ? ' checked' : '') + ' aria-label="Select every company"></th>' +
+                '<th style="width: 44px">#</th>' +
+                '<th>Company (from list)</th>' +
+                '<th style="min-width: 220px">Name in database</th>' +
+                '<th style="width: 190px">Status</th>' +
+                '<th style="width: 180px">Industry</th>' +
+                '<th>Possible match in database</th>' +
+                '<th style="width: 48px"></th>' +
+              '</tr></thead>' +
+              '<tbody>' + body + '</tbody>' +
+            '</table>' +
+          '</div>' +
+          '<div class="vet-review-foot">' +
+            '<span class="vet-review-foot__count" data-sel-count></span>' +
+            '<button type="button" class="btn btn--primary btn--sm" data-act="bulk-add" data-bulk-add>' +
+              '<i class="bi bi-database-add"></i> <span data-bulk-add-text></span></button>' +
           '</div>' +
         '</div>'
       );
+    }
+
+    // The footer count and button, and the select-all box, follow the drafts.
+    // Updated in place while typing, so the name field keeps its focus.
+    function refreshReviewSelection() {
+      const list = rowsOfWave(activeTab).filter(function (v) { return v.bucket === 'review'; });
+      const n = list.filter(selectedForAdd).length;
+      const count = waveContent.querySelector('[data-sel-count]');
+      const btn = waveContent.querySelector('[data-bulk-add]');
+      const text = waveContent.querySelector('[data-bulk-add-text]');
+      const all = waveContent.querySelector('[data-draft-all]');
+      if (count) count.textContent = n + ' selected';
+      if (text) text.textContent = 'Add ' + n + ' to database';
+      if (btn) btn.disabled = n === 0;
+      if (all) all.checked = list.length > 0 && n === list.length;
     }
 
     // ---------- Found in the database ----------
@@ -1282,19 +1402,62 @@
       else if (act === 'discard-wave') discardWave(activeTab);
       else if (act === 'remove')   removeLineItem(id);
       else if (act === 'link')     linkSuggestion(id);
+      else if (act === 'link-to')  linkTo(id, btn.getAttribute('data-sponsor'));
       else if (act === 'reject')   rejectMatch(id);
       else if (act === 'unreject') unreject(id);
-      else if (act === 'add-open') { addOpenFor = addOpenFor === id ? null : id; renderWave(); }
-      else if (act === 'add-cancel') { addOpenFor = null; renderWave(); }
-      else if (act === 'add-save') addSponsorFromRow(id);
+      else if (act === 'bulk-add') bulkAdd();
     });
 
-    // Prohibited needs an annex category instead of nothing.
+    function draftRow(el) {
+      const tr = el.closest('[data-row]');
+      const v = tr ? viewRow(tr.getAttribute('data-row')) : null;
+      return v ? { tr: tr, v: v, d: draftFor(v) } : null;
+    }
+
+    // Typing a name: keep the draft, and re-check it against the database in
+    // place (a re-render would steal the focus mid-word).
+    waveContent.addEventListener('input', function (e) {
+      if (e.target.getAttribute('data-draft') !== 'name') return;
+      const row = draftRow(e.target);
+      if (!row) return;
+      row.d.name = e.target.value;
+      row.tr.querySelector('[data-hint]').innerHTML = nameHintHtml(row.v, row.d);
+      const c = nameConflict(row.v, row.d);
+      const box = row.tr.querySelector('[data-draft="checked"]');
+      box.disabled = !!(c && c.hard);
+      box.checked = row.d.checked && !box.disabled;
+      refreshReviewSelection();
+    });
+
     waveContent.addEventListener('change', function (e) {
-      if (e.target.getAttribute('data-add') !== 'category') return;
-      const form = e.target.closest('.vet-add');
-      const annex = form && form.querySelector('[data-add-annex]');
-      if (annex) annex.hidden = e.target.value !== 'prohibited';
+      const t = e.target;
+      if (t.hasAttribute('data-draft-all')) {
+        rowsOfWave(activeTab).forEach(function (v) {
+          if (v.bucket === 'review') draftFor(v).checked = t.checked;
+        });
+        renderWave();
+        return;
+      }
+      if (t.getAttribute('data-bulk') === 'category') {
+        if (!t.value) return;
+        rowsOfWave(activeTab).forEach(function (v) {
+          if (v.bucket === 'review' && selectedForAdd(v)) draftFor(v).category = t.value;
+        });
+        renderWave();
+        return;
+      }
+      const field = t.getAttribute('data-draft');
+      if (!field || field === 'name') return;
+      const row = draftRow(t);
+      if (!row) return;
+      if (field === 'checked') row.d.checked = t.checked;
+      else row.d[field] = t.value;
+      // Prohibited needs an annex category instead of nothing.
+      if (field === 'category') {
+        row.tr.querySelector('[data-draft="annex"]').hidden = t.value !== 'prohibited';
+      }
+      if (field === 'annex') t.classList.remove('is-invalid');
+      refreshReviewSelection();
     });
 
     completeBtn.addEventListener('click', markCompleted);
@@ -1333,11 +1496,17 @@
     }
 
     // "Same company": file this row under the suggested sponsor.
-    async function linkSuggestion(id) {
+    function linkSuggestion(id) {
       const v = viewRow(id);
-      if (!v || !v.r.suggestion) return;
-      const s = sponsorById(v.r.suggestion.id);
-      if (!s) return;
+      if (v && v.r.suggestion) linkTo(id, v.r.suggestion.id);
+    }
+
+    // File a row under an existing sponsor: the matcher's suggestion, or the
+    // company a corrected name turned out to be.
+    async function linkTo(id, sponsorId) {
+      const v = viewRow(id);
+      const s = sponsorById(sponsorId);
+      if (!v || !s) return;
       const owner = sponsorOwner(s.id, v.line.id);
       if (owner) {
         toastMsg({ type: 'error', title: 'Already on this submission',
@@ -1350,6 +1519,7 @@
           return saveRows([entryFor(v.line, linkedResult(v.r, s), v.line.rejected_sponsor_id)]);
         });
       } catch (e) { toastError('Could not link this company', e); return; }
+      drafts.delete(id);
       toastMsg({ type: 'success', title: 'Linked',
                  message: '“' + v.line.company_name + '” is recorded as ' + s.name + '.' });
     }
@@ -1384,64 +1554,86 @@
       catch (e) { toastError('Could not undo that', e); }
     }
 
-    async function addSponsorFromRow(id) {
-      const v = viewRow(id);
-      const form = waveContent.querySelector('[data-add-for="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
-      if (!v || !form) return;
-
-      const category = form.querySelector('[data-add="category"]').value;
-      const industry = form.querySelector('[data-add="industry"]').value;
-      const annexSel = form.querySelector('[data-add="annex"]');
-      const annex = annexSel.value;
-      if (category === 'prohibited' && !annex) {
-        annexSel.classList.add('is-invalid');
-        annexSel.focus();
-        toastMsg({ type: 'error', title: 'Pick an annex category',
-                   message: 'A prohibited or restricted company needs its annex category.' });
+    // Add every ticked company to the database in one insert, then file each
+    // one on the wave under its new record. A corrected name no longer matches
+    // the club's spelling, so the link is written explicitly rather than left
+    // to the matcher.
+    async function bulkAdd() {
+      const list = rowsOfWave(activeTab).filter(function (v) { return v.bucket === 'review'; });
+      const picked = [];
+      const seen = new Set();
+      let problem = null;
+      list.forEach(function (v) {
+        if (problem || !selectedForAdd(v)) return;
+        const d = draftFor(v);
+        const name = d.name.trim();
+        const norm = window.Matcher.normalise(name);
+        const tr = waveContent.querySelector('[data-row="' + v.line.id + '"]');
+        if (!norm) {
+          problem = { msg: 'Every selected company needs a name.', el: tr && tr.querySelector('[data-draft="name"]') };
+        } else if (d.category === 'prohibited' && !d.annex) {
+          problem = { msg: name + ' needs an annex category.', el: tr && tr.querySelector('[data-draft="annex"]') };
+        } else if (seen.has(norm)) {
+          problem = { msg: '“' + name + '” is selected twice. Untick one of them.', el: tr && tr.querySelector('[data-draft="name"]') };
+        } else {
+          seen.add(norm);
+          picked.push({ v: v, d: d, name: name, norm: norm });
+        }
+      });
+      if (problem) {
+        if (problem.el) { problem.el.classList.add('is-invalid'); problem.el.focus(); }
+        toastMsg({ type: 'error', title: 'Check the selected rows', message: problem.msg });
         return;
       }
+      if (!picked.length) return;
 
-      const name = v.line.company_name.trim();
-      const norm = window.Matcher.normalise(name);
-      const clash = sponsors.find(function (s) { return s.normalised === norm; });
-      if (clash) {
-        toastMsg({ type: 'error', title: 'Already in the database',
-                   message: clash.name + ' is already on record under this name.' });
-        return;
-      }
-
-      const statusLabel = category === 'prohibited'
-        ? ((annexCats.find(function (a) { return a.id === annex; }) || {}).annex === 'B' ? 'Restricted' : 'Prohibited')
-        : STATUS_OPTIONS.find(function (o) { return o.value === category; }).label;
       const ok = await askDialog({
-        title: 'Add to the sponsor database?',
+        title: 'Add ' + plural(picked.length, 'company', 'companies') + ' to the sponsor database?',
         icon: 'bi-database-add',
-        body: '<p><b>' + esc(name) + '</b> will be added as <b>' + esc(statusLabel) + '</b>, ' +
-              esc(industryDisplay(industry)) + '.</p>' +
-              '<p class="vet-dialog__note">This applies to every club and every event from now on, ' +
-              'not just this list.</p>',
-        ok: 'Add to database'
+        body: '<ul class="vet-dialog__list">' + picked.map(function (p) {
+                return '<li><b>' + esc(p.name) + '</b> &middot; ' + esc(statusLabel(p.d)) + ', ' +
+                  esc(industryDisplay(p.d.industry)) +
+                  (isEdited(p.v, p.d)
+                    ? ' <span class="vet-dialog__was">(listed as “' + esc(p.v.line.company_name) + '”)</span>'
+                    : '') +
+                  '</li>';
+              }).join('') + '</ul>' +
+              '<p class="vet-dialog__note">They are filed on wave ' + activeTab + ' straight away. Adding to ' +
+              'the database applies to every club and every event from now on, not just this list.</p>',
+        ok: 'Add ' + picked.length + ' to database'
       });
       if (!ok) return;
 
-      const payload = {
-        name: name, normalised: norm, industry: industry, category: category,
-        notes: '', annex_category_id: category === 'prohibited' ? annex : null
-      };
-      let added = 0;
+      let added = 0, linked = 0;
       try {
         await runBusy(async function () {
-          const inserted = await window.AdminAPI.bulkAddSponsors([payload]);
+          const inserted = await window.AdminAPI.bulkAddSponsors(picked.map(function (p) {
+            return {
+              name: p.name, normalised: p.norm, industry: p.d.industry, category: p.d.category,
+              notes: '', annex_category_id: p.d.category === 'prohibited' ? p.d.annex : null
+            };
+          }));
           added = inserted.length;
           await refreshSponsors();
-          addOpenFor = null;
-          await syncChanged();     // the row now matches its new record
-        });
-      } catch (e) { toastError('Could not add this company', e); return; }
 
-      toastMsg(added
-        ? { type: 'success', title: 'Added to the database', message: name + ' is now on record and filed on this wave.' }
-        : { type: 'info', title: 'Already in the database', message: name + ' was added by someone else in the meantime.' });
+          // Anything the insert skipped was added by someone else meanwhile;
+          // it is on the database all the same, so it is linked like the rest.
+          const entries = [];
+          picked.forEach(function (p) {
+            const s = sponsors.find(function (x) { return x.normalised === p.norm; });
+            if (!s || sponsorOwner(s.id, p.v.line.id)) return;
+            entries.push(entryFor(p.v.line, linkedResult(p.v.r, s), p.v.line.rejected_sponsor_id));
+            drafts.delete(p.v.line.id);
+            linked++;
+          });
+          await saveRows(entries);
+        });
+      } catch (e) { toastError('Could not add these companies', e); return; }
+
+      let msg = plural(added, 'company is', 'companies are') + ' now on record and filed on wave ' + activeTab + '.';
+      if (picked.length > added) msg += ' ' + (picked.length - added) + ' already existed and were linked instead.';
+      if (linked < picked.length) msg += ' ' + (picked.length - linked) + ' could not be filed: that company is already on this submission.';
+      toastMsg({ type: linked < picked.length ? 'warning' : 'success', title: 'Added to the database', message: msg });
     }
 
     async function removeLineItem(id) {
@@ -2011,7 +2203,7 @@
       }
 
       if (submissionId !== lastAppliedId) {
-        addOpenFor = null;
+        drafts = new Map();
         uploadIndustry = new Map();
         clearUpload();
       }
