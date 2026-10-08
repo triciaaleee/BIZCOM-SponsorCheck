@@ -898,8 +898,9 @@
     }
 
     // The sticky bar: where the wave stands, and the one action it needs.
-    // Approval does not wait for the unvetted rows, so the two steps can both
-    // be open at once; the track shows each one's own state.
+    // Approval does not wait for the unvetted rows, so it comes second and
+    // "Vetted" last: it means the whole list is checked and every action taken.
+    // Approved can reopen when a company vetted later turns out approachable.
     function actionBarHtml(st) {
       const cap = submissionCap();
       const used = submission.sponsor_count || 0;
@@ -939,8 +940,8 @@
           '<div class="vet-next__row">' +
             '<ol class="vet-next__track" aria-label="Progress">' +
               dot(1, 'Saved', 'done') +
-              dot(2, 'Vetted', st.toResolve ? 'current' : 'done') +
-              dot(3, 'Approved', st.ready ? (st.toResolve ? '' : 'current') : 'done') +
+              dot(2, 'Approved', st.ready ? 'current' : 'done') +
+              dot(3, 'Vetted', st.done ? 'done' : (st.ready ? '' : 'current')) +
             '</ol>' +
             '<div class="vet-next__text">' +
               '<div class="vet-next__title">' + esc(title) + '</div>' +
