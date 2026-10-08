@@ -302,6 +302,7 @@ erDiagram
         text recorded_by "admin email"
         timestamptz recorded_at
         timestamptz outreach_logged_at "locks re-contact"
+        uuid rejected_sponsor_id FK "admin said: not this company"
     }
     admins {
         uuid id PK
@@ -340,6 +341,7 @@ erDiagram
 | `submissions` | *(none)* | — | — | — | Admin-managed; no FK. |
 | `submission_sponsors` | `submission_id` | `submissions.id` | **CASCADE** | No | Line items belong to a submission; delete the submission, delete its list. |
 | `submission_sponsors` | `sponsor_id` | `sponsors.id` | **SET NULL** | Yes | The record it matched, if any. Null for a company not (yet) on the database. |
+| `submission_sponsors` | `rejected_sponsor_id` | `sponsors.id` | **SET NULL** | Yes | A match an admin marked "not the same company" (0022). The vetting page re-matches the row without it. |
 | `admins` | `user_id` | `auth.users.id` | **SET NULL** | Yes | Links the whitelist row to the actual login account. |
 
 **Not foreign keys (intentionally):** `outreach_log.contacted_by`,
@@ -483,8 +485,8 @@ rows stay admin-only.
 
 | Function | Returns | Who | What it does |
 | -------- | ------- | --- | ------------ |
-| `log_outreach(sponsor_id, note?, submission_id?)` | `'logged'` \| `'capped'` \| `'skipped'` \| `'duplicate'` \| `'not_recorded'` \| `'not_approachable'` \| `'event_capped'` | admin | The one place **both** cap rules live. Rejects contacts during an active cooldown (`skipped`), resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` when the per-sponsor cap is reached (`capped`). Given a `submission_id` it also enforces one contact per company per event (`duplicate`), refuses a company not recorded against it (`not_recorded`) or not approachable (`not_approachable`), and — since 0015 — refuses a contact that would push the event past its cap (`event_capped`). **Always use this instead of inserting into `outreach_log` directly.** |
-| `record_submission_wave(submission_id, entries)` | `{ wave, added, refreshed, skipped, counted, listed, cap, event_size }` | admin | De-dupes the payload, refreshes the status of companies already on the submission (unless they have been contacted), and inserts the new ones as the next wave. Since 0015 it does **not** check the event cap: recording is not approaching, so it cannot breach it. The only way to write `submission_sponsors` — the client is granted `select` and `delete` on that table, never `insert`. |
+| `log_outreach(sponsor_id, note?, submission_id?)` | `'logged'` \| `'capped'` \| `'skipped'` \| `'duplicate'` \| `'not_recorded'` \| `'not_approachable'` \| `'event_capped'` \| `'completed'` | admin | The one place **both** cap rules live. Rejects contacts during an active cooldown (`skipped`), resets an elapsed cooldown, writes the `outreach_log` row, and stamps `cooldown_started_at` when the per-sponsor cap is reached (`capped`). Given a `submission_id` it also enforces one contact per company per event (`duplicate`), refuses a company not recorded against it (`not_recorded`) or not approachable (`not_approachable`), and — since 0015 — refuses a contact that would push the event past its cap (`event_capped`). Since 0022 a completed submission answers `completed`. **Always use this instead of inserting into `outreach_log` directly.** |
+| `record_submission_wave(submission_id, entries, refresh_only?)` | `{ wave, added, refreshed, skipped, counted, listed, cap, event_size }` | admin | De-dupes the payload, refreshes the status of companies already on the submission (unless they have been contacted), and inserts the new ones as the next wave. Since 0015 it does **not** check the event cap: recording is not approaching, so it cannot breach it. Since 0022: `refresh_only` updates existing rows and never inserts; entries may carry `rejected_sponsor_id`; a sponsor already on the submission is never added twice; a completed submission is refused; and the first saved wave moves a `new` submission to `reviewing`. The only way to write `submission_sponsors` — the client is granted `select` and `delete` on that table, never `insert`. |
 | `counts_toward_cap(status)` | bool | internal | The single definition of which vetting results consume an event cap. |
 | `recalc_submission_totals(submission_id)` | void | internal | Re-derives `submissions.sponsor_count`, `listed_count` + `wave_count`. Called by the trigger on `submission_sponsors`. |
 | `transfer_super_admin(target_email)` | void | super-admin | Atomically moves the single super-admin seat (demotes the current holder first, so the one-super-admin rule is never briefly violated). |

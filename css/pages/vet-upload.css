@@ -1,42 +1,18 @@
 /* ============================================================
    pages/vet-upload.css
-   Vet & upload page (admin/vet-upload.html): vet an uploaded list
-   against the database, then bulk-add new companies. Loaded AFTER
+   Vet & upload page (admin/vet-upload.html): club submissions, one
+   tab per wave, each vetted against the database. Loaded AFTER
    pages/admin.css so it can lean on the admin type scale.
    Reusable bits (drop-zone, table, pills, forms, banner) come from
    css/components/*; only the page-specific layout lives here.
    (Internal class names keep the `bulk-` prefix.)
    ============================================================ */
 
-/* This page's tables are wide (matched panel has 8 columns), so give the
+/* This page's tables are wide (the found panel has 8 columns), so give the
    whole content area more room than the default 1280px admin cap. Uses the
    shared wide-width token so sponsors/home (which opt in via .admin-main--wide)
    stay matched to this page. */
 .admin-main { max-width: var(--layout-wide-width); }
-
-/* Numbered step badge in each section heading. */
-.bulk-step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  margin-right: var(--space-2);
-  border-radius: 50%;
-  background-color: var(--color-navy);
-  color: var(--text-inverse);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  vertical-align: 2px;
-}
-
-/* Generic card wrapper for each section's body. */
-.bulk-card {
-  background-color: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-}
 
 /* Format helper under the drop zone. */
 .bulk-format-hint {
@@ -52,22 +28,6 @@
   border-radius: var(--radius-sm);
   font-size: 0.9em;
   color: var(--color-navy);
-}
-
-/* ---------- Checking state ---------- */
-
-.bulk-checking {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  text-align: center;
-}
-
-.bulk-checking__msg {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
 }
 
 /* ---------- Results summary tiles ---------- */
@@ -112,24 +72,7 @@
   color: var(--text-muted);
 }
 
-/* ---------- Results header bar ---------- */
-
-.bulk-results-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
-
-.bulk-results-bar__text {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-/* ---------- Result panels (matched vs. review) ---------- */
+/* ---------- Result panels (found vs. not in the database) ---------- */
 
 .vet-panel {
   background-color: var(--surface-card);
@@ -139,7 +82,7 @@
   margin-bottom: var(--space-4);
 }
 
-/* Panel B is the "needs attention" window: tinted + gold-edged so it reads
+/* "Not in the database" is the needs-attention panel: tinted + gold-edged so it reads
    as distinct from the matched-results panel above it. */
 .vet-panel--review {
   border-left: 4px solid var(--color-gold);
@@ -176,37 +119,7 @@
   color: var(--text-muted);
 }
 
-.vet-panel__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-top: var(--space-4);
-}
-
-/* Neutral helper text in a panel footer (e.g. the outreach-logging note). */
-.vet-panel__foot-note {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  max-width: 62ch;
-}
-
-/* Grouped actions on the right of a panel footer (count + buttons). */
-.vet-foot-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.vet-foot-count {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-}
-
-/* ---------- Matched-record cell (Panel A) ---------- */
+/* ---------- Matched-record cell ---------- */
 
 /* "approx." badge on fuzzy matches: a nudge to eyeball the pairing. */
 .vet-approx {
@@ -220,7 +133,7 @@
   white-space: nowrap;
 }
 
-/* ---------- Outreach-cap cell (Panel A) ---------- */
+/* ---------- Outreach-cap cell ---------- */
 
 .vet-cap {
   font-weight: var(--font-weight-semibold);
@@ -238,7 +151,7 @@
   white-space: nowrap;
 }
 
-/* ---------- Possible-match cell (Panel B) ---------- */
+/* ---------- Possible-match cell ---------- */
 
 /* Review rows that carry a near-miss suggestion: subtle gold tint so they
    stand out from genuinely-unknown companies. */
@@ -530,6 +443,7 @@
 
 .vet-flag--todo { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
 .vet-flag--done { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
+.vet-flag--ready { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
 
 /* Due chips mirror .due-chip on Home: gold means "coming up", orange is
    reserved for actually late, so the two screens read the same. */
@@ -573,6 +487,7 @@
 }
 
 .vet-back:hover { text-decoration: underline; }
+.vet-back:disabled { opacity: 0.5; cursor: not-allowed; text-decoration: none; }
 
 .vet-sub {
   background-color: var(--surface-card);
@@ -583,7 +498,6 @@
   margin-bottom: var(--space-5);
 }
 
-
 .vet-sub__head {
   margin-bottom: var(--space-5);
   display: flex;
@@ -591,6 +505,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+.vet-sub__side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .vet-sub__event {
@@ -606,127 +527,94 @@
   margin-top: 2px;
 }
 
-/* ---------- Wave history ---------- */
+.vet-completed { margin-bottom: var(--space-5); }
 
-.waves {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
+/* ---------- Wave tabs ---------- */
+/* One tab per wave the club has sent, each carrying what is left on it, so
+   the work outstanding on a submission reads before any tab is opened. The
+   last tab is always the way to add the next wave. */
 
-.wave {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.wave__head {
-  width: 100%;
+.wave-tabs {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--surface-muted);
-  border: 0;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  color: inherit;
+  gap: var(--space-1);
+  margin-bottom: -1px;            /* the selected tab sits on the panel's edge */
+  position: relative;
+  z-index: 1;
 }
 
-.wave__head:hover { background-color: #F1EEE7; }
-
-.wave__no {
+.wave-tab {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 64px;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-navy);
-  color: var(--text-inverse);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.wave__date {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-bottom-color: transparent;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background-color: var(--surface-muted);
+  font-family: inherit;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-}
-
-.wave__stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  font-size: var(--font-size-xs);
   color: var(--text-secondary);
-  margin-left: auto;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
 }
 
-.wave__stats b { font-weight: var(--font-weight-semibold); color: var(--text-primary); }
+.wave-tab:hover { color: var(--text-primary); }
 
-.wave__chev {
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  transition: transform var(--duration-base) var(--ease-out);
+.wave-tab[aria-selected="true"] {
+  background-color: var(--surface-card);
+  border-color: var(--border-default);
+  border-bottom-color: var(--surface-card);
+  color: var(--text-primary);
 }
 
-.wave.is-open .wave__chev { transform: rotate(90deg); }
+.wave-tab--upload { border-style: dashed; border-bottom-color: transparent; }
+.wave-tab--upload[aria-selected="true"] { border-style: solid; border-bottom-color: var(--surface-card); }
 
-.wave__body { display: none; }
-.wave.is-open .wave__body { display: block; }
+.wave-tab__chip {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
 
-/* What is still outstanding on a wave, and the way back into step 1. Above the
-   table rather than below it, so a wave holding a hundred companies does not
-   put its own action several screens out of reach. */
-.wave__actions {
+.wave-tab__chip--todo  { background-color: rgba(214, 178, 56, 0.20); color: #8C7212; }
+.wave-tab__chip--ready { background-color: rgba(46, 82, 157, 0.12); color: var(--color-navy); }
+.wave-tab__done { color: var(--color-green-dark); }
+
+.wave-tabs.is-busy .wave-tab { pointer-events: none; opacity: 0.6; }
+
+.wave-panel {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  padding: var(--space-5);
+}
+
+/* While a write runs, nothing in the wave may be clicked: removing a row the
+   approval loop is about to write, or linking one, would act on a list that
+   is mid-write. The progress readout is not a control, so it stays bright. */
+#wave-content.is-busy button,
+#wave-content.is-busy select { pointer-events: none; }
+#wave-content.is-busy .vet-panel { opacity: 0.6; }
+
+.wave-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-4);
 }
 
-.wave__actions-note {
+.wave-meta__text {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  max-width: 62ch;
 }
 
-
-/* A wave's table scrolls inside its own box past roughly a dozen rows, so the
-   waves after it and the whole of step 1 stay within reach. .table thead th is
-   already sticky, so the column labels come along for free. */
-.wave__table {
-  max-height: 60vh;
-  overflow-y: auto;
-  border: 0;
-  border-radius: 0;
-}
-
-/* Status of a company at the time its wave was recorded. */
-.wave-tag {
-  display: inline-block;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  background-color: var(--surface-muted);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.wave-tag--approved   { background-color: rgba(42, 148, 99, 0.10); color: var(--color-green-dark); }
-.wave-tag--alumni     { background-color: rgba(46, 82, 157, 0.10); color: var(--color-navy); }
-.wave-tag--prohibited { background-color: rgba(211, 58, 3, 0.10); color: var(--color-orange-dark); }
-.wave-tag--restricted { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
-.wave-tag--closed     { background-color: var(--surface-muted); color: var(--text-muted); }
-.wave-tag--cooldown   { background-color: rgba(202, 88, 28, 0.10); color: var(--color-orange); }
-.wave-tag--review     { background-color: rgba(214, 178, 56, 0.16); color: #8C7212; }
+/* ---------- Per-company outreach state ---------- */
 
 .wave-contacted {
   display: inline-flex;
@@ -746,10 +634,21 @@
   white-space: nowrap;
 }
 
+/* Included the next time this wave is approved for outreach. */
+.vet-ready {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background-color: rgba(46, 82, 157, 0.10);
+  color: var(--color-navy);
+  white-space: nowrap;
+}
+
 /* Take one company back off the submission. Deliberately quiet until hovered:
-   it is the only destructive control in the wave history, and it sits beside
-   rows the admin is reading rather than acting on. Rendered only while the
-   company has no outreach logged against it. */
+   it sits beside rows the admin is reading rather than acting on. Rendered
+   only while the company has not been approved for outreach. */
 .wave-remove {
   display: inline-flex;
   align-items: center;
@@ -770,23 +669,9 @@
   color: var(--color-orange-dark);
 }
 
-/* While outreach is being logged, the history may not be edited: removing a
-   line item the loop is about to write, or pulling another wave into step 1,
-   would both act on a list that is mid-write. Expanding a wave still works,
-   so the buttons are dimmed rather than the whole panel. */
-.waves.is-busy .wave-remove,
-.waves.is-busy [data-load-wave] {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
 /* ---------- The next action ---------- */
-/* Recording and logging outreach are two ordered writes, and only one of them
-   is ever the admin's next move. Rendering both at once read as a pile of
-   controls; parking them in a section below the results put them out of sight
-   of the thing they act on. So: one bar, docked under the summary, showing the
-   current step only, and sticky so it stays in reach while the two result
-   panels are read. */
+/* Where the wave stands and the one action it needs, docked under the
+   summary and sticky so it stays in reach while the tables are read. */
 
 .vet-next {
   position: sticky;
@@ -803,11 +688,9 @@
   overflow: hidden;
 }
 
-.vet-next[hidden] { display: none; }
-
-/* Shown only while a wave's outreach is being logged. Sits inside the sticky
-   bar, so the one slow write on this page reports itself wherever the admin
-   has scrolled to. */
+/* Shown only while a wave is being approved. Sits inside the sticky bar, so
+   the one slow write on this page reports itself wherever the admin has
+   scrolled to. */
 .vet-next__progress {
   padding: 0 var(--space-5) var(--space-4);
   display: flex;
@@ -824,41 +707,17 @@
 
 /* Only this bar is sticky. The tables' own headers scroll away with their rows,
    so they can never reach the top of the viewport and collide with it. */
-#vet-detail .table thead th,
-#vet-detail .admin-table thead th {
+#vet-detail .table thead th {
   position: static;
-}
-
-/* The one exception: a wave's table scrolls inside its own box, so its header
-   sticks to the top of that box and can never travel far enough to meet the
-   bar above. Sixty rows without column labels is worse than the collision this
-   rule exists to prevent. */
-#vet-detail .wave__table .table thead th {
-  position: sticky;
-  top: 0;
-}
-
-/* Panel A carries eight columns and needs ~990px; the content column is
-   narrower than that on anything but a very wide screen. .table-wrapper sets
-   overflow:hidden, which was silently cutting the last columns off with no way
-   to reach them. Scroll them instead. */
-#vet-detail .table-wrapper { overflow-x: auto; }
-
-/* One header height across all three tables on this page. Panel A's cells are
-   text only, while panel B's and step 2's carry a select-all checkbox whose
-   margin was making those rows ~10px taller than panel A's. */
-#vet-detail .table thead th,
-#vet-detail .admin-table thead th {
   height: 46px;
   padding-top: 0;
   padding-bottom: 0;
   vertical-align: middle;
 }
 
-#vet-detail thead .bulk-staging__check {
-  margin-top: 0;
-  vertical-align: middle;
-}
+/* The found panel carries eight columns and needs ~990px. .table-wrapper sets
+   overflow:hidden, which cut the last columns off; scroll them instead. */
+#vet-detail .table-wrapper { overflow-x: auto; }
 
 .vet-next__banner { border-radius: 0; }
 
@@ -871,8 +730,6 @@
   min-height: 84px;
 }
 
-/* Two dots, so the admin can see there is a second step coming before they
-   commit to the first one. */
 .vet-next__track {
   list-style: none;
   margin: 0;
@@ -940,16 +797,22 @@
   color: var(--text-primary);
 }
 
+.vet-next__note {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
 .vet-next__btn { flex: 0 0 auto; margin-left: auto; }
 
-/* Both writes done: stop competing for attention. */
+/* Nothing left on the wave: stop competing for attention. */
 .vet-next.is-done {
   border-left-color: var(--color-green);
   box-shadow: var(--shadow-sm);
   background-color: rgba(42, 148, 99, 0.04);
 }
 
-/* ---------- Step 1 locked until a submission is chosen ---------- */
+/* ---------- Upload tab locked ---------- */
 
 /* The file input covers the whole zone, so dim and neutralise both. */
 .drop-zone.is-locked {
@@ -968,31 +831,19 @@
   text-decoration: none;
 }
 
-/* ---------- Per-company outreach state (Panel A) ---------- */
+/* ---------- Row actions ---------- */
 
-/* Outreach already logged for this event: the tick box is replaced, not
-   disabled, so the row reads as done rather than unavailable. */
-.vet-logged {
-  color: var(--color-green-dark);
-  font-size: var(--font-size-base);
+.vet-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
-
-/* Approved, but not yet recorded against the submission, so it cannot be
-   contacted for this event yet. */
-.vet-locked {
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-
-/* ---------- Confirming a possible match (Panel B) ---------- */
 
 /* A near-miss that is genuinely the same company must be CONFIRMED, not added:
    adding it again would duplicate the record it already has. */
-.vet-link-btn {
-  white-space: nowrap;
-}
+.vet-link-btn { white-space: nowrap; }
 
-/* The confirmed result, shown on the row once it moves up into Panel A. */
+/* A confirmed "Same company" link. */
 .vet-linked {
   display: inline-block;
   font-size: var(--font-size-xs);
@@ -1004,21 +855,137 @@
   white-space: nowrap;
 }
 
-/* Undo, available only until the wave is recorded. */
-.vet-unlink {
+/* Small text-only actions inside a cell: "Not the same company", "Undo". */
+.vet-textbtn {
   border: 0;
-  background: transparent;
-  padding: 0 2px;
+  background: none;
+  padding: 0;
+  margin-top: 2px;
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-link);
   cursor: pointer;
-  color: var(--text-muted);
-  line-height: 1;
 }
 
-.vet-unlink:hover { color: var(--color-orange-dark); }
+.vet-textbtn:hover { text-decoration: underline; color: var(--text-link-hover); }
 
-/* Queued for the wave's single outreach action. Not a control: there is no
-   per-row selection, so this only reports what the button will cover. */
-.vet-pending {
+/* The match an admin ruled out, kept on the row so the verdict can be undone. */
+.vet-rejected {
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ---------- Inline "Add to database" ---------- */
+
+.vet-add-row > td { background-color: var(--surface-muted); }
+
+.vet-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.vet-add__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.vet-add__field[hidden] { display: none; }
+
+.vet-add__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* ---------- Confirmation dialog ---------- */
+
+.vet-dialog .modal__dialog { max-width: 520px; }
+
+.vet-dialog__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.vet-dialog__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: rgba(46, 82, 157, 0.10);
+  color: var(--color-navy);
+  font-size: var(--font-size-lg);
+}
+
+.vet-dialog__icon--danger {
+  background-color: rgba(211, 58, 3, 0.10);
+  color: var(--color-orange-dark);
+}
+
+.vet-dialog__body p { margin: 0 0 var(--space-3); }
+.vet-dialog__body b { color: var(--text-primary); font-weight: var(--font-weight-semibold); }
+
+.vet-dialog__note {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.vet-dialog__list {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-muted);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.vet-dialog__list li { padding: 2px 0; }
+.vet-dialog__more { color: var(--text-muted); }
+
+.vet-dialog__stat {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: rgba(46, 82, 157, 0.06);
   font-size: var(--font-size-sm);
 }
+
+.vet-dialog__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.vet-dialog__chip {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  border-left: 3px solid var(--text-muted);
+}
+
+.vet-dialog__chip--approved   { border-left-color: var(--color-green); }
+.vet-dialog__chip--alumni     { border-left-color: var(--color-navy); }
+.vet-dialog__chip--cooldown   { border-left-color: var(--color-orange); }
+.vet-dialog__chip--prohibited { border-left-color: var(--color-orange-dark); }
+.vet-dialog__chip--restricted { border-left-color: var(--color-gold); }
+.vet-dialog__chip--review     { border-left-color: var(--color-gold); }

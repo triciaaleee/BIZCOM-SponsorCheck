@@ -22,9 +22,9 @@
   <link rel="stylesheet" href="../css/components/skeletons.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
+  <link rel="stylesheet" href="../css/components/modals.css">
   <link rel="stylesheet" href="../css/pages/admin.css">
   <link rel="stylesheet" href="../css/pages/vet-upload.css">
-  <link rel="stylesheet" href="../css/components/staging-table.css">
   <link rel="stylesheet" href="../css/utilities.css">
 </head>
 <body>
@@ -81,7 +81,11 @@
   </section>
 
   <!-- ============================================================
-       SCREEN B - one submission (or step 2 on its own)
+       SCREEN B - one submission
+       One tab per wave the club has sent, plus a tab for uploading
+       the next one. Every list is saved the moment it is uploaded,
+       so whatever is left to do on it is waiting in its tab the next
+       time the submission is opened.
        ============================================================ -->
   <div id="vet-detail" hidden>
 
@@ -95,7 +99,13 @@
         <h2 class="vet-sub__event" id="vet-sub-event">&nbsp;</h2>
         <div class="vet-sub__club" id="vet-sub-club">&nbsp;</div>
       </div>
-      <span id="vet-sub-status"></span>
+      <div class="vet-sub__side">
+        <span id="vet-sub-status"></span>
+        <!-- Only offered once every wave has nothing left to vet or approve. -->
+        <button type="button" class="btn btn--secondary btn--sm" id="vet-complete-btn" hidden>
+          <i class="bi bi-check2-circle"></i> Mark as completed
+        </button>
+      </div>
     </div>
     <div class="sub-cap">
       <div class="sub-cap__head">
@@ -103,257 +113,72 @@
         <span class="sub-cap__waves" id="vet-sub-waves">No waves yet</span>
       </div>
       <div class="sub-cap__meter"><span class="sub-cap__bar" id="vet-sub-bar"></span></div>
-      <!-- Rewritten for migration 0015: the cap moved from "recorded" to
-           "contacted", so the meter tracks outreach, not the size of the list. -->
       <p class="sub-cap__hint">
-        The meter counts companies this event has actually contacted, so recording
-        a club's list costs nothing and a submission may hold far more names than
-        it is allowed to approach. Only approved and alumni companies can be
-        contacted at all, so only they ever reach the meter.
+        The meter counts companies approved for outreach on this event. Saving a club's
+        list costs nothing, so a submission may hold far more names than it is allowed
+        to approach. Only approved and alumni companies can be approved for outreach.
       </p>
     </div>
   </section>
 
-  <!-- ============================================================
-       WAVE HISTORY - what the club has sent, and who was approached
-       ============================================================ -->
-  <section class="admin-section">
-    <div class="admin-section__head">
-      <div>
-        <h2 class="admin-section__title">Wave history</h2>
-        <p class="admin-section__sub">
-          Each list the club has sent, and which companies were approached in it. A company
-          appears once per submission, in the wave it first arrived.
-        </p>
-      </div>
+  <div class="banner banner--info vet-completed" id="completed-banner" hidden>
+    <i class="bi bi-lock-fill banner__icon"></i>
+    <div class="banner__body">
+      <div class="banner__title">This submission is completed</div>
+      <div class="banner__message">Its waves are shown as they were left. Reopen it on Home to make changes.</div>
     </div>
-    <div class="bulk-card">
-      <div class="waves" id="waves-list"></div>
-      <div class="vet-panel__empty" id="waves-empty" hidden>
-        Nothing recorded against this submission yet. Vet a list below to start wave 1.
+  </div>
+
+  <div class="wave-tabs" id="wave-tabs" role="tablist" aria-label="Waves"></div>
+
+  <div class="wave-panel" id="wave-panel">
+    <!-- Rendered by JS for the selected wave. -->
+    <div id="wave-content"></div>
+
+    <!-- The upload tab. Static, so the file input keeps its listeners. -->
+    <div id="upload-pane" hidden>
+      <div class="drop-zone is-locked" id="drop-zone">
+        <input type="file" id="file-input" accept=".csv" aria-label="Upload the club's list">
+        <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
+        <div class="drop-zone__title" id="drop-zone-title">Drop a .csv list here</div>
+        <div class="drop-zone__hint" id="drop-zone-hint">or click to browse</div>
+        <div class="drop-zone__divider">
+          <span>CSV only, up to 5 MB</span>
+        </div>
       </div>
+      <div class="bulk-format-hint">
+        Two columns: <code>company_name</code> and an optional <code>industry_code</code>
+        (e.g. <code>Razer,tech_electronics</code>). A header row is optional. The list is
+        checked first, then saved as a new wave once you confirm. Companies already on an
+        earlier wave are skipped.
+        &nbsp;&middot;&nbsp; <a href="#" id="load-sample-link">Load a sample list</a>
+      </div>
+      <div id="upload-status" class="mt-3"></div>
     </div>
-  </section>
-
-  <!-- ============================================================
-       STEP 1 - Vet a list
-       ============================================================ -->
-  <section class="admin-section">
-    <div class="admin-section__head">
-      <div>
-        <h2 class="admin-section__title"><span class="bulk-step">1</span>Vet a list</h2>
-        <p class="admin-section__sub">
-          Upload a club's CSV to check each company against the database.
-        </p>
-      </div>
-    </div>
-
-    <div class="bulk-card">
-
-      <!-- Upload state -->
-      <div id="check-upload">
-        <div class="drop-zone is-locked" id="drop-zone">
-          <input type="file" id="file-input" accept=".csv" aria-label="Upload sponsor list">
-          <i class="bi bi-cloud-arrow-up drop-zone__icon"></i>
-          <div class="drop-zone__title" id="drop-zone-title">Drop a .csv list here</div>
-          <div class="drop-zone__hint" id="drop-zone-hint">or click to browse</div>
-          <div class="drop-zone__divider">
-            <span>CSV only, up to 5 MB</span>
-          </div>
-        </div>
-        <div class="bulk-format-hint">
-          Two columns: <code>company_name</code> and an optional <code>industry_code</code>
-          (e.g. <code>Razer,tech_electronics</code>). A header row is optional.
-          &nbsp;&middot;&nbsp; <a href="#" id="load-sample-link">Load a sample list</a>
-        </div>
-        <div id="upload-status" class="mt-3"></div>
-      </div>
-
-      <!-- Checking state -->
-      <div id="check-loading" class="d-none">
-        <div class="bulk-checking">
-          <div class="loading-dot"></div>
-          <div class="bulk-checking__msg">Cross-checking against the sponsor database&hellip;</div>
-        </div>
-      </div>
-
-      <!-- Results state -->
-      <div id="check-results" class="d-none">
-
-        <div class="bulk-results-bar">
-          <div class="bulk-results-bar__text" id="results-headline"></div>
-          <button type="button" class="btn btn--secondary btn--sm" id="reupload">
-            <i class="bi bi-arrow-counterclockwise"></i> Upload another
-          </button>
-        </div>
-
-        <div class="bulk-summary" id="bulk-summary"></div>
-
-        <div class="vet-next" id="vet-actions" hidden>
-          <div class="banner banner--warn vet-next__banner" id="cap-banner" hidden>
-            <i class="bi bi-exclamation-triangle-fill banner__icon"></i>
-            <div class="banner__body">
-              <div class="banner__title">Over the event cap</div>
-              <div class="banner__message" id="cap-banner-msg"></div>
-            </div>
-          </div>
-
-          <div class="vet-next__row">
-            <ol class="vet-next__track" id="vet-next-track" aria-label="Progress">
-              <li class="vet-next__dot" data-step="1"><span>1</span>Record</li>
-              <li class="vet-next__dot" data-step="2"><span>2</span>Outreach</li>
-            </ol>
-            <div class="vet-next__text">
-              <div class="vet-next__title" id="vet-next-title">&nbsp;</div>
-            </div>
-            <!-- One button, two jobs: recording companies that are new to the
-                 submission, and updating ones whose verdict has moved since.
-                 The label is set from JS so it cannot disagree with the title
-                 beside it, which it did ("Update 2 companies" over "Record 2"). -->
-            <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="vet-record-btn" hidden>
-              <i class="bi bi-journal-plus"></i> <span id="vet-record-text">Record to submission</span>
-            </button>
-            <!-- Label set from JS: it doubles as the progress readout while
-                 the wave is being logged, which is one request per company and
-                 can run for tens of seconds. -->
-            <button type="button" class="btn btn--primary btn--sm vet-next__btn" id="log-outreach-btn" hidden>
-              <i class="bi bi-graph-up-arrow"></i> <span id="log-outreach-text">Log outreach</span>
-            </button>
-          </div>
-
-          <!-- Only shown while outreach is being logged. Before this the whole
-               action was silent: the button greyed out and nothing else on the
-               page moved until every request had finished, which read as a
-               hung page and had admins refreshing mid-write. -->
-          <div class="vet-next__progress" id="log-progress" hidden>
-            <div class="vet-next__progress-text" id="log-progress-text"></div>
-            <div class="progress"><div class="progress__bar" id="log-progress-bar" style="width:0%"></div></div>
-          </div>
-        </div>
-
-        <div class="banner banner--info" id="dup-banner" hidden>
-          <i class="bi bi-info-circle-fill banner__icon"></i>
-          <div class="banner__body">
-            <div class="banner__title"><span id="dup-count">0</span> duplicate rows in the file</div>
-            <div class="banner__message">The same company appeared more than once, either under the same name or under two spellings that match one company in the database. Extra rows were ignored, and the row that was kept says which others it covers. Each company is checked, recorded and contacted once.</div>
-          </div>
-        </div>
-
-        <!-- Panel A: matched against the database (prohibited + approved flagged) -->
-        <div class="vet-panel">
-          <div class="vet-panel__head">
-            <h3 class="vet-panel__title"><i class="bi bi-database-check"></i> Found in the database</h3>
-          </div>
-          <div class="table-wrapper table-wrapper--responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <!-- Two different things, so two different headings: the
-                       first is this event's outreach, the second is the
-                       company's own running total across every event. -->
-                  <th style="width: 52px">Logged</th>
-                  <th style="width: 44px">#</th>
-                  <th>Company (from list)</th>
-                  <th>Matched in database</th>
-                  <th>Status</th>
-                  <th>Industry</th>
-                  <th>Outreach count</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody id="matched-tbody"></tbody>
-            </table>
-          </div>
-          <div class="vet-panel__empty" id="matched-empty" hidden>None of the uploaded companies were found in the database.</div>
-        </div>
-
-        <!-- Panel B: the separate review window for companies not on record -->
-        <div class="vet-panel vet-panel--review">
-          <div class="vet-panel__head">
-            <h3 class="vet-panel__title"><i class="bi bi-search"></i> Not in the database</h3>
-            <span class="vet-panel__sub">No confident match was found. Where a close record exists it is shown as a possible match. If it is the same company, use &ldquo;Same company&rdquo; to confirm it, do not add it again or you will duplicate the record it already has. Tick the genuinely new companies and stage them for adding in step 2. None of this blocks recording: unvetted companies are recorded at zero and start counting once resolved.</span>
-          </div>
-          <div class="table-wrapper table-wrapper--responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th style="width: 40px"><input type="checkbox" id="review-all" class="bulk-staging__check" aria-label="Select all companies"></th>
-                  <th style="width: 44px">#</th>
-                  <th>Company (from list)</th>
-                  <th>Suggested industry</th>
-                  <th>Possible match in database</th>
-                  <th style="width: 150px">Same company?</th>
-                </tr>
-              </thead>
-              <tbody id="review-tbody"></tbody>
-            </table>
-          </div>
-          <div class="vet-panel__empty" id="review-empty" hidden>Every company on the list was found in the database.</div>
-          <div class="vet-panel__foot" id="review-foot">
-            <span class="vet-panel__foot-note">Adding a company to the database does not put it on this submission or count it towards the cap. Vet the list again once they are added.</span>
-            <div class="vet-foot-actions">
-              <span class="vet-foot-count" id="review-sel-text">0 selected</span>
-              <button type="button" class="btn btn--primary btn--sm" id="send-to-staging" disabled>
-                <i class="bi bi-arrow-down-circle"></i> Stage for adding
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ============================================================
-       STEP 2 - Add sponsors to the database
-       ============================================================ -->
-  <section class="admin-section" id="section-add">
-    <div class="admin-section__head">
-      <div>
-        <h2 class="admin-section__title"><span class="bulk-step">2</span>Add sponsors to the database</h2>
-        <p class="admin-section__sub">
-          Set each company's status and industry, and add them to the database.
-        </p>
-      </div>
-      <button type="button" class="btn btn--secondary btn--sm" id="add-row">
-        <i class="bi bi-plus-lg"></i> Add row
-      </button>
-    </div>
-
-    <div class="bulk-card">
-      <div class="admin-table-wrap">
-        <table class="admin-table bulk-staging">
-          <thead>
-            <tr>
-              <th style="width: 40px"><input type="checkbox" id="staging-all" class="bulk-staging__check" checked aria-label="Select all rows"></th>
-              <th>Company name</th>
-              <th style="width: 150px">Status</th>
-              <th style="width: 200px">Industry</th>
-              <th>Annex category / notes</th>
-              <th style="width: 48px"></th>
-            </tr>
-          </thead>
-          <tbody id="staging-tbody"></tbody>
-        </table>
-        <div class="bulk-staging__empty" id="staging-empty">
-          Nothing staged yet. Upload a list in step 1, or click &ldquo;Add row&rdquo; to start.
-        </div>
-      </div>
-
-      <div class="bulk-add-foot">
-        <div class="bulk-add-foot__count" id="staging-count">0 selected</div>
-        <div class="bulk-add-foot__actions">
-          <button type="button" class="btn btn--secondary btn--sm" id="staging-clear">Clear all</button>
-          <button type="button" class="btn btn--primary btn--sm" id="staging-save">
-            <i class="bi bi-database-add"></i> Add <span id="staging-save-count">0</span> to database
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
+  </div>
 
   </div><!-- /#vet-detail -->
+
+  <!-- Confirmation dialog for every write on this page. Filled and opened
+       by askDialog() in vet-upload-page.js. -->
+  <div class="modal vet-dialog" id="vet-dialog" aria-hidden="true">
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="vet-dialog-title">
+      <div class="modal__header">
+        <div class="vet-dialog__head">
+          <span class="vet-dialog__icon" id="vet-dialog-icon"><i class="bi bi-question-lg"></i></span>
+          <h2 class="modal__title" id="vet-dialog-title">&nbsp;</h2>
+        </div>
+        <button type="button" class="modal__close" data-dialog="cancel" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal__body vet-dialog__body" id="vet-dialog-body"></div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" data-dialog="cancel" id="vet-dialog-cancel">Cancel</button>
+        <button type="button" class="btn btn--primary" data-dialog="ok" id="vet-dialog-ok">OK</button>
+      </div>
+    </div>
+  </div>
 
 </main>
 
@@ -361,7 +186,6 @@
 <script src="../js/lib/supabase-config.js" defer></script>
 <script src="../js/lib/supabase-client.js" defer></script>
 <script src="../js/admin/admin-api.js" defer></script>
-<script src="../js/admin/staging-table.js" defer></script>
 <script src="../js/lib/matcher-core.js" defer></script>
 <script src="../js/components/toast.js" defer></script>
 <script src="../js/admin/admin-shell.js" defer></script>

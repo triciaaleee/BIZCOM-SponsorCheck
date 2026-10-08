@@ -298,8 +298,11 @@
     // contacted twice for the same event, and records which event it was for.
     //
     // Returns 'logged' | 'capped' | 'skipped'
-    //       | 'duplicate'    (already logged for this submission)
-    //       | 'not_recorded' (company is not on this submission yet).
+    //       | 'duplicate'        (already logged for this submission)
+    //       | 'not_recorded'     (company is not on this submission yet)
+    //       | 'not_approachable' (its line item is not approved/alumni)
+    //       | 'event_capped'     (the event cap is full, nothing written)
+    //       | 'completed'        (the submission is completed, 0022).
     logOutreach: function (sponsorId, note, submissionId) {
       return Promise.resolve(
         sb().rpc('log_outreach', {
@@ -384,7 +387,7 @@
     listSubmissionSponsors: function (submissionId) {
       return Promise.resolve(
         sb().from('submission_sponsors')
-          .select('id, wave, company_name, normalised, sponsor_id, status, ' +
+          .select('id, wave, company_name, normalised, sponsor_id, rejected_sponsor_id, status, ' +
                   'recorded_by, recorded_at, outreach_logged_at, outreach_logged_by')
           .eq('submission_id', submissionId)
           .order('wave', { ascending: true })
@@ -409,19 +412,42 @@
       ).then(function (res) { if (res.error) throw res.error; });
     },
 
-    // Record one wave of a club's list against a submission. The event cap lives
-    // server-side in record_submission_wave (see 0012), which de-dupes the
-    // payload, skips companies already on the submission, and rejects the whole
-    // wave if it would push the total past the cap for the event size.
-    // Only approved and alumni companies consume the cap; prohibited, closed,
-    // cooldown and not-yet-vetted ones are stored for the record but not counted.
-    // entries: [{ company_name, normalised, sponsor_id, status }]
+    // Drop a whole wave that nothing has been logged on yet. The
+    // outreach_logged_at filter means a logged line item can never go with it,
+    // even if the page's own check is stale.
+    deleteSubmissionWave: function (submissionId, wave) {
+      return Promise.resolve(
+        sb().from('submission_sponsors').delete()
+          .eq('submission_id', submissionId)
+          .eq('wave', wave)
+          .is('outreach_logged_at', null)
+      ).then(function (res) { if (res.error) throw res.error; });
+    },
+
+    // Saved status and outreach stamp of every line item, across every
+    // submission. Small columns only: it backs the "3 to vet, 12 ready" chips
+    // on the Vet & Upload cards, which need counts, not companies.
+    listSubmissionLineSummary: function () {
+      return Promise.resolve(
+        sb().from('submission_sponsors').select('submission_id, status, outreach_logged_at')
+      ).then(unwrap).then(function (rows) { return rows || []; });
+    },
+
+    // Record one wave of a club's list against a submission. The
+    // record_submission_wave RPC de-dupes the payload, skips companies (and
+    // sponsors) already on the submission, and refreshes the status of the
+    // ones that have not been contacted. Recording never touches the event
+    // cap: since 0015 only approving outreach does (log_outreach).
+    // entries: [{ company_name, normalised, sponsor_id, status, rejected_sponsor_id }]
+    // refreshOnly (0022): update companies already on the submission and never
+    // insert, so an edit to a saved wave cannot resurrect a removed company.
     // returns: { wave, added, refreshed, skipped, counted, listed, cap, event_size }
-    recordSubmissionWave: function (submissionId, entries) {
+    recordSubmissionWave: function (submissionId, entries, refreshOnly) {
       return Promise.resolve(
         sb().rpc('record_submission_wave', {
           p_submission_id: submissionId,
-          p_entries: entries || []
+          p_entries: entries || [],
+          p_refresh_only: !!refreshOnly
         })
       ).then(unwrap);
     },
