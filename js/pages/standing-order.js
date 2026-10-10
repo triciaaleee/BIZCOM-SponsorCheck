@@ -12,12 +12,17 @@
    Android Chrome offers a download instead, and iOS Safari shows only
    the first page. PDF.js draws each page onto a canvas, so the reader
    looks the same everywhere. A transparent text layer over each page
-   keeps the text selectable and findable with the browser's own Find.
+   keeps the text selectable, and is what the reader's search marks.
 
-   Canvases are drawn only for pages near the viewport and released
-   again once they are far away, so a long document stays light on a
-   phone. Text layers are cheap DOM and are built for every page up
-   front, so Find reaches pages that have not been scrolled to yet.
+   THE READER IS A WINDOW, NOT THE PAGE
+   The pages scroll inside a fixed-height box, so a 100-page order
+   never stands between a student and the rest of this page. The bar
+   above it searches the whole document and shows / jumps to a page.
+
+   Canvases are drawn only for pages near the box's visible area and
+   released again once they are far away, so a long document stays
+   light on a phone. Text layers are cheap DOM and are built for every
+   page up front, so search reaches pages not yet scrolled to.
 
    PDF.js is only fetched once there is a PDF to show.
    ============================================================ */
@@ -32,10 +37,9 @@
   // Sharp enough on a retina screen; 3x phones would triple the memory for
   // no visible gain on body text.
   var MAX_DPR = 2;
-  var MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var MIN_QUERY = 2;
 
   var viewer = document.getElementById('so-viewer');
-  var metaEl = document.getElementById('so-doc-meta');
   var actionsEl = document.getElementById('so-doc-actions');
   var openLink = document.getElementById('so-open');
   var downloadLink = document.getElementById('so-download');
@@ -66,12 +70,6 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function formatDate(iso) {
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear();
-  }
-
   function showLoading() {
     viewer.innerHTML =
       '<div class="so-viewer__status" role="status">' +
@@ -94,14 +92,12 @@
   }
 
   function showEmpty() {
-    metaEl.textContent = 'Not yet uploaded.';
     showState('bi-file-earmark-text', 'Standing Order PDF not yet available',
       'BIZCOM has not uploaded the document yet. In the meantime, the binding text is on the SMUSA Gazette.',
       ['Open the SMUSA Gazette', GAZETTE_URL, 'bi-box-arrow-up-right']);
   }
 
   function showUnavailable() {
-    metaEl.textContent = 'Could not be loaded.';
     showState('bi-cloud-slash', 'Could not load the Standing Order',
       'Please refresh to try again. The binding text is also on the SMUSA Gazette.',
       ['Open the SMUSA Gazette', GAZETTE_URL, 'bi-box-arrow-up-right']);
@@ -136,8 +132,6 @@
   }
 
   function openDocument(doc) {
-    var uploaded = formatDate(doc.uploadedAt);
-    metaEl.textContent = uploaded ? 'Uploaded ' + uploaded : '';
     openLink.href = doc.url;
     // Supabase serves the file as an attachment with this name when asked.
     downloadLink.href = doc.url + '?download=' + encodeURIComponent(DOWNLOAD_NAME);
@@ -148,8 +142,6 @@
       pdfjsLib = lib;
       return pdfjsLib.getDocument({ url: doc.url }).promise;
     }).then(function (pdf) {
-      metaEl.textContent = [uploaded && 'Uploaded ' + uploaded,
-        pdf.numPages + (pdf.numPages === 1 ? ' page' : ' pages')].filter(Boolean).join(' · ');
       var pending = [];
       for (var i = 1; i <= pdf.numPages; i++) pending.push(pdf.getPage(i));
       return Promise.all(pending);
@@ -161,44 +153,77 @@
     });
   }
 
+  // ---------- reader ----------
   function buildReader(pdfjsLib, pages) {
-    var list = document.createElement('div');
-    list.className = 'so-pages';
-    viewer.innerHTML = '';
-    viewer.appendChild(list);
+    var total = pages.length;
+    viewer.innerHTML =
+      '<div class="so-reader__bar">' +
+        '<div class="so-find" role="search">' +
+          '<i class="bi bi-search so-find__icon" aria-hidden="true"></i>' +
+          '<input type="search" class="so-find__input" placeholder="Search the PDF" ' +
+            'aria-label="Search the Standing Order" autocomplete="off">' +
+          '<span class="so-find__count" aria-live="polite"></span>' +
+          '<button type="button" class="so-icon-btn" data-find="prev" aria-label="Previous match" disabled>' +
+            '<i class="bi bi-chevron-up"></i></button>' +
+          '<button type="button" class="so-icon-btn" data-find="next" aria-label="Next match" disabled>' +
+            '<i class="bi bi-chevron-down"></i></button>' +
+        '</div>' +
+        '<div class="so-pager">' +
+          '<span>Page</span>' +
+          '<input type="text" class="so-pager__input" inputmode="numeric" value="1" aria-label="Go to page">' +
+          '<span>of ' + total + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="so-reader__scroll" tabindex="0" role="region" aria-label="Standing Order document">' +
+        '<div class="so-pages"></div>' +
+      '</div>';
 
+    var scroller = viewer.querySelector('.so-reader__scroll');
+    var list = viewer.querySelector('.so-pages');
+
+    var textReady = [];
     var entries = pages.map(function (page, i) {
       var base = page.getViewport({ scale: 1 });
       var el = document.createElement('div');
       el.className = 'so-page';
       el.style.aspectRatio = base.width + ' / ' + base.height;
-      el.setAttribute('aria-label', 'Page ' + (i + 1) + ' of ' + pages.length);
-      el.setAttribute('role', 'region');
 
       var canvas = document.createElement('canvas');
       canvas.className = 'so-page__canvas';
       canvas.setAttribute('aria-hidden', 'true');
+      // A blank canvas defaults to 300x150 pixels; times 100+ pages, that is
+      // memory spent on nothing until the page is actually drawn.
+      freeCanvas(canvas);
       var text = document.createElement('div');
       text.className = 'textLayer';
       el.appendChild(canvas);
       el.appendChild(text);
       list.appendChild(el);
 
-      var entry = { page: page, base: base, el: el, canvas: canvas, drawnWidth: 0, task: null, near: false, failed: false };
+      var entry = {
+        page: page, base: base, el: el, canvas: canvas,
+        drawnWidth: 0, task: null, near: false, failed: false,
+        textDivs: [], originals: [], marked: []
+      };
       // Built at the page's current scale (PDF.js insists the two match);
       // after that, --scale-factor alone resizes it with the page.
       var scale = setScale(entry);
-      pdfjsLib.renderTextLayer({
+      textReady.push(pdfjsLib.renderTextLayer({
         textContentSource: page.streamTextContent(),
         container: text,
         viewport: page.getViewport({ scale: scale }),
-        textDivs: []
-      }).promise.catch(function (e) {
+        textDivs: entry.textDivs
+      }).promise.then(function () {
+        // Search swaps marks into these spans, so keep each span's own text
+        // to put back when the query changes.
+        entry.originals = entry.textDivs.map(function (d) { return d.textContent; });
+      }, function (e) {
         console.error('[standing-order] text layer, page ' + (i + 1), e);
-      });
+      }));
       return entry;
     });
 
+    // Drawing follows the box's own scroll, not the window's.
     if (!('IntersectionObserver' in window)) {
       entries.forEach(function (entry) { entry.near = true; draw(entry); });
     } else {
@@ -209,7 +234,7 @@
           entry.near = c.isIntersecting;
           if (entry.near) draw(entry); else release(entry);
         });
-      }, { rootMargin: '150% 0px' });
+      }, { root: scroller, rootMargin: '100% 0px' });
       entries.forEach(function (entry) { io.observe(entry.el); });
     }
 
@@ -226,8 +251,169 @@
         }, 150);
       }).observe(list);
     }
+
+    wirePager(scroller, entries);
+    wireSearch(scroller, entries, Promise.all(textReady));
   }
 
+  // ---------- page counter ----------
+  function wirePager(scroller, entries) {
+    var input = viewer.querySelector('.so-pager__input');
+    var current = 1;
+
+    // The page covering a point a third of the way down the box. Pages are
+    // in order, so a binary search keeps this cheap on a 100+ page order.
+    function pageAtScroll() {
+      var y = scroller.scrollTop + scroller.clientHeight / 3;
+      var lo = 0, hi = entries.length - 1;
+      while (lo < hi) {
+        var mid = (lo + hi + 1) >> 1;
+        if (entries[mid].el.offsetTop <= y) lo = mid; else hi = mid - 1;
+      }
+      return lo + 1;
+    }
+
+    var queued = false;
+    scroller.addEventListener('scroll', function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () {
+        queued = false;
+        current = pageAtScroll();
+        if (document.activeElement !== input) input.value = current;
+      });
+    }, { passive: true });
+
+    function go() {
+      var n = parseInt(input.value, 10);
+      if (!Number.isInteger(n)) { input.value = current; return; }
+      n = Math.min(Math.max(n, 1), entries.length);
+      input.value = n;
+      scroller.scrollTop = entries[n - 1].el.offsetTop - topPadding(scroller);
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); go(); input.select(); }
+      else if (e.key === 'Escape') { input.value = current; input.blur(); }
+    });
+    input.addEventListener('change', go);
+    input.addEventListener('focus', function () { input.select(); });
+  }
+
+  // The box's top padding, so a jumped-to page lands with a little air above
+  // it rather than flush against the bar.
+  function topPadding(scroller) {
+    return parseFloat(getComputedStyle(scroller).paddingTop) || 0;
+  }
+
+  // ---------- search ----------
+  // Matches are found within each text-layer span (roughly, one run of text
+  // on a line), so a phrase broken across two lines is not matched. That
+  // keeps every match something the reader can actually highlight.
+  function wireSearch(scroller, entries, textReady) {
+    var input = viewer.querySelector('.so-find__input');
+    var countEl = viewer.querySelector('.so-find__count');
+    var prevBtn = viewer.querySelector('[data-find="prev"]');
+    var nextBtn = viewer.querySelector('[data-find="next"]');
+
+    var hits = [];
+    var index = -1;
+    var query = '';
+    var timer = null;
+
+    function clearHits() {
+      entries.forEach(function (entry) {
+        entry.marked.forEach(function (i) { entry.textDivs[i].textContent = entry.originals[i]; });
+        entry.marked = [];
+      });
+      hits = [];
+      index = -1;
+    }
+
+    function render() {
+      var has = hits.length > 0;
+      prevBtn.disabled = nextBtn.disabled = !has;
+      if (query.length < MIN_QUERY) countEl.textContent = '';
+      else if (!has) countEl.textContent = 'No matches';
+      else countEl.textContent = (index + 1) + ' of ' + hits.length;
+    }
+
+    function run() {
+      var q = input.value.trim();
+      query = q;
+      clearHits();
+      if (q.length < MIN_QUERY) { render(); return; }
+
+      countEl.textContent = 'Searching…';
+      textReady.then(function () {
+        if (q !== query) return;   // superseded by newer typing
+        var re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        entries.forEach(function (entry) {
+          entry.originals.forEach(function (str, i) {
+            if (!str) return;
+            re.lastIndex = 0;
+            var m = re.exec(str);
+            if (!m) return;
+            var frag = document.createDocumentFragment();
+            var pos = 0;
+            while (m) {
+              frag.appendChild(document.createTextNode(str.slice(pos, m.index)));
+              var mark = document.createElement('mark');
+              mark.className = 'so-hit';
+              mark.textContent = m[0];
+              frag.appendChild(mark);
+              hits.push(mark);
+              pos = m.index + m[0].length;
+              m = re.exec(str);
+            }
+            frag.appendChild(document.createTextNode(str.slice(pos)));
+            var div = entry.textDivs[i];
+            div.textContent = '';
+            div.appendChild(frag);
+            entry.marked.push(i);
+          });
+        });
+        if (hits.length) select(0); else render();
+      });
+    }
+
+    // Scrolls the box, never the page, so the student stays where they are.
+    function select(i) {
+      if (!hits.length) return;
+      if (index >= 0 && hits[index]) hits[index].classList.remove('is-current');
+      index = (i + hits.length) % hits.length;
+      var mark = hits[index];
+      mark.classList.add('is-current');
+      var r = mark.getBoundingClientRect();
+      var box = scroller.getBoundingClientRect();
+      if (r.top < box.top + 24 || r.bottom > box.bottom - 24) {
+        scroller.scrollTop += (r.top - box.top) - scroller.clientHeight / 3;
+      }
+      render();
+    }
+
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(run, 200);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Enter before the debounce fires searches straight away.
+        if (input.value.trim() !== query) { clearTimeout(timer); run(); return; }
+        select(index + (e.shiftKey ? -1 : 1));
+      } else if (e.key === 'Escape' && input.value) {
+        e.preventDefault();
+        input.value = '';
+        clearTimeout(timer);
+        run();
+      }
+    });
+    prevBtn.addEventListener('click', function () { select(index - 1); });
+    nextBtn.addEventListener('click', function () { select(index + 1); });
+  }
+
+  // ---------- drawing ----------
   // Returns the scale applied. A page with no width yet (still hidden) keeps
   // its previous scale, or 1, until the ResizeObserver corrects it.
   function setScale(entry) {

@@ -65,14 +65,12 @@
 
 .so-doc__head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-bottom: var(--space-4);
 }
-
-.so-doc__head .so-section__sub { margin-bottom: 0; }
 
 .so-doc__actions {
   display: flex;
@@ -83,19 +81,167 @@
 /* An author `display` beats the UA sheet's [hidden] rule. */
 .so-doc__actions[hidden] { display: none; }
 
-/* ---------- Reader ---------- */
+/* ---------- Reader ----------
+   A window onto the document: the bar on top, then a fixed-height box the
+   pages scroll inside, so the rest of the page is never more than a short
+   scroll away however long the order is. */
 
 .so-viewer {
   background-color: var(--surface-muted);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  overflow: hidden;
   min-height: 240px;
 }
 
+.so-reader__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* The positioned ancestor, so each page's offsetTop is measured from here
+   (the page counter and "go to page" rely on it). */
+.so-reader__scroll {
+  position: relative;
+  height: min(75vh, 960px);
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.so-reader__scroll:focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -2px;
+}
+
 @media (max-width: 560px) {
-  /* Every pixel of width goes to the page on a phone. */
-  .so-viewer { padding: var(--space-2); }
+  /* Shorter on a phone, so there is always page above or below the box to
+     put a thumb on and scroll past it; and every pixel of width goes to
+     the document. */
+  .so-reader__scroll {
+    height: 65vh;
+    padding: var(--space-2);
+  }
+  .so-reader__bar { padding: var(--space-2) var(--space-3); }
+}
+
+/* ---------- Search ---------- */
+
+.so-find {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1 1 320px;
+  /* Lets the group shrink below its contents' natural width on a phone,
+     instead of pushing the next-match button out of the box. */
+  min-width: 0;
+  max-width: 480px;
+}
+
+.so-find__icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  pointer-events: none;
+}
+
+.so-find__input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--space-3) 0 var(--space-7);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-sans);
+  background-color: var(--surface-card);
+}
+
+.so-find__input:focus {
+  outline: none;
+  border-color: var(--color-navy);
+  box-shadow: var(--shadow-focus);
+}
+
+.so-find__count {
+  flex-shrink: 0;
+  min-width: 4.5em;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.so-icon-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.so-icon-btn:hover:not(:disabled) {
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+.so-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.so-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 560px) {
+  /* Search gets its own row; the page counter wraps below it. */
+  .so-find { flex-basis: 100%; max-width: none; }
+}
+
+/* ---------- Page counter ---------- */
+
+.so-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.so-pager__input {
+  width: 3.5em;
+  height: 32px;
+  padding: 0 var(--space-1);
+  text-align: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-sans);
+  background-color: var(--surface-card);
+}
+
+.so-pager__input:focus {
+  outline: none;
+  border-color: var(--color-navy);
+  box-shadow: var(--shadow-focus);
 }
 
 .so-viewer__status {
@@ -193,4 +339,18 @@
 
 .so-page .textLayer ::selection {
   background: rgba(46, 82, 157, 0.25);
+}
+
+/* Search matches. The text stays transparent like the rest of the layer;
+   only the highlight shows, over the drawn page. */
+.so-page .textLayer .so-hit {
+  color: transparent;
+  background-color: rgba(214, 178, 56, 0.45);
+  border-radius: 2px;
+  padding: 0;
+  margin: 0;
+}
+
+.so-page .textLayer .so-hit.is-current {
+  background-color: rgba(202, 88, 28, 0.5);
 }
