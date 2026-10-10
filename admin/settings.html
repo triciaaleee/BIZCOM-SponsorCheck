@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../css/components/states.css">
   <link rel="stylesheet" href="../css/components/tables.css">
   <link rel="stylesheet" href="../css/components/modals.css">
+  <link rel="stylesheet" href="../css/components/drop-zone.css">
   <link rel="stylesheet" href="../css/components/admin-shell.css">
   <link rel="stylesheet" href="../css/components/admin-meta.css">
   <link rel="stylesheet" href="../css/components/toasts.css">
@@ -118,6 +119,39 @@
         <button type="button" class="btn btn--primary btn--sm" id="settings-save">
           <i class="bi bi-check-lg"></i> Save settings
         </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <div class="admin-section__head">
+      <div>
+        <h2 class="admin-section__title">Standing Order PDF</h2>
+        <p class="admin-section__sub">The document students read on the public Standing Order page.</p>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-section">
+        <h3 class="settings-section__title">Current document</h3>
+        <div id="so-current"><!-- rendered by settings-page.js --></div>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section__title">Replace document</h3>
+        <p class="settings-section__hint">
+          Uploading a new PDF publishes it straight away and deletes the previous file,
+          so only one version is ever stored.
+        </p>
+        <div class="drop-zone drop-zone--compact" id="so-drop-zone">
+          <input type="file" id="so-file-input" accept="application/pdf,.pdf" aria-label="Upload the Standing Order PDF">
+          <i class="bi bi-file-earmark-pdf drop-zone__icon"></i>
+          <div class="drop-zone__title" id="so-drop-title">Drop the Standing Order PDF here</div>
+          <div class="drop-zone__hint">or click to browse</div>
+          <div class="drop-zone__divider">
+            <span>PDF only, up to 20 MB</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>

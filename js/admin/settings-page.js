@@ -1,10 +1,14 @@
 /* ============================================================
    js/admin/settings-page.js
-   Super-admin-only Settings page. Two sections:
+   Super-admin-only Settings page. Three sections:
      1. Team members — list, invite, rename, remove, and transfer
         the super-admin role.
      2. Cooldown & event limits — outreach cap, cooldown days, and
         per-event sponsor caps.
+     3. Standing Order PDF — the document shown on the public
+        standing-order.html. Any admin may replace it; the upload
+        deletes the previous file so one version is stored at a time
+        (Storage bucket `standing-order`, see 0023).
 
    Reads/writes live via window.AdminAPI (Supabase). Team writes and
    settings updates are super-admin only (enforced by RLS). No MOCK_DATA.
@@ -67,6 +71,11 @@
     const setEventMedium = document.getElementById('set-event-medium');
     const setEventLarge = document.getElementById('set-event-large');
     const settingsSave = document.getElementById('settings-save');
+
+    const soCurrent = document.getElementById('so-current');
+    const soDropZone = document.getElementById('so-drop-zone');
+    const soFileInput = document.getElementById('so-file-input');
+    const soDropTitle = document.getElementById('so-drop-title');
 
     // ---------- helpers ----------
     function toastMsg(o) { if (window.toast) window.toast(o); }
@@ -441,6 +450,153 @@
       toastMsg({ type: 'success', title: 'Settings saved', message: 'Outreach cap and event limits updated.' });
     }
 
+    // ---------- standing order PDF ----------
+    // Mirrors the bucket's file_size_limit (0023). The bucket enforces it
+    // regardless; checking here just fails fast with a clear message.
+    const SO_MAX_BYTES = 20 * 1024 * 1024;
+    const SO_DROP_TITLE = soDropTitle.textContent;
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    let standingOrder = null;   // { name, url, uploadedAt, size } | null
+    let soBusy = false;
+
+    // e.g. "10 Oct 2026, 3:04 pm"
+    function formatWhen(iso) {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const h = d.getHours() % 12 || 12;
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear() +
+             ', ' + h + ':' + m + ' ' + (d.getHours() < 12 ? 'am' : 'pm');
+    }
+
+    function formatBytes(n) {
+      if (!n && n !== 0) return '';
+      if (n < 1024 * 1024) return Math.max(1, Math.round(n / 1024)) + ' KB';
+      return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function renderStandingOrder(loadError) {
+      let icon, name, meta, actions = '';
+      if (loadError) {
+        icon = 'bi-exclamation-triangle';
+        name = 'Could not load the current PDF';
+        meta = loadError.message || 'Please refresh and try again.';
+      } else if (!standingOrder) {
+        icon = 'bi-file-earmark-x';
+        name = 'No PDF uploaded yet';
+        meta = 'The public page points students to the SMUSA Gazette until one is uploaded.';
+      } else {
+        icon = 'bi-file-earmark-pdf';
+        name = 'Standing Order PDF';
+        meta = ['Uploaded ' + formatWhen(standingOrder.uploadedAt), formatBytes(standingOrder.size)]
+          .filter(Boolean).join(' · ');
+        actions =
+          '<a class="btn btn--secondary btn--sm" href="' + esc(standingOrder.url) + '" target="_blank" rel="noopener">' +
+            '<i class="bi bi-eye"></i> View PDF' +
+          '</a>' +
+          '<a class="btn btn--tertiary btn--sm" href="../standing-order.html" target="_blank" rel="noopener">' +
+            '<i class="bi bi-box-arrow-up-right"></i> Public page' +
+          '</a>';
+      }
+      soCurrent.innerHTML =
+        '<div class="upload-status">' +
+          '<div class="upload-status__icon"><i class="bi ' + icon + '"></i></div>' +
+          '<div class="upload-status__body">' +
+            '<div class="upload-status__name">' + esc(name) + '</div>' +
+            '<div class="upload-status__meta">' + esc(meta) + '</div>' +
+          '</div>' +
+          (actions ? '<div class="upload-status__actions">' + actions + '</div>' : '') +
+        '</div>';
+    }
+
+    function setSoBusy(busy) {
+      soBusy = busy;
+      soDropZone.classList.toggle('is-busy', busy);
+      soFileInput.disabled = busy;
+      soDropTitle.textContent = busy ? 'Uploading…' : SO_DROP_TITLE;
+    }
+
+    // A real PDF starts with "%PDF-". Checked so a renamed Word or image file
+    // is refused here instead of being published as a page that cannot open.
+    async function looksLikePdf(file) {
+      try {
+        return (await file.slice(0, 5).text()) === '%PDF-';
+      } catch (e) {
+        return true;   // cannot read it here; let the bucket's type check decide
+      }
+    }
+
+    async function handleStandingOrderFile(file) {
+      if (soBusy) return;
+      soFileInput.value = '';   // so choosing the same file again still fires change
+
+      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+        toastMsg({ type: 'error', title: 'PDF only', message: file.name + ' is not a PDF.' });
+        return;
+      }
+      if (file.size > SO_MAX_BYTES) {
+        toastMsg({ type: 'error', title: 'File too large', message: file.name + ' is ' + formatBytes(file.size) + '. The limit is 20 MB.' });
+        return;
+      }
+      if (!file.size || !(await looksLikePdf(file))) {
+        toastMsg({ type: 'error', title: 'Not a valid PDF', message: file.name + ' could not be read as a PDF.' });
+        return;
+      }
+
+      const prompt = standingOrder
+        ? 'Replace the Standing Order PDF with "' + file.name + '"?\n\n' +
+          'The current PDF (uploaded ' + formatWhen(standingOrder.uploadedAt) + ') is deleted, ' +
+          'and students see the new one on the public page straight away.'
+        : 'Publish "' + file.name + '" as the Standing Order PDF?\n\n' +
+          'Students see it on the public page straight away.';
+      if (!confirm(prompt)) return;
+
+      setSoBusy(true);
+      let result;
+      try {
+        result = await window.AdminAPI.uploadStandingOrder(file);
+      } catch (e) {
+        setSoBusy(false);
+        toastError('Could not upload the PDF', e);
+        return;
+      }
+      setSoBusy(false);
+
+      standingOrder = result.file;
+      renderStandingOrder();
+
+      if (result.cleanupError) {
+        console.error('[settings] standing order clean-up', result.cleanupError);
+        toastMsg({
+          type: 'warning',
+          title: 'PDF published, old file not deleted',
+          message: 'Students already see the new PDF. The previous file is removed automatically on the next upload.'
+        });
+      } else {
+        toastMsg({ type: 'success', title: 'Standing Order updated', message: file.name + ' is now on the public page.' });
+      }
+    }
+
+    soDropZone.addEventListener('dragenter', soDragOver);
+    soDropZone.addEventListener('dragover', soDragOver);
+    function soDragOver(e) { e.preventDefault(); if (!soBusy) soDropZone.classList.add('is-drag-over'); }
+    ['dragleave', 'drop'].forEach(function (evt) {
+      soDropZone.addEventListener(evt, function (e) {
+        e.preventDefault();
+        if (evt === 'dragleave' && e.target !== soDropZone) return;
+        soDropZone.classList.remove('is-drag-over');
+      });
+    });
+    soDropZone.addEventListener('drop', function (e) {
+      const file = e.dataTransfer.files[0];
+      if (file) handleStandingOrderFile(file);
+    });
+    soFileInput.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) handleStandingOrderFile(file);
+    });
+
     // ---------- role-based UI ----------
     // The team section is read-only for a normal admin: no invite, no row
     // actions, no rename. Cooldown and event limits stay editable for everyone.
@@ -467,6 +623,20 @@
       }
       render();
       loadSettings();
+    })();
+
+    // Separate from the boot above so a Storage hiccup cannot blank the team
+    // list or the limits, and vice versa.
+    (async function bootStandingOrder() {
+      soCurrent.innerHTML = '<div class="text-sm text-muted">Loading…</div>';
+      try {
+        standingOrder = await window.AdminAPI.getStandingOrder();
+      } catch (e) {
+        console.error('[settings] could not load the standing order PDF', e);
+        renderStandingOrder(e);
+        return;
+      }
+      renderStandingOrder();
     })();
   }
 

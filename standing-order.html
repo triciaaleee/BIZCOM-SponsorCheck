@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Standing order, BIZCOM SponsorCheck</title>
   <link rel="icon" href="admin/assets/favicon.png">
-  <meta name="description" content="The SMUSA Sponsorship Standing Order, searchable summary with the SMUSA Gazette as the binding source.">
+  <meta name="description" content="The SMUSA Sponsorship Standing Order, with the current outreach and event-size caps. The SMUSA Gazette is the binding source.">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,7 +64,7 @@
           <div class="banner__body">
             <div class="banner__title">Binding source: the SMUSA Gazette</div>
             <div class="banner__message">
-              This page paraphrases the official Standing Order (effective 1 March 2024). For the binding text and the latest amendments, refer to the SMUSA Gazette.
+              The document below is the official Standing Order, as uploaded by BIZCOM. For the binding text and the latest amendments, refer to the SMUSA Gazette.
             </div>
             <a href="https://www.smusa.sg/smusa-gazette" target="_blank" rel="noopener" class="btn btn--secondary btn--sm mt-3">
               <i class="bi bi-box-arrow-up-right"></i> Open the SMUSA Gazette
@@ -73,162 +73,59 @@
         </div>
       </header>
 
-      <div class="standing-order">
+      <section class="so-section" aria-labelledby="limits-title">
+        <h2 class="so-section__title" id="limits-title">Current limits</h2>
+        <p class="so-section__sub">Read live from BIZCOM’s settings, so these figures are always the ones in force.</p>
 
-        <aside class="toc" aria-label="Table of contents">
-          <div class="toc__heading">On this page</div>
-          <ul class="toc__list">
-            <li><a href="#section-1" class="toc__link is-active">1. Purpose and scope</a></li>
-            <li><a href="#section-2" class="toc__link">2. Definitions</a></li>
-            <li><a href="#section-3" class="toc__link">3. Roles and responsibilities</a></li>
-            <li><a href="#section-4" class="toc__link">4. Outreach process</a></li>
-            <li><a href="#section-5" class="toc__link">5. <span data-stat="cooldown_days">&hellip;</span>-day outreach cap</a></li>
-            <li><a href="#section-6" class="toc__link">6. Event-size caps</a></li>
-            <li><a href="#section-7" class="toc__link">7. Master List</a></li>
-            <li><a href="#section-8" class="toc__link">8. Alumni List</a></li>
-            <li><a href="#section-9" class="toc__link">9. Non-circumvention</a></li>
-            <li><a href="#section-10" class="toc__link">10. Penalties</a></li>
-            <li><a href="#annex-a" class="toc__link">Annex A, prohibited categories</a></li>
-            <li><a href="#annex-b" class="toc__link">Annex B, restricted organisations</a></li>
-          </ul>
-
-          <div class="so-search mt-5">
-            <i class="bi bi-search so-search__icon"></i>
-            <input type="search" id="so-search" placeholder="Search this page..." aria-label="Search standing order">
-          </div>
-        </aside>
-
-        <article class="so-content">
-
-          <h2 id="section-1">1. Purpose and scope</h2>
-          <p>
-            The Standing Order establishes how Student Activity Groups (SAGs) approach external organisations for sponsorship of SMU-organised events. It exists so SMU clubs present a coordinated face to corporate partners and avoid contradicting each other in outreach.
-          </p>
-          <p>
-            It applies to all SAGs under SMUSA, including School Constituent Bodies, CCA Constituent Bodies, CCA Clubs, and any group operating under the SMUSA umbrella.
-          </p>
-
-          <h2 id="section-2">2. Definitions</h2>
-          <ul>
-            <li><strong>Sponsor</strong>: an external organisation contacted to provide cash, in-kind goods, services, prizes, or vouchers.</li>
-            <li><strong>Outreach</strong>: any deliberate contact with a sponsor for the purpose of soliciting support (cold email, follow-up, in-person pitch).</li>
-            <li><strong>Master List</strong>: the pre-vetted, BIZCOM-maintained database of sponsors eligible for approach.</li>
-            <li><strong>Alumni List</strong>: a subset of sponsors owned, founded, or operated by SMU alumni, requiring OAR coordination before approach.</li>
-            <li><strong>Submission</strong>: a complete sponsor list submitted to BIZCOM for vetting prior to outreach.</li>
-          </ul>
-
-          <h2 id="section-3">3. Roles and responsibilities</h2>
-          <h3>SAGs</h3>
-          <p>
-            SAGs assemble their intended sponsor list, pre-check it through this platform, and submit the cleaned list to the BIZCOM Corporate Relations Secretary for final vetting before any outreach begins.
-          </p>
-          <h3>BIZCOM Corporate Relations Secretary</h3>
-          <p>
-            Maintains the Master List, Prohibited List, and Alumni List. Reviews each submission and confirms approved sponsors back to the SAG within the published turnaround time.
-          </p>
-          <h3>BIZCOM as a whole</h3>
-          <p>
-            Owns enterprise-level partnerships and coordinates with SAGs where there is overlap between BIZCOM's own contacts and a SAG's intended list.
-          </p>
-
-          <h2 id="section-4">4. Outreach process</h2>
-          <ol>
-            <li>Assemble a draft sponsor list with company names and (preferably) industry tags.</li>
-            <li>Pre-check the list through this platform. Review any flagged rows.</li>
-            <li>Submit the cleaned list to BIZCOM by email for final approval.</li>
-            <li>Wait for BIZCOM confirmation before initiating any outreach.</li>
-            <li>Log each outreach attempt back to BIZCOM so the rolling outreach counter stays accurate for everyone.</li>
-          </ol>
-
-          <h2 id="section-5">5. <span data-stat="cooldown_days">&hellip;</span>-day outreach cap</h2>
-          <div class="annex">
+        <div class="so-limits">
+          <div class="so-limit">
+            <h3 class="so-limit__title" id="outreach-cap"><span data-stat="cooldown_days">&hellip;</span>-day outreach cap</h3>
             <p>
               Each sponsor may receive a maximum of <strong><span data-stat="outreach_cap">&hellip;</span> outreach attempts</strong> in any rolling <span data-stat="cooldown_days">&hellip;</span>-day window across all SMU SAGs combined. Once the cap is reached, the sponsor enters a <span data-stat="cooldown_days">&hellip;</span>-day cooldown during which no SAG may approach them.
             </p>
-            <p class="text-secondary text-sm" style="margin-bottom: 0">
-              Rationale: repeated cold outreach to the same company within a short window damages SMU's reputation as a coordinated partner. The cap is enforced advisorily through this platform and definitively at BIZCOM review. Figures on this page are read live from BIZCOM's settings.
+            <p class="so-limit__note">
+              Rationale: repeated cold outreach to the same company within a short window damages SMU’s reputation as a coordinated partner. The cap is enforced advisorily through this platform and definitively at BIZCOM review.
             </p>
           </div>
 
-          <h2 id="section-6">6. Event-size caps</h2>
-          <p>The maximum number of distinct sponsors that may be approached per event is determined by the event size:</p>
-          <ul>
-            <li><strong>Small event</strong> (under 50 attendees): cap of <strong><span data-stat="event_cap_small">&hellip;</span></strong> sponsors.</li>
-            <li><strong>Medium event</strong> (50 to 150 attendees): cap of <strong><span data-stat="event_cap_medium">&hellip;</span></strong> sponsors.</li>
-            <li><strong>Large event</strong> (over 150 attendees): cap of <strong><span data-stat="event_cap_large">&hellip;</span></strong> sponsors.</li>
-          </ul>
-          <p class="text-secondary text-sm">
-            These caps are cumulative across all submission waves for the same event. Re-classifying an event after submission requires written approval from the Corporate Relations Secretary. Figures on this page are read live from BIZCOM's settings.
-          </p>
+          <div class="so-limit">
+            <h3 class="so-limit__title" id="event-caps">Event-size caps</h3>
+            <p>The maximum number of distinct sponsors that may be approached per event is determined by the event size:</p>
+            <ul>
+              <li><strong>Small event</strong> (under 50 attendees): cap of <strong><span data-stat="event_cap_small">&hellip;</span></strong> sponsors.</li>
+              <li><strong>Medium event</strong> (50 to 150 attendees): cap of <strong><span data-stat="event_cap_medium">&hellip;</span></strong> sponsors.</li>
+              <li><strong>Large event</strong> (over 150 attendees): cap of <strong><span data-stat="event_cap_large">&hellip;</span></strong> sponsors.</li>
+            </ul>
+            <p class="so-limit__note">
+              These caps are cumulative across all submission waves for the same event. Re-classifying an event after submission requires written approval from the Corporate Relations Secretary.
+            </p>
+          </div>
+        </div>
+      </section>
 
-          <h2 id="section-7">7. Master List</h2>
-          <p>
-            The Master List contains sponsors that have been previously approved through BIZCOM vetting. Companies on the Master List are not automatically pre-approved for new events. They still require submission, but they will not be flagged as prohibited, restricted, or alumni-affiliated.
-          </p>
-          <p>
-            The Master List grows over time. Sponsors approved through one SAG's submission are subsequently added to the Master List, reducing review time for future submissions.
-          </p>
+      <section class="so-section" aria-labelledby="doc-title">
+        <div class="so-doc__head">
+          <div>
+            <h2 class="so-section__title" id="doc-title">The Standing Order</h2>
+            <p class="so-section__sub" id="so-doc-meta">&nbsp;</p>
+          </div>
+          <div class="so-doc__actions" id="so-doc-actions" hidden>
+            <a class="btn btn--secondary btn--sm" id="so-open" target="_blank" rel="noopener">
+              <i class="bi bi-box-arrow-up-right"></i> Open in new tab
+            </a>
+            <a class="btn btn--secondary btn--sm" id="so-download">
+              <i class="bi bi-download"></i> Download
+            </a>
+          </div>
+        </div>
 
-          <h2 id="section-8">8. Alumni List</h2>
-          <p>
-            Companies owned, founded, or operated by SMU alumni are tracked separately on the Alumni List. Outreach to alumni-affiliated sponsors must be coordinated with the Office of Alumni Relations (OAR) before initiation, regardless of the company's appearance on any other list.
-          </p>
-          <p>
-            The Alumni List is maintained collaboratively with OAR and is updated as alumni-owned businesses are identified.
-          </p>
-          <ul class="text-secondary text-sm">
-            <li>Office of Alumni Relations (OAR): <a href="mailto:alumni@smu.edu.sg">alumni@smu.edu.sg</a></li>
-            <li>Office of Advancement (OA): <a href="mailto:alumnigiving@smu.edu.sg">alumnigiving@smu.edu.sg</a></li>
-          </ul>
+        <div class="so-viewer" id="so-viewer"><!-- rendered by js/pages/standing-order.js --></div>
 
-          <h2 id="section-9">9. Non-circumvention</h2>
-          <p>
-            SAGs may not circumvent these rules through indirect outreach, including outreach via parent companies, subsidiaries, individual staff contacts, or third parties, to a sponsor that would otherwise be prohibited, on cooldown, or unapproved.
-          </p>
-          <p>
-            Suspected circumvention should be reported to the Corporate Relations Secretary for investigation.
-          </p>
+        <p class="mt-5 text-secondary text-sm">
+          <em>For clarifications, contact the BIZCOM Corporate Relations Secretary at <a href="mailto:biz.secretary@smu.edu.sg">biz.secretary@smu.edu.sg</a>.</em>
+        </p>
+      </section>
 
-          <h2 id="section-10">10. Penalties</h2>
-          <p>
-            Breaches of this standing order may result in: a written warning to the SAG executive committee, suspension of sponsorship privileges for the current academic term, or escalation to the SMUSA Disciplinary Committee for repeat offences.
-          </p>
-          <p>
-            Penalties are determined case-by-case by the BIZCOM Director in consultation with the SMUSA Executive Committee.
-          </p>
-
-          <h2 id="annex-a">Annex A, prohibited categories</h2>
-          <p>The following organisations, and all associated companies, must not be approached for sponsorship under any circumstances:</p>
-          <ul>
-            <li><strong>All Foundations</strong> (e.g. Lee Foundation, Shaw Foundation, Tanoto Foundation)</li>
-            <li><strong>SMU Board of Trustees and associated companies</strong>: see the <a href="./dashboard.html">sponsor directory</a> for the full list</li>
-            <li><strong>Alcoholic product companies</strong> (e.g. Asia Pacific Breweries)</li>
-            <li><strong>Tobacco product companies</strong> (e.g. Marlboro)</li>
-            <li><strong>Gaming and betting companies</strong> (e.g. Singapore Pools)</li>
-            <li><strong>Sexual product companies</strong> (e.g. Durex)</li>
-            <li><strong>SMU Commencement sponsorship companies</strong></li>
-            <li><strong>Insurance companies</strong>: no sponsorship, partnership, or collaboration, direct or indirect, monetary or otherwise, including through their subsidiaries, affiliates, intermediaries, representatives, brokers, agents, or any third party acting on their behalf</li>
-            <li><strong>Multi-level marketing companies</strong></li>
-          </ul>
-
-          <h2 id="annex-b">Annex B, restricted organisations</h2>
-          <p>
-            The following are organisations BIZCOM is collaborating with directly. CBDs and Student Activity Groups may not approach them on their own. Any other company may still be approached, provided a SAG does not negotiate on behalf of SMUSA or BIZCOM and the company is not offering a corporate discount to all SMU students; if a listed company asks to liaise with SMUSA, refer it to BIZCOM instead.
-          </p>
-          <ul>
-            <li><strong>Government entities</strong> (e.g. TOTE Board)</li>
-            <li><strong>Banks and financial institutions</strong></li>
-          </ul>
-          <p>
-            <strong>SMU Alumni Members</strong> are also covered under Annex B. See <a href="#section-8">Section 8, Alumni List</a> for the outreach process and OAR/OA contact details.
-          </p>
-
-          <p class="mt-6 text-secondary text-sm">
-            <em>Effective date: 1 March 2024. The binding text and all amendments are on the <a href="https://www.smusa.sg/smusa-gazette" target="_blank" rel="noopener">SMUSA Gazette</a>. For clarifications, contact the BIZCOM Corporate Relations Secretary at <a href="mailto:biz.secretary@smu.edu.sg">biz.secretary@smu.edu.sg</a>.</em>
-          </p>
-
-        </article>
-      </div>
     </div>
   </main>
 
@@ -256,7 +153,7 @@
       </div>
       <div class="footer__bottom">
         <span>© 2026 SMU BIZCOM</span>
-        <span>Plain-English summary. The SMUSA Gazette is the binding source.</span>
+        <span>The SMUSA Gazette is the binding source.</span>
       </div>
     </div>
   </footer>
@@ -267,102 +164,6 @@
 <script src="./js/lib/supabase-public.js" defer></script>
 <script src="./js/lib/public-data.js" defer></script>
 <script src="./js/components/navbar.js" defer></script>
-
-<script>
-(function () {
-  // This script is inline, so `defer` on the tag would be ignored and it
-  // would otherwise run immediately during parsing, before the deferred
-  // supabase-config/supabase-public/public-data scripts above have had a
-  // chance to define window.PublicData. Waiting for DOMContentLoaded is
-  // guaranteed (by spec) to run after every deferred script has executed.
-  document.addEventListener('DOMContentLoaded', main);
-
-  function main() {
-  // Fills every [data-stat] span from the live settings row, then hands off
-  // to the TOC + search setup below. The search feature snapshots the
-  // article's innerHTML to restore it after each keystroke, so that snapshot
-  // must happen AFTER these numbers are filled in, or clearing the search box
-  // would revert a live figure back to its static placeholder.
-  // Every figure on this page comes from the settings row. The markup ships
-  // placeholders rather than numbers so this page can never drift from the
-  // Settings screen or the checker the way three separate hardcoded sets did.
-  function fillStats(settings) {
-    document.querySelectorAll('[data-stat]').forEach(function (el) {
-      const value = settings && settings[el.getAttribute('data-stat')];
-      el.textContent = (value != null) ? Number(value).toLocaleString() : 'unavailable';
-    });
-  }
-
-  function loadLiveStats() {
-    if (!window.PublicData || !window.PublicData.getSettings) {
-      fillStats(null);
-      return Promise.resolve();
-    }
-    return window.PublicData.getSettings().then(fillStats).catch(function (e) {
-      console.error('[standing-order] could not load the live figures', e);
-      fillStats(null);
-    });
-  }
-
-  loadLiveStats().then(init);
-
-  function init() {
-  const links = document.querySelectorAll('.toc__link');
-
-  // Restoring the article from the snapshot below replaces every section
-  // element, so the observer has to be pointed at the new nodes each time.
-  // Left as a one-off setup, it kept watching detached orphans and the
-  // active-section highlight froze on whatever was current at first search.
-  let observer = null;
-  function observeSections() {
-    if (!('IntersectionObserver' in window)) return;
-    if (observer) observer.disconnect();
-    observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          const id = entry.target.id;
-          links.forEach(l => l.classList.toggle('is-active', l.getAttribute('href') === '#' + id));
-        }
-      });
-    }, { rootMargin: '-100px 0px -60% 0px' });
-    Array.from(links)
-      .map(l => document.getElementById(l.getAttribute('href').slice(1)))
-      .filter(Boolean)
-      .forEach(s => observer.observe(s));
-  }
-  observeSections();
-
-  const search = document.getElementById('so-search');
-  const content = document.querySelector('.so-content');
-  let originalHTML = content.innerHTML;
-
-  search.addEventListener('input', function (e) {
-    const q = e.target.value.trim();
-    content.innerHTML = originalHTML;
-    observeSections();
-    if (q.length < 2) return;
-
-    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-    walk(content, function (textNode) {
-      if (re.test(textNode.nodeValue)) {
-        const span = document.createElement('span');
-        span.innerHTML = textNode.nodeValue.replace(re, '<mark class="so-highlight">$1</mark>');
-        textNode.parentNode.replaceChild(span, textNode);
-      }
-    });
-
-    const first = content.querySelector('.so-highlight');
-    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-
-  function walk(node, fn) {
-    if (node.nodeType === 3) { fn(node); return; }
-    if (node.nodeType !== 1 || node.tagName === 'SCRIPT' || node.tagName === 'STYLE') return;
-    Array.from(node.childNodes).forEach(c => walk(c, fn));
-  }
-  }
-  }
-})();
-</script>
+<script src="./js/pages/standing-order.js" defer></script>
 </body>
 </html>

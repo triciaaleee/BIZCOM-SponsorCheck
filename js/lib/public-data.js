@@ -1,6 +1,7 @@
 /* ============================================================
    js/lib/public-data.js
-   Read-only data layer for the PUBLIC pages (directory + checker).
+   Read-only data layer for the PUBLIC pages (directory, checker and
+   standing order).
    Every table it reads is anon-readable under RLS, so the publishable
    key is all it needs — there is no login on the public site.
 
@@ -50,6 +51,21 @@
       return Promise.resolve(
         sb().from('settings').select('*').maybeSingle()
       ).then(unwrap).then(function (row) { return row || {}; });
+    },
+
+    // The Standing Order PDF admins upload from Settings (Storage bucket, see
+    // 0023), as { url, uploadedAt }, or null if none has been uploaded yet.
+    // Takes the NEWEST file rather than assuming there is only one, so a
+    // leftover from a failed clean-up can never be shown in its place.
+    getStandingOrder: function () {
+      var bucket = sb().storage.from('standing-order');
+      return Promise.resolve(
+        bucket.list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+      ).then(unwrap).then(function (rows) {
+        var f = (rows || []).filter(function (r) { return r.id && /\.pdf$/i.test(r.name); })[0];
+        if (!f) return null;
+        return { url: bucket.getPublicUrl(f.name).data.publicUrl, uploadedAt: f.created_at };
+      });
     },
 
     // Outreach snapshot keyed by sponsor id — { count, cooldown_started_at,

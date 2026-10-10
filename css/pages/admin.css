@@ -1346,6 +1346,33 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* ---------- Standing Order PDF ---------- */
+
+.drop-zone--compact {
+  padding: var(--space-6) var(--space-5);
+  gap: var(--space-2);
+}
+
+.drop-zone--compact .drop-zone__icon { font-size: 36px; }
+
+/* Settles in place while the upload runs: no hover lift, no second drop. */
+.drop-zone.is-busy {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.upload-status__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  #so-current .upload-status { flex-wrap: wrap; }
+  #so-current .upload-status__actions { width: 100%; }
+}
+
 /* ============================================================
    SUBMISSION <-> VETTING LINK
    Shared by the Home side-panel and the Vet & Upload context bar

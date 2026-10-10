@@ -496,8 +496,83 @@
       return Promise.resolve(
         sb().from('settings').update(patch).eq('id', true).select().maybeSingle()
       ).then(unwrap);
+    },
+
+    // ---------- standing order PDF — Storage bucket, admin writes (0023) ----------
+    // The current PDF as { name, url, uploadedAt, size }, or null if none has
+    // been uploaded yet.
+    getStandingOrder: function () {
+      return listStandingOrder().then(function (files) {
+        return files[0] ? describeStandingOrder(files[0]) : null;
+      });
+    },
+
+    // Uploads `file` under a fresh name, then deletes every older PDF so the
+    // bucket holds one file at rest. Resolves { file, cleanupError }: the upload
+    // itself throws, but a failed clean-up does not, because the new PDF is
+    // already live (readers take the newest) and the next upload sweeps the
+    // leftover away.
+    uploadStandingOrder: function (file) {
+      var name = 'standing-order-' + Date.now() + '.pdf';
+      return Promise.resolve(
+        standingOrderBucket().upload(name, file, {
+          contentType: 'application/pdf',
+          // Every version has its own name, so a cached copy can never be stale.
+          cacheControl: '31536000',
+          upsert: false
+        })
+      ).then(unwrap).then(function () {
+        var result = {
+          file: { name: name, url: standingOrderUrl(name), uploadedAt: new Date().toISOString(), size: file.size },
+          cleanupError: null
+        };
+        return listStandingOrder().then(function (files) {
+          var mine = files.filter(function (f) { return f.name === name; })[0];
+          if (!mine) return result;
+          result.file = describeStandingOrder(mine);
+          // Only files OLDER than this upload go. If two admins upload at the
+          // same moment, the later one survives, instead of each deleting the
+          // other's and leaving the bucket empty.
+          var stale = files.filter(function (f) {
+            return f.name !== name && Date.parse(f.created_at) < Date.parse(mine.created_at);
+          }).map(function (f) { return f.name; });
+          if (!stale.length) return result;
+          return Promise.resolve(standingOrderBucket().remove(stale)).then(unwrap).then(function () {
+            return result;
+          });
+        }).catch(function (e) {
+          result.cleanupError = e;
+          return result;
+        });
+      });
     }
   };
+
+  var STANDING_ORDER_BUCKET = 'standing-order';
+
+  function standingOrderBucket() { return sb().storage.from(STANDING_ORDER_BUCKET); }
+
+  function standingOrderUrl(name) {
+    return standingOrderBucket().getPublicUrl(name).data.publicUrl;
+  }
+
+  // Every PDF in the bucket, newest first. Folders (id null) are skipped.
+  function listStandingOrder() {
+    return Promise.resolve(
+      standingOrderBucket().list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+    ).then(unwrap).then(function (rows) {
+      return (rows || []).filter(function (f) { return f.id && /\.pdf$/i.test(f.name); });
+    });
+  }
+
+  function describeStandingOrder(f) {
+    return {
+      name: f.name,
+      url: standingOrderUrl(f.name),
+      uploadedAt: f.created_at,
+      size: f.metadata && f.metadata.size
+    };
+  }
 
   window.AdminAPI = AdminAPI;
 })();

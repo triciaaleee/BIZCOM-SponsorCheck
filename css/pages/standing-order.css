@@ -1,174 +1,196 @@
 /* ============================================================
    pages/standing-order.css
-   Searchable rendering of the SMUSA Sponsorship Standing Order.
+   The SMUSA Sponsorship Standing Order: the live caps, then the
+   uploaded PDF in an in-page reader (js/pages/standing-order.js).
    ============================================================ */
 
-.standing-order {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-5);
-}
-
-@media (min-width: 1024px) {
-  .standing-order {
-    grid-template-columns: 240px 1fr;
-    gap: var(--space-7);
-    align-items: start;
-  }
-}
-
-/* ---------- Sticky TOC ---------- */
-
-.toc {
-  position: sticky;
-  top: calc(var(--navbar-height) + var(--space-4));
-  max-height: calc(100vh - var(--navbar-height) - var(--space-7));
-  overflow-y: auto;
-  padding: var(--space-4);
-  background-color: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-}
-
-.toc__heading {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
-  color: var(--text-muted);
-  margin-bottom: var(--space-3);
-}
-
-.toc__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.toc__list li { margin: 0; }
-
-.toc__link {
-  display: block;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
-}
-
-.toc__link:hover {
-  background-color: var(--surface-muted);
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-.toc__link.is-active {
-  background-color: rgba(46, 82, 157, 0.06);
-  color: var(--color-navy);
-  border-left-color: var(--color-navy);
-  font-weight: var(--font-weight-medium);
-}
-
-/* ---------- Content ---------- */
-
-.so-content {
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-relaxed);
-  color: var(--text-primary);
-  max-width: 720px;
-}
-
-.so-content h2 {
-  font-size: var(--font-size-2xl);
+.so-section {
   margin-top: var(--space-7);
-  margin-bottom: var(--space-3);
-  padding-top: var(--space-3);
+}
+
+.so-section__title {
+  font-size: var(--font-size-2xl);
+  margin: 0;
   scroll-margin-top: calc(var(--navbar-height) + var(--space-4));
 }
 
-.so-content h2:first-of-type { margin-top: 0; padding-top: 0; }
-
-.so-content h3 {
-  font-size: var(--font-size-lg);
-  margin-top: var(--space-5);
-  margin-bottom: var(--space-2);
-}
-
-.so-content p {
+.so-section__sub {
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-bottom: var(--space-4);
+  margin: var(--space-1) 0 var(--space-4);
 }
 
-.so-content ul,
-.so-content ol {
-  color: var(--text-secondary);
-  margin-bottom: var(--space-4);
+/* ---------- Current limits ---------- */
+
+.so-limits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
 }
 
-.so-content li {
-  margin-bottom: var(--space-2);
+@media (min-width: 900px) {
+  .so-limits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-.so-content strong { color: var(--text-primary); }
-
-.so-content .annex {
+.so-limit {
   background-color: var(--surface-muted);
   border-left: 3px solid var(--color-navy);
-  padding: var(--space-4);
   border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
+  padding: var(--space-5);
+  line-height: var(--line-height-relaxed);
 }
 
-/* ---------- Search box ---------- */
-.so-search {
-  position: relative;
+.so-limit__title {
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--space-3);
+  scroll-margin-top: calc(var(--navbar-height) + var(--space-4));
+}
+
+.so-limit p,
+.so-limit ul {
+  color: var(--text-secondary);
   margin-bottom: var(--space-3);
 }
 
-.so-search input {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--space-3) 0 var(--space-7);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+.so-limit li { margin-bottom: var(--space-2); }
+
+.so-limit strong { color: var(--text-primary); }
+
+.so-limit .so-limit__note {
   font-size: var(--font-size-sm);
-  font-family: var(--font-family-sans);
+  margin-bottom: 0;
 }
 
-.so-search input:focus {
-  outline: none;
-  border-color: var(--color-navy);
-  box-shadow: var(--shadow-focus);
+/* ---------- Document header ---------- */
+
+.so-doc__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
 }
 
-.so-search__icon {
-  position: absolute;
-  left: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: var(--font-size-base);
-  pointer-events: none;
+.so-doc__head .so-section__sub { margin-bottom: 0; }
+
+.so-doc__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-/* ---------- Search highlight pulse ---------- */
-.so-content .so-highlight {
-  background-color: var(--color-gold-light);
-  animation: so-pulse 1200ms ease-out;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
+/* An author `display` beats the UA sheet's [hidden] rule. */
+.so-doc__actions[hidden] { display: none; }
+
+/* ---------- Reader ---------- */
+
+.so-viewer {
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-height: 240px;
 }
 
-@keyframes so-pulse {
-  0%   { background-color: var(--color-gold); }
-  100% { background-color: var(--color-gold-light); }
+@media (max-width: 560px) {
+  /* Every pixel of width goes to the page on a phone. */
+  .so-viewer { padding: var(--space-2); }
+}
+
+.so-viewer__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 200px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.so-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--color-navy);
+  border-radius: 50%;
+  animation: so-spin 800ms linear infinite;
+}
+
+@keyframes so-spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .so-content .so-highlight { animation: none; }
+  .so-spinner { animation-duration: 2400ms; }
+}
+
+.so-pages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* Sized by aspect-ratio before its canvas is drawn, so the scrollbar is right
+   from the start and pages never jump as they render. */
+.so-page {
+  position: relative;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.so-page__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- PDF.js text layer ----------
+   Transparent text laid exactly over the drawn page, so the text can be
+   selected, copied and found with the browser's Find. Taken from PDF.js
+   3.11's pdf_viewer.css. --scale-factor (set per page by the script)
+   sizes it to the page's current width. */
+.so-page .textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+}
+
+.so-page .textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.so-page .textLayer span.markedContent {
+  top: 0;
+  height: 0;
+}
+
+.so-page .textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: -1;
+  cursor: default;
+  user-select: none;
+}
+
+.so-page .textLayer ::selection {
+  background: rgba(46, 82, 157, 0.25);
 }

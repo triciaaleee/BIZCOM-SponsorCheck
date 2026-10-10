@@ -129,10 +129,12 @@ the shared `normalise()` helper rather than duplicating the logic in SQL.
 | outreach_log | none | full (write via `log_outreach`) |
 | admins | none | read; **super-admin** writes |
 | settings updates | none | **super-admin** only |
+| `standing-order` Storage bucket (the PDF) | read | read + upload + delete |
 
 ¹ `settings` writes are super-admin only; the rest are any admin.
 
 ## Changed vs the earlier draft
+- Standing Order PDF (0023). A public Storage bucket, `standing-order`, holds the PDF shown on `standing-order.html`; any admin replaces it from Settings. Each upload gets a fresh name and then deletes every older file, so one PDF is stored at a time. PDF only, 20 MB max. No table or column involved.
 - Wave tabs on Vet & Upload (0022). `submission_sponsors.rejected_sponsor_id` stores an admin's "not the same company" verdict. `record_submission_wave()` gains `p_refresh_only`, never puts one sponsor on a submission twice, refuses completed submissions, and moves `new` to `reviewing` on the first saved wave. `log_outreach()` returns `completed` for a completed submission.
 - Moved the event cap from "recorded" to "contacted" (0015). `sponsor_count` now counts companies with outreach logged, so recording a club's list is free and only an actual approach consumes the cap. `record_submission_wave()` no longer rejects on the cap; `log_outreach()` enforces it and returns `event_capped`.
 - Dropped `submissions.contact_email` (0014): nothing ever read it. The app sends no mail (the public checker composes a message in the student's own mail client and writes nothing here), so the column only ever displayed an address back to whoever typed it in.
